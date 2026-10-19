@@ -559,17 +559,39 @@ window.SITE = {
   ],
   appReleases: [
     {
+      version: "v1.2.3",
+      name: "NewbiesTeam Android App v1.2.3",
+      date: "2026-10-19",
+      by: "Softbrick & NewbiesTeam",
+      isLatest: true,
+      apkUrl:
+        "https://github.com/zcyrl/newbiesteam-app/releases/download/v1.2.3/NewbiesTeam-v1.2.3.apk",
+      fallbackApkUrl: "https://newbiesteam.surge.sh/assets/NewbiesTeam.apk",
+      releaseUrl:
+        "https://github.com/zcyrl/newbiesteam-app/releases/tag/v1.2.3",
+      size: "5.0 MB",
+      badge: "Latest Release",
+      summary:
+        "Official release with persistent release signing, KSU-styled About dialog, and ROM screenshots deep linking.",
+      changelog: [
+        "Permanent V2+V3 release signing with clean in-place upgrade compatibility across all future updates.",
+        "Integrated KSU-styled About window featuring dynamic build versioning and official team credits.",
+        "Direct ROM <-> Screenshot linking with 3-photo preview strip and deep navigation.",
+        "Removed debug probe binaries and restricted cleartext traffic for clean Play Protect verification.",
+      ],
+    },
+    {
       version: "v1.2.2",
       name: "NewbiesTeam Android App v1.2.2",
       date: "2026-10-19",
       by: "Softbrick & NewbiesTeam",
-      isLatest: true,
+      isLatest: false,
       apkUrl:
         "https://github.com/zcyrl/newbiesteam-app/releases/download/v1.2.2/NewbiesTeam-v1.2.2.apk",
       releaseUrl:
         "https://github.com/zcyrl/newbiesteam-app/releases/tag/v1.2.2",
       size: "6.1 MB",
-      badge: "Latest Release",
+      badge: "Release",
       summary:
         "New official brand logos, animated startup splash opening & adaptive launcher icon.",
       changelog: [
