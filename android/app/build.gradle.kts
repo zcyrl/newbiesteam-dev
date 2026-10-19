@@ -12,20 +12,35 @@ android {
         applicationId = "team.newbies.dev"
         minSdk = 26
         targetSdk = 34
-        versionCode = 3
-        versionName = "1.2.0"
+        versionCode = 4
+        versionName = "1.2.2"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+    }
+
+    signingConfigs {
+        create("release") {
+            storeFile = file("release.jks")
+            storePassword = System.getenv("KEYSTORE_PASSWORD") ?: "newbiesteam2026"
+            keyAlias = System.getenv("KEY_ALIAS") ?: "newbiesteam"
+            keyPassword = System.getenv("KEY_PASSWORD") ?: "newbiesteam2026"
+            storeType = "PKCS12"
+            enableV1Signing = true
+            enableV2Signing = true
+            enableV3Signing = true
+            enableV4Signing = true
+        }
     }
 
     buildTypes {
         release {
             isMinifyEnabled = false
+            isDebuggable = false
+            signingConfig = signingConfigs.getByName("release")
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
-            signingConfig = signingConfigs.getByName("debug")
         }
         debug {
             signingConfig = signingConfigs.getByName("debug")
@@ -39,6 +54,13 @@ android {
 
     kotlinOptions {
         jvmTarget = "17"
+    }
+
+    packaging {
+        resources {
+            excludes += "DebugProbesKt.bin"
+            excludes += "/META-INF/{AL2.0,LGPL2.1}"
+        }
     }
 }
 
