@@ -13,9 +13,9 @@ const CONFIG = {
 
   // 32-character high-entropy developer keys with single-user bindings
   keys: {
-    "NBT-ADM-orTWTao8d46rNzvrIBBgOjIS": {
+    "NBT-ADM-2IdtYOnmHqVgzpKF9ctRdUGB": {
       role: "admin",
-      name: "Softbrick (Owner)",
+      name: "Softbrick (Admin)",
       canAutoPush: true,
       status: "active",
       revoked: false,
@@ -23,7 +23,7 @@ const CONFIG = {
       bound_user_name: "Softbrick",
       bound_photo: null,
       headline: "Master Admin Active",
-      description: "Full access enabled. Any ROM, guide, screenshot, or news you upload or edit is auto-pushed live immediately."
+      description: "Full access enabled. Any ROM, guide, screenshot, or news you upload is auto-pushed live immediately."
     },
     "NBT-DEV1-ZPYYluKXiW1kZxsoOWiFx3I": {
       role: "team",
@@ -34,8 +34,8 @@ const CONFIG = {
       bound_device_id: null,
       bound_user_name: null,
       bound_photo: null,
-      headline: "MBuTT3178 (Developer)",
-      description: "Team developer access enabled. Upload or edit ROMs, guides, screenshots, and news directly to live site."
+      headline: "MBuTT3178 Active",
+      description: "Updates & News post immediately. ROMs, Guides, and Screenshots are sent to the terminal tool for confirmation."
     },
     "NBT-DEV2-p1CXkO2WfRLCROYFivPN5UH": {
       role: "team",
@@ -43,11 +43,11 @@ const CONFIG = {
       canAutoPush: true,
       status: "active",
       revoked: false,
-      bound_device_id: null,
-      bound_user_name: null,
+      bound_device_id: "e02ba6a5-d541-48a8-b9ef-d1f3e12ea1f1",
+      bound_user_name: "Mehraann",
       bound_photo: null,
-      headline: "Mehraann (Developer)",
-      description: "Team developer access enabled. Upload or edit ROMs, guides, screenshots, and news directly to live site."
+      headline: "Mehraann Active",
+      description: "Updates & News post immediately. ROMs, Guides, and Screenshots are sent to the terminal tool for confirmation."
     },
     "NBT-DEV3-nbqMbAwxXaHuObtNzPr2d6B": {
       role: "team",
@@ -55,23 +55,11 @@ const CONFIG = {
       canAutoPush: true,
       status: "active",
       revoked: false,
-      bound_device_id: null,
-      bound_user_name: null,
+      bound_device_id: "cbd8c53c-f652-4575-afd4-aeb05e137c10",
+      bound_user_name: "fjrXTR",
       bound_photo: null,
-      headline: "fjrXTR (Developer)",
-      description: "Team developer access enabled. Upload or edit ROMs, guides, screenshots, and news directly to live site."
-    },
-    "NBT-DEV4-ptRLMWQkMiQSQrouMT9ZB06": {
-      role: "team",
-      name: "Team Member 4",
-      canAutoPush: false,
-      status: "revoked",
-      revoked: true,
-      bound_device_id: null,
-      bound_user_name: null,
-      bound_photo: null,
-      headline: "Key Revoked",
-      description: "This key has been revoked by Softbrick."
+      headline: "fjrXTR Active",
+      description: "Updates & News post immediately. ROMs, Guides, and Screenshots are sent to the terminal tool for confirmation."
     },
   }
 };
