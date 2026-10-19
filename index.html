@@ -1,0 +1,623 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>NewbiesDev Hub</title>
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#120d0d">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <link rel="stylesheet" href="styles.css">
+  <link rel="icon" type="image/png" href="icons/icon-192.png">
+  <script src="data.js"></script>
+</head>
+<body>
+
+  <!-- ================= KEY GATEKEEPER SCREEN ================= -->
+  <section id="gatekeeper-screen" class="screen active">
+    <div class="gatekeeper-card">
+      <div class="logo-circle">
+        <img src="icons/icon-192.png" alt="NewbiesTeam Logo">
+      </div>
+      <h1 class="glow-title">NewbiesDev Hub</h1>
+      <p class="subtitle">GT 20 PRO DEVELOPER ACCESS</p>
+
+      <div class="lock-shield-icon">
+        <svg viewBox="0 0 24 24" width="44" height="44" fill="none" stroke="currentColor" stroke-width="2">
+          <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+          <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+        </svg>
+      </div>
+
+      <p class="gatekeeper-hint">Enter your 32-character developer key to unlock phone uploading.</p>
+
+      <form id="key-form" autocomplete="off" onsubmit="return false;">
+        <div class="input-group">
+          <input type="password" id="dev-key-input" placeholder="Enter 32-character key..." maxlength="64" spellcheck="false" required>
+          <button type="button" id="toggle-key-visibility" class="icon-btn" title="Show/Hide Key">
+            <svg id="eye-icon" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+              <circle cx="12" cy="12" r="3"></circle>
+            </svg>
+          </button>
+        </div>
+
+        <div id="key-error" class="error-msg"></div>
+
+        <button type="submit" id="unlock-btn" class="btn btn-primary btn-block">
+          <span>Unlock Dev Hub</span>
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"></polyline></svg>
+        </button>
+      </form>
+
+      <div class="gatekeeper-footer">
+        <span>Restricted Developers Tool</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= PROFILE ONBOARDING SCREEN ================= -->
+  <section id="profile-setup-screen" class="screen">
+    <div class="gatekeeper-card">
+      <div class="setup-badge">PROFILE SETUP</div>
+      <h1 class="glow-title">Developer Identity</h1>
+      <p class="subtitle">GT 20 PRO TEAM ACCESS</p>
+
+      <p class="gatekeeper-hint">Set up your profile photo and developer name. This identity will appear on all your uploads, live updates, and the team roster.</p>
+
+      <form id="profile-setup-form" autocomplete="off" onsubmit="return false;">
+        <div class="avatar-setup-wrapper">
+          <div class="avatar-circle-preview" id="setup-avatar-trigger" title="Tap to choose profile photo">
+            <img id="setup-avatar-preview" src="icons/icon-192.png" alt="Profile Photo">
+            <div class="avatar-camera-overlay">
+              <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path><circle cx="12" cy="13" r="4"></circle></svg>
+            </div>
+          </div>
+          <input type="file" id="setup-photo-input" accept="image/*" style="display: none;">
+          <button type="button" id="setup-choose-photo-btn" class="photo-select-btn">
+            <span>Choose Profile Photo</span>
+          </button>
+        </div>
+
+        <div class="input-field-group">
+          <label class="field-label" for="setup-name-input">Developer Name / Handle</label>
+          <input type="text" id="setup-name-input" placeholder="e.g. Softbrick, Alex, Dev" maxlength="24" required>
+        </div>
+
+        <div id="setup-error" class="error-msg"></div>
+
+        <button type="submit" id="setup-submit-btn" class="btn btn-primary btn-block">
+          <span>Complete Setup &amp; Enter Hub</span>
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"></polyline></svg>
+        </button>
+      </form>
+
+      <div class="gatekeeper-footer">
+        <span>Restricted Developers Tool</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= MAIN DASHBOARD SCREEN ================= -->
+  <section id="dashboard-screen" class="screen">
+    
+    <!-- Top Mobile App Bar -->
+    <header class="app-bar">
+      <div class="app-bar-left">
+        <img src="icons/icon-192.png" class="bar-logo" alt="Logo">
+        <div>
+          <div class="bar-title">NewbiesDev <span class="badge-app-ver" id="app-ver-badge">v1.1.0</span></div>
+          <div id="bar-user-name" class="bar-subtitle">Developer</div>
+        </div>
+      </div>
+      <div class="app-bar-right">
+        <!-- M3 Theme Toggle Chip -->
+        <button id="theme-toggle-btn" class="theme-toggle-btn" title="Toggle Theme (Auto / Dark / Light)">
+          <span id="theme-btn-icon">🌓</span>
+          <span id="theme-btn-label">Auto</span>
+        </button>
+
+        <!-- Corner Profile Pill with Photo & Name (Smoothly Expands Roster) -->
+        <button id="dev-profile-pill" class="dev-profile-pill" title="Tap to view team roster & details">
+          <div class="pill-avatar-wrap">
+            <img id="pill-avatar-img" src="icons/icon-192.png" alt="Avatar">
+            <span class="pill-status-dot"></span>
+          </div>
+          <span id="pill-dev-name" class="pill-dev-name">Softbrick</span>
+          <svg class="pill-arrow" viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"></polyline></svg>
+        </button>
+      </div>
+    </header>
+
+    <!-- Live Web Sync Banner -->
+    <div class="sync-banner" id="sync-banner">
+      <div class="sync-status-badge">
+        <span class="sync-dot" id="sync-dot"></span>
+        <span id="sync-status-text">Web Data Linked</span>
+      </div>
+      <button id="sync-refresh-btn" class="sync-btn" title="Sync live data from surge">
+        🔄 Sync Surge
+      </button>
+    </div>
+
+    <!-- Main Scrollable Content -->
+    <main class="content-container">
+      
+      <!-- User Status Banner -->
+      <div id="status-card" class="card status-card">
+        <div class="status-header">
+          <div class="status-indicator-dot"></div>
+          <span id="status-headline" class="status-headline">Master Admin Active</span>
+        </div>
+        <p id="status-description" class="status-description">
+          Your key has direct auto-push privileges. Anything you upload is published live immediately.
+        </p>
+      </div>
+
+      <!-- Quick Action Cards Grid -->
+      <div class="section-title">Quick Uploads</div>
+      <div class="actions-grid">
+        <button class="action-card" data-category="rom">
+          <div class="action-icon action-icon-rom">📱</div>
+          <div class="action-name">Add ROM</div>
+          <div class="action-desc">Port or AOSP release</div>
+        </button>
+
+        <button class="action-card" data-category="screenshots">
+          <div class="action-icon action-icon-ss">📸</div>
+          <div class="action-name">Screenshots</div>
+          <div class="action-desc">Link photos to ROM</div>
+        </button>
+
+        <button class="action-card" data-category="guide">
+          <div class="action-icon action-icon-guide">📖</div>
+          <div class="action-name">Add Guide</div>
+          <div class="action-desc">Flashing, root &amp; tools</div>
+        </button>
+
+        <button class="action-card" data-category="news">
+          <div class="action-icon action-icon-news">📢</div>
+          <div class="action-name">Post News</div>
+          <div class="action-desc">Instant changelog feed</div>
+        </button>
+
+        <button class="action-card" data-category="module">
+          <div class="action-icon action-icon-module">⚡</div>
+          <div class="action-name">Module / Tool</div>
+          <div class="action-desc">Recovery &amp; Magisk</div>
+        </button>
+
+        <button class="action-card" data-category="dev-apk">
+          <div class="action-icon action-icon-apk">📦</div>
+          <div class="action-name">Dev APK Updates</div>
+          <div class="action-desc">In-App Download (v1.1.0)</div>
+        </button>
+
+        <button class="action-card" data-category="site-link">
+          <div class="action-icon action-icon-site">🌐</div>
+          <div class="action-name">Live Hub</div>
+          <div class="action-desc">View newbiesteam.surge.sh</div>
+        </button>
+      </div>
+
+      <!-- Manage Live Web Content -->
+      <div class="section-title" style="margin-top: 24px;">Manage Live Web Content</div>
+      
+      <!-- Segmented Category Filter Chips -->
+      <div class="segmented-chips" id="live-category-chips">
+        <button class="m3-chip active" data-live-cat="roms">
+          <span>ROMs</span>
+          <span class="m3-chip-count" id="count-roms">0</span>
+        </button>
+        <button class="m3-chip" data-live-cat="updates">
+          <span>Updates &amp; News</span>
+          <span class="m3-chip-count" id="count-updates">0</span>
+        </button>
+        <button class="m3-chip" data-live-cat="guides">
+          <span>Guides</span>
+          <span class="m3-chip-count" id="count-guides">0</span>
+        </button>
+        <button class="m3-chip" data-live-cat="modules">
+          <span>Modules &amp; Tools</span>
+          <span class="m3-chip-count" id="count-modules">0</span>
+        </button>
+        <button class="m3-chip" data-live-cat="dev-apks">
+          <span>Dev APK Updates</span>
+          <span class="m3-chip-count" id="count-dev-apks">v1.1.0</span>
+        </button>
+      </div>
+
+      <!-- Container for dynamically rendered live items with Edit/Delete -->
+      <div id="live-items-container" class="live-items-list">
+        <!-- Rendered dynamically -->
+      </div>
+
+      <!-- Recent Local Submissions Feed -->
+      <div class="section-title" style="margin-top: 24px;">Your Recent Submissions</div>
+      <div id="history-container" class="history-list">
+        <div class="empty-history">
+          <div class="empty-icon">📂</div>
+          <p>No recent submissions on this device yet.</p>
+          <small>Tap the circle <strong>(+)</strong> button below to make your first upload.</small>
+        </div>
+      </div>
+
+    </main>
+
+    <!-- FLOATING ACTION BUTTON (CIRCLE PLUS BUTTON) -->
+    <button id="fab-plus" class="fab-circle" title="Upload New Content">
+      <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round">
+        <line x1="12" y1="5" x2="12" y2="19"></line>
+        <line x1="5" y1="12" x2="19" y2="12"></line>
+      </svg>
+    </button>
+
+  </section>
+
+  <!-- ================= UPLOAD BOTTOM SHEET MODAL ================= -->
+  <div id="upload-modal" class="modal-backdrop">
+    <div class="modal-sheet">
+      <div class="sheet-drag-handle"></div>
+
+      <div class="sheet-header">
+        <div class="sheet-title-group">
+          <h2 id="modal-title" class="sheet-title">Upload Content</h2>
+          <p id="modal-subtitle" class="sheet-subtitle">Select upload type below</p>
+        </div>
+        <button id="modal-close-btn" class="icon-circle-btn">
+          <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+        </button>
+      </div>
+
+      <!-- Category Switcher Pill Tabs -->
+      <div class="category-tabs" id="modal-category-tabs">
+        <button type="button" class="cat-tab active" data-type="rom">📱 ROM</button>
+        <button type="button" class="cat-tab" data-type="screenshots">📸 Photos</button>
+        <button type="button" class="cat-tab" data-type="guide">📖 Guide</button>
+        <button type="button" class="cat-tab" data-type="news">📢 News</button>
+        <button type="button" class="cat-tab" data-type="module">⚡ Module</button>
+      </div>
+
+      <!-- Scrollable Form Container -->
+      <form id="submission-form" class="sheet-form" onsubmit="return false;">
+        <input type="hidden" id="form-action" value="add">
+        <input type="hidden" id="edit-section" value="">
+        <input type="hidden" id="edit-target-name" value="">
+        <input type="hidden" id="edit-target-category" value="">
+        <input type="hidden" id="edit-target-id" value="">
+        
+        <!-- ================= ROM FORM ================= -->
+        <div id="fields-rom" class="form-section">
+          <div class="form-group">
+            <label>ROM Name <span class="req">*</span></label>
+            <input type="text" id="rom-name" placeholder="e.g. HiOS 16.3 Port or HyperOS 3 V2" required>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label>Category <span class="req">*</span></label>
+              <select id="rom-category">
+                <option value="Port ROMs">Port ROMs</option>
+                <option value="AOSP ROMs">AOSP ROMs</option>
+                <option value="Latest">Latest</option>
+                <option value="Flashable firmware">Flashable firmware</option>
+                <option value="Base Firmware (Complete files)">Base Firmware</option>
+                <option value="boot.img files">boot.img files</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Android Ver</label>
+              <input type="text" id="rom-android" placeholder="e.g. 14 or 15">
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label>Author / Maintainer <span class="req">*</span></label>
+            <input type="text" id="rom-by" placeholder="e.g. MBuTT3178 or Softbrick" required>
+          </div>
+
+          <div class="form-group">
+            <label>Base Device / Port Base</label>
+            <input type="text" id="rom-base" placeholder="e.g. Tecno Camon 30 Premier (CL9)">
+          </div>
+
+          <div class="form-group">
+            <label>Primary Download Link (Google Drive / SourceForge) <span class="req">*</span></label>
+            <input type="url" id="rom-url" placeholder="https://drive.google.com/..." required>
+          </div>
+
+          <div class="form-group">
+            <label>Mirror Download Link (Mega / MediaFire / Telegram)</label>
+            <input type="url" id="rom-mirror" placeholder="https://mega.nz/... or https://t.me/...">
+          </div>
+
+          <div class="form-group">
+            <label>Changelog &amp; Key Features (one per line)</label>
+            <textarea id="rom-changelog" rows="3" placeholder="Working FOD &amp; 120Hz&#10;Dolby Atmos included&#10;SELinux Enforcing"></textarea>
+          </div>
+
+          <div class="form-group">
+            <label>Known Bugs (one per line, leave empty if none)</label>
+            <textarea id="rom-bugs" rows="2" placeholder="e.g. MemFusion display bug in settings"></textarea>
+          </div>
+
+          <div class="form-group">
+            <label>ROM Banner Image (From Phone Gallery)</label>
+            <div class="file-picker-box">
+              <input type="file" id="rom-image-file" accept="image/*" class="file-input">
+              <div id="rom-image-preview" class="image-preview-slot">
+                <div class="preview-placeholder">
+                  <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg>
+                  <span>Tap to choose image from phone</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ================= SCREENSHOTS FORM ================= -->
+        <div id="fields-screenshots" class="form-section hidden">
+          <!-- 1. Target ROM Selection from Live Menu -->
+          <div class="form-group">
+            <label>Target ROM <span class="req">*</span></label>
+            <select id="ss-rom-select" required>
+              <option value="">-- Choose Target ROM --</option>
+            </select>
+          </div>
+
+          <!-- 2. Existing Screenshots Gallery & Quick Delete -->
+          <div id="ss-gallery-section" class="ss-gallery-section hidden">
+            <div class="ss-gallery-header">
+              <span class="ss-gallery-title">Current Screenshots</span>
+              <span id="ss-gallery-count" class="ss-gallery-badge">0 photos</span>
+            </div>
+            <div id="ss-gallery-list" class="ss-gallery-list">
+              <!-- Dynamically populated -->
+            </div>
+          </div>
+
+          <!-- 3. Upload New Screenshot -->
+          <div class="ss-upload-box">
+            <div class="ss-divider-label">Add New Screenshot to ROM</div>
+
+            <div class="form-group">
+              <label>Screenshot Caption <span class="req">*</span></label>
+              <input type="text" id="ss-caption" placeholder="e.g. Homescreen, Lockscreen, Control Center, Antutu Score">
+            </div>
+
+            <div class="form-group">
+              <label>Select Screenshot Image from Phone <span class="req">*</span></label>
+              <div class="file-picker-box">
+                <input type="file" id="ss-image-file" accept="image/*" class="file-input">
+                <div id="ss-image-preview" class="image-preview-slot">
+                  <div class="preview-placeholder">
+                    <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg>
+                    <span>Tap to select phone screenshot</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ================= GUIDE FORM ================= -->
+        <div id="fields-guide" class="form-section hidden">
+          <div class="form-group">
+            <label>Guide Title <span class="req">*</span></label>
+            <input type="text" id="guide-title" placeholder="e.g. Complete Flashing Guide for Port ROMs" required>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label>Category <span class="req">*</span></label>
+              <select id="guide-category">
+                <option value="Flashing Guides">Flashing Guides</option>
+                <option value="Bootloader Guides">Bootloader Guides</option>
+                <option value="Rooting Guides">Rooting Guides</option>
+                <option value="General Guides">General Guides</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Author / Credit</label>
+              <input type="text" id="guide-by" placeholder="e.g. Softbrick or Mehraann">
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label>Guide Steps (one step per line) <span class="req">*</span></label>
+            <textarea id="guide-steps" rows="4" placeholder="1. Unlock bootloader in developer options&#10;2. Reboot to fastboot: adb reboot bootloader&#10;3. Flash recovery: fastboot flash recovery_ab ofox.img" required></textarea>
+          </div>
+
+          <div class="form-group">
+            <label>Warnings / Important Cautions (one per line)</label>
+            <textarea id="guide-cautions" rows="2" placeholder="Backup all user data! Bootloader unlock formats phone."></textarea>
+          </div>
+        </div>
+
+        <!-- ================= NEWS & CHANGELOG FORM ================= -->
+        <div id="fields-news" class="form-section hidden">
+          <div class="notice-badge">
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
+            <span>Updates &amp; News post <strong>instantly to live site</strong> for all keys.</span>
+          </div>
+
+          <div class="form-group">
+            <label>Post Title <span class="req">*</span></label>
+            <input type="text" id="news-title" placeholder="e.g. HiOS 16.3 Port Released for GT 20 Pro" required>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label>Category Tag</label>
+              <select id="news-tag">
+                <option value="New ROM">New ROM</option>
+                <option value="Web Update">Web Update</option>
+                <option value="Site Update">Site Update</option>
+                <option value="Kernel Update">Kernel Update</option>
+                <option value="Module Update">Module Update</option>
+                <option value="Notice">Notice</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Posted By <span class="req">*</span></label>
+              <input type="text" id="news-by" placeholder="Author name" required>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label>Details / Changelog Body <span class="req">*</span></label>
+            <textarea id="news-body" rows="4" placeholder="Describe the release, fixes, and installation notes..." required></textarea>
+          </div>
+
+          <div class="form-group">
+            <label>Optional Button Link URL</label>
+            <input type="text" id="news-url" placeholder="https://... or #roms">
+          </div>
+          <div class="form-group">
+            <label>Button Label</label>
+            <input type="text" id="news-link-label" placeholder="e.g. Download ROM">
+          </div>
+
+          <div class="form-group">
+            <label>Optional Post Image</label>
+            <div class="file-picker-box">
+              <input type="file" id="news-image-file" accept="image/*" class="file-input">
+              <div id="news-image-preview" class="image-preview-slot">
+                <div class="preview-placeholder">
+                  <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg>
+                  <span>Select photo from phone</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ================= MODULE / TOOL FORM ================= -->
+        <div id="fields-module" class="form-section hidden">
+          <div class="form-group">
+            <label>Tool / Module Name <span class="req">*</span></label>
+            <input type="text" id="mod-name" placeholder="e.g. OrangeFox Recovery or KernelSU v0.9" required>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label>Section <span class="req">*</span></label>
+              <select id="mod-section">
+                <option value="recovery">Recovery &amp; Tools</option>
+                <option value="modules">Magisk &amp; KSU Modules</option>
+                <option value="kernels">Custom Kernels</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Category Group</label>
+              <input type="text" id="mod-category" placeholder="e.g. Recovery, Root Tools, Audio">
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label>Primary Download Link <span class="req">*</span></label>
+            <input type="url" id="mod-url" placeholder="https://..." required>
+          </div>
+
+          <div class="form-group">
+            <label>Mirror Download Link</label>
+            <input type="url" id="mod-mirror" placeholder="https://...">
+          </div>
+
+          <div class="form-group">
+            <label>Author / Credits</label>
+            <input type="text" id="mod-by" placeholder="e.g. Softbrick or Team">
+          </div>
+
+          <div class="form-group">
+            <label>Description &amp; Instructions</label>
+            <textarea id="mod-details" rows="3" placeholder="Installation advice and notes..."></textarea>
+          </div>
+        </div>
+      </form>
+
+      <!-- Pinned Bottom Action Footer (Always Visible on Screen) -->
+      <div class="sheet-footer">
+        <button type="button" id="modal-cancel-btn" class="btn btn-secondary">Cancel</button>
+        <button type="button" id="submit-btn" class="btn btn-primary" style="flex: 1;">
+          <span id="submit-btn-text">🚀 Upload &amp; Publish</span>
+          <div id="submit-spinner" class="spinner hidden"></div>
+        </button>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ================= EXPANDABLE CURRENT DEVS DRAWER ================= -->
+  <div id="roster-modal" class="roster-overlay">
+    <div class="roster-card">
+      <div class="roster-header">
+        <div class="roster-header-left">
+          <div class="roster-title">Team Roster</div>
+          <div class="roster-subtitle">Active Developers &amp; Single-User Devices</div>
+        </div>
+        <button id="close-roster-btn" class="roster-close-btn">&times;</button>
+      </div>
+
+      <!-- Current User Highlight Card -->
+      <div class="my-profile-card">
+        <div class="my-avatar-box">
+          <img id="my-profile-avatar" src="icons/icon-192.png" alt="My Photo">
+        </div>
+        <div class="my-profile-info">
+          <div class="my-profile-name" id="my-profile-name">Softbrick</div>
+          <div class="my-profile-badges">
+            <span id="my-profile-role" class="badge-pill badge-admin">ADMIN</span>
+            <span class="badge-pill badge-single-user">🔒 Single-User Active</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Team Roster List -->
+      <div class="roster-list-heading">Current Developers</div>
+      <div id="roster-list-container" class="roster-list-container">
+        <!-- Rendered dynamically -->
+      </div>
+
+      <div class="roster-footer">
+        <span>⚡ 1 Key / 1 Device Enforced · Real-Time Cloud Sync</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= POPUP ALERT MODAL ================= -->
+  <div id="alert-modal" class="alert-overlay">
+    <div class="alert-card">
+      <div class="alert-icon-wrap">
+        <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+      </div>
+      <h3 id="alert-title" class="alert-title">Access Restricted</h3>
+      <p id="alert-message" class="alert-message">This key is used by another member.</p>
+      <button type="button" id="alert-dismiss-btn" class="btn btn-primary btn-block">
+        <span>Understood</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- ================= POPUP CONFIRMATION MODAL ================= -->
+  <div id="confirm-modal" class="alert-overlay">
+    <div class="alert-card">
+      <div class="alert-icon-wrap" style="background: rgba(239, 68, 68, 0.12); color: var(--color-error); border-color: rgba(239, 68, 68, 0.3);">
+        <svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+      </div>
+      <h3 id="confirm-title" class="alert-title">Confirm Deletion</h3>
+      <p id="confirm-message" class="alert-message">Are you sure you want to delete this item from the live site?</p>
+      <div style="display: flex; gap: 10px; margin-top: 14px;">
+        <button type="button" id="confirm-cancel-btn" class="btn btn-secondary" style="flex: 1;">Cancel</button>
+        <button type="button" id="confirm-ok-btn" class="btn" style="flex: 1; background: var(--color-error); color: #fff;">Delete</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- TOAST NOTIFICATION POPUP -->
+  <div id="toast" class="toast"></div>
+
+  <script src="app.js"></script>
+</body>
+</html>
