@@ -683,6 +683,33 @@ function setupEventListeners() {
     });
   }
 
+  // Mod section & category dropdown dynamic switcher
+  const modSecSelect = document.getElementById("mod-section");
+  const modCatSelect = document.getElementById("mod-category-select");
+  const modCatInput = document.getElementById("mod-category");
+
+  if (modSecSelect) {
+    modSecSelect.addEventListener("change", () => {
+      updateModCategoryDropdown(modSecSelect.value);
+    });
+  }
+
+  if (modCatSelect && modCatInput) {
+    modCatSelect.addEventListener("change", () => {
+      if (modCatSelect.value === "__custom__") {
+        modCatInput.classList.remove("hidden");
+        modCatInput.value = "";
+        modCatInput.focus();
+      } else {
+        modCatInput.classList.add("hidden");
+        modCatInput.value = modCatSelect.value;
+      }
+    });
+  }
+
+  // Initialize dropdown with default selection
+  updateModCategoryDropdown(modSecSelect?.value || "recovery");
+
   // Image Upload Triggers
   setupImagePickers();
 
@@ -1533,10 +1560,27 @@ function openEditGuideModal(item) {
   if (catEl) catEl.value = item.category || "Flashing Guides";
 
   const byEl = document.getElementById("guide-by");
-  if (byEl) byEl.value = item.info?.Requires || "";
+  if (byEl) byEl.value = item.by || item.info?.Requires || "";
 
   const stepsEl = document.getElementById("guide-steps");
-  if (stepsEl) stepsEl.value = Array.isArray(item.intro) ? item.intro.join("\n") : (item.intro || "");
+  let stepsText = "";
+  if (Array.isArray(item.sections)) {
+    const lines = [];
+    item.sections.forEach((s) => {
+      if (Array.isArray(s.body)) {
+        s.body.forEach((b) => {
+          if (typeof b === "string") lines.push(b);
+          else if (b.ol && Array.isArray(b.ol)) lines.push(...b.ol);
+          else if (b.ul && Array.isArray(b.ul)) lines.push(...b.ul);
+        });
+      }
+    });
+    stepsText = lines.join("\n");
+  }
+  if (!stepsText && item.intro) {
+    stepsText = Array.isArray(item.intro) ? item.intro.join("\n") : item.intro;
+  }
+  if (stepsEl) stepsEl.value = stepsText;
 
   const cautionsEl = document.getElementById("guide-cautions");
   if (cautionsEl) cautionsEl.value = item.warning || "";
@@ -1564,8 +1608,7 @@ function openEditModuleModal(item, sec, cat) {
   const secEl = document.getElementById("mod-section");
   if (secEl) secEl.value = sec || "modules";
 
-  const catEl = document.getElementById("mod-category");
-  if (catEl) catEl.value = cat || "";
+  updateModCategoryDropdown(sec || "modules", cat || item.group || "");
 
   const byEl = document.getElementById("mod-by");
   if (byEl) byEl.value = item.by || "";
@@ -1575,6 +1618,9 @@ function openEditModuleModal(item, sec, cat) {
 
   const mirrorEl = document.getElementById("mod-mirror");
   if (mirrorEl) mirrorEl.value = item.mirrorUrl || "";
+
+  const detailsEl = document.getElementById("mod-details");
+  if (detailsEl) detailsEl.value = item.note || item.details || "";
 }
 
 // ----------------------------------------------------
@@ -1737,7 +1783,14 @@ async function handleFormSubmit(e) {
     }
 
     const submissionId = (isEdit ? "edit-" : "sub-") + Date.now();
-    const sectionTarget = editSectionInput?.value || (activeCategory === "rom" ? "roms" : activeCategory);
+    let sectionTarget = editSectionInput?.value;
+    if (!sectionTarget) {
+      if (activeCategory === "rom") sectionTarget = "roms";
+      else if (activeCategory === "module") sectionTarget = payloadData.section || "modules";
+      else if (activeCategory === "guide") sectionTarget = "guides";
+      else if (activeCategory === "news") sectionTarget = "updates";
+      else sectionTarget = activeCategory;
+    }
     const isNewsOrUpdate = (activeCategory === "news" || activeCategory === "updates" || sectionTarget === "updates");
 
     const isScreenshots = activeCategory === "screenshots";
@@ -1850,6 +1903,7 @@ function buildPayloadForCategory(cat) {
     case "guide": {
       const title = (document.getElementById("guide-title")?.value || "").trim();
       const category = document.getElementById("guide-category")?.value || "Flashing Guides";
+      const by = (document.getElementById("guide-by")?.value || "").trim() || currentUser.name;
       const stepsRaw = (document.getElementById("guide-steps")?.value || "").trim();
       const cautionsRaw = (document.getElementById("guide-cautions")?.value || "").trim();
 
@@ -1859,6 +1913,7 @@ function buildPayloadForCategory(cat) {
       return {
         title,
         category,
+        by,
         steps,
         cautions
       };
@@ -1866,6 +1921,7 @@ function buildPayloadForCategory(cat) {
     case "news": {
       const title = (document.getElementById("news-title")?.value || "").trim();
       const tag = document.getElementById("news-tag")?.value || "New ROM";
+      const by = (document.getElementById("news-by")?.value || "").trim() || currentUser.name;
       const body = (document.getElementById("news-body")?.value || "").trim();
       const url = (document.getElementById("news-url")?.value || "").trim();
       const linkLabel = (document.getElementById("news-link-label")?.value || "").trim();
@@ -1873,6 +1929,7 @@ function buildPayloadForCategory(cat) {
       return {
         title,
         tag,
+        by,
         body,
         url,
         linkLabel,
@@ -1882,10 +1939,21 @@ function buildPayloadForCategory(cat) {
     case "module": {
       const name = (document.getElementById("mod-name")?.value || "").trim();
       const section = document.getElementById("mod-section")?.value || "modules";
-      const category = (document.getElementById("mod-category")?.value || "").trim();
+      const catSelect = document.getElementById("mod-category-select");
+      const catInput = document.getElementById("mod-category");
+      let category = "";
+      if (catSelect && catSelect.value === "__custom__") {
+        category = (catInput?.value || "").trim();
+      } else if (catSelect) {
+        category = catSelect.value || (catInput?.value || "").trim();
+      } else {
+        category = (catInput?.value || "").trim();
+      }
+
       const by = (document.getElementById("mod-by")?.value || "").trim() || currentUser.name;
       const url = (document.getElementById("mod-url")?.value || "").trim();
       const mirror = (document.getElementById("mod-mirror")?.value || "").trim();
+      const details = (document.getElementById("mod-details")?.value || "").trim();
 
       return {
         name,
@@ -1893,7 +1961,8 @@ function buildPayloadForCategory(cat) {
         category,
         by,
         url,
-        mirror
+        mirror,
+        details
       };
     }
     default:
@@ -2297,13 +2366,61 @@ function compressScreenshotFile(file, maxWidth = 1080, maxHeight = 2400, quality
   });
 }
 
+const SECTION_CATEGORIES = {
+  recovery: ["Ofox Recovery", "Fenrir", "Penumbra & Debugging", "Rooted Apps toolkit"],
+  modules: ["Universal modules", "XOS/HiOS modules", "BBK modules"],
+  kernels: ["GKI kernels", "Fenrir", "Patched boot.img", "KSU Ultra .apk"]
+};
+
+function updateModCategoryDropdown(sectionVal, preselectVal = "") {
+  const selectEl = document.getElementById("mod-category-select");
+  const inputEl = document.getElementById("mod-category");
+  if (!selectEl || !inputEl) return;
+
+  const cats = SECTION_CATEGORIES[sectionVal] || SECTION_CATEGORIES.modules;
+  selectEl.innerHTML = "";
+
+  cats.forEach((cat) => {
+    const opt = document.createElement("option");
+    opt.value = cat;
+    opt.textContent = cat;
+    selectEl.appendChild(opt);
+  });
+
+  const customOpt = document.createElement("option");
+  customOpt.value = "__custom__";
+  customOpt.textContent = "+ Custom Category...";
+  selectEl.appendChild(customOpt);
+
+  if (preselectVal && cats.includes(preselectVal)) {
+    selectEl.value = preselectVal;
+    inputEl.classList.add("hidden");
+    inputEl.value = preselectVal;
+  } else if (preselectVal) {
+    selectEl.value = "__custom__";
+    inputEl.classList.remove("hidden");
+    inputEl.value = preselectVal;
+  } else {
+    selectEl.value = cats[0];
+    inputEl.classList.add("hidden");
+    inputEl.value = cats[0];
+  }
+}
+
 function setupPicker(inputId, btnId, previewId, categoryKey, maxW, maxH) {
   const fileInput = document.getElementById(inputId);
   const btn = document.getElementById(btnId);
   const preview = document.getElementById(previewId);
+  const box = fileInput ? fileInput.closest(".file-picker-box") : null;
 
-  if (btn && fileInput) btn.addEventListener("click", () => fileInput.click());
-  if (preview && fileInput) preview.addEventListener("click", () => fileInput.click());
+  if (box && fileInput) {
+    box.addEventListener("click", (e) => {
+      if (e.target !== fileInput) fileInput.click();
+    });
+  } else {
+    if (btn && fileInput) btn.addEventListener("click", () => fileInput.click());
+    if (preview && fileInput) preview.addEventListener("click", () => fileInput.click());
+  }
 
   if (fileInput) {
     fileInput.addEventListener("change", async (e) => {
@@ -2415,6 +2532,10 @@ function resetForm() {
         <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg>
         <span>Select photo from phone</span>
       </div>`;
+  }
+  const modSec = document.getElementById("mod-section");
+  if (modSec) {
+    updateModCategoryDropdown(modSec.value || "recovery");
   }
 }
 

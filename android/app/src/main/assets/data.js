@@ -23,14 +23,108 @@ window.SITE = {
     {
       title: "Latest",
       feature: {
-        name: "OxygenOS 16.0.10 V1",
-        date: "upcoming",
-        image: "assets/oxygenos16.webp",
-        width: 1200,
-        height: 675,
-        alt: "OxygenOS 16 for X6871",
-        url: "",
+        name: "XOS 16.3 Official (Android 16)",
+        date: "2026-10-19",
+        by: "Infinix Official",
+        image: "assets/xos16-banner.webp",
+        width: 1024,
+        height: 462,
+        alt: "Official XOS 16.3 Update for Infinix GT 20 Pro",
+        url: "https://android.googleapis.com/packages/ota-api/package/744f47c66b26e36501d6106360708d3e4dbd6ac1.zip",
+        guide: "flash-port-rom",
+        note: "Official Stock OTA • 8.8 GB • Security: 2026-09-05",
+        details: {
+          base: "Infinix GT 20 Pro (Global - OP Market, X6871)",
+          changelogs: [
+            "Device: Infinix GT 20 Pro (Global - OP Market)",
+            "Build title: Tcard_X6871-16.3.0.155SP20-OP008PF001AZ_a15",
+            "OS: Android 16 (Upgraded from Android 15 for enhanced security and features)",
+            "OS Version: Upgraded from XOS 15.1.2 to XOS 16.3.0 for a smarter UI and refreshed look",
+            "GlowSpace Superfluid Visual Language: Translucent glass-inspired design across lock screen, home screen, Control Center, and system controls with smooth, immersive animations",
+            "AI Search: Enhanced summary and collection search in MindHub, natural language search in Settings",
+            "AI Subtitles: Upgraded NMT architecture for faster real-time subtitle sync for video streams",
+            "Wallpapers: Live photos to live wallpapers & AI Theme Generator matching system colors and style",
+            "Launcher: App download progress visualization, auto folder suggestions, and Widget Center 1x1 One-Tap Lock Screen widget",
+            "Notifications & Control Center: Superfluid visuals, seamless status bar transitions, notification stacking and custom grouping rules, seamless expansion animations for Wi-Fi and mobile data cards",
+            "Privacy & Security: Changing credentials requires privacy password verification; unified privacy password with reset; Dual System app transfers",
+            "Communication Network: Enhanced call recording for selected contacts with optimized file naming",
+            "System Performance: Lightweight system service architecture (reduced power consumption and improved smoothness) and upgraded junk cleanup",
+            "Cloud Service: Fully upgraded cloud services with support for more data backup and sync types",
+            "Incremental: 301550057 • Security patch: 2026-09-05 • Size: 8811.2 MB",
+            "Fingerprint: Infinix/X6871-OP/Infinix-X6871:16/BP2A.250605.031.A3/301550057:user/release-keys",
+            "Build date: 2026-10-14 19:26:52 (CST)",
+          ],
+          fixed: [
+            "Optimized system stability and performance while fixing other issues",
+            "Updated Android security patch to 2026-09-05",
+          ],
+          bugs: ["None (Official Global Stock OTA)"],
+        },
+        screenshots: [
+          {
+            url: "assets/screenshots/ss-1792411593-1-1792411593715.webp",
+            caption: "Banner / System Update",
+            width: 1064,
+            height: 2400,
+          },
+          {
+            url: "assets/screenshots/ss-1792411593-2-1792411594265.webp",
+            caption: "Lockscreen",
+            width: 1064,
+            height: 2400,
+          },
+          {
+            url: "assets/screenshots/ss-1792411593-3-1792411594975.webp",
+            caption: "Statusbar & Control Center",
+            width: 1064,
+            height: 2400,
+          },
+          {
+            url: "assets/screenshots/ss-1792411593-4-1792411595797.webp",
+            caption: "DTS Sound",
+            width: 1064,
+            height: 2400,
+          },
+          {
+            url: "assets/screenshots/ss-1792411593-5-1792411596619.webp",
+            caption: "Superfluid Homescreen",
+            width: 1064,
+            height: 2400,
+          },
+        ],
       },
+      items: [
+        {
+          name: "XOS 16.3 Official",
+          date: "2026-10-19",
+          by: "TransShit",
+          image: "assets/screenshots/rom-1792416360-1792416360555.webp",
+          alt: "XOS 16.3 Official for X6871 by TransShit",
+          url: "https://android.googleapis.com/packages/ota-api/package/744f47c66b26e36501d6106360708d3e4dbd6ac1.zip",
+          details: {
+            base: "Gt 20 pro",
+            changelogs: [
+              "Update Version:",
+              "X6871-16.3.0.155SP20(OP008PF001AZ)",
+              "Android Version:",
+              "1. Upgraded from Android 15 to Android 16 for enhanced security, more features, and a better user experience",
+              "OS Version:",
+              "1. Upgraded from XOS 15.1.2 to XOS 16.3.0 for a smarter user interface and a refreshed look for your device.",
+              "Size: 8811.2 MB",
+            ],
+          },
+        },
+        {
+          name: "OxygenOS 16.0.10 V1",
+          date: "upcoming",
+          image: "assets/oxygenos16.webp",
+          width: 1200,
+          height: 675,
+          alt: "OxygenOS 16 for X6871",
+          url: "",
+          note: "Work in progress port",
+        },
+      ],
     },
     {
       title: "Port ROMs",
@@ -182,6 +276,48 @@ window.SITE = {
             ],
             bugs: ["No major bugs reported"],
           },
+          screenshots: [
+            {
+              url: "assets/screenshots/ss-1792411593-1-1792411593715.webp",
+              caption: "Banner",
+            },
+            {
+              url: "assets/screenshots/ss-1792411593-2-1792411594265.webp",
+              caption: "Lockscreen",
+            },
+            {
+              url: "assets/screenshots/ss-1792411593-3-1792411594975.webp",
+              caption: "Statusbar",
+            },
+            {
+              url: "assets/screenshots/ss-1792411593-4-1792411595797.webp",
+              caption: "DTS sound",
+            },
+            {
+              url: "assets/screenshots/ss-1792411593-5-1792411596619.webp",
+              caption: "Homescreen",
+            },
+            {
+              url: "assets/screenshots/ss-1792412127-1-1792412127382.webp",
+              caption: "Banner",
+            },
+            {
+              url: "assets/screenshots/ss-1792412127-2-1792412128124.webp",
+              caption: "Lockscreen",
+            },
+            {
+              url: "assets/screenshots/ss-1792412127-3-1792412129021.webp",
+              caption: "Statusbar",
+            },
+            {
+              url: "assets/screenshots/ss-1792412127-4-1792412129974.webp",
+              caption: "DTS sound",
+            },
+            {
+              url: "assets/screenshots/ss-1792412127-5-1792412130753.webp",
+              caption: "Homescreen",
+            },
+          ],
         },
       ],
     },
@@ -267,6 +403,12 @@ window.SITE = {
     {
       title: "Flashable firmware",
       items: [
+        {
+          name: "XOS 16.3.0 (Android 16)",
+          note: "Official Stock OTA • 8.8 GB • Security Patch: 2026-09-05",
+          guide: "flash-port-rom",
+          url: "https://android.googleapis.com/packages/ota-api/package/744f47c66b26e36501d6106360708d3e4dbd6ac1.zip",
+        },
         {
           name: "XOS 15.1.2.180",
           guide: "flash-port-rom",
@@ -515,8 +657,7 @@ window.SITE = {
         "https://github.com/zcyrl/newbiesteam-app/releases/tag/v1.2.0",
       size: "5.0 MB",
       badge: "Release",
-      summary:
-        "Background update checks, edge-to-edge layout & swipe refresh.",
+      summary: "Background update checks, edge-to-edge layout & swipe refresh.",
       changelog: [
         "Background update check for newly added ROMs and modules.",
         "Edge-to-edge immersive layout and transparent system bars.",
@@ -582,6 +723,17 @@ window.SITE = {
     },
   ],
   updates: [
+    {
+      id: "upd-xos16-official",
+      date: "2026-10-19",
+      tag: "Official Firmware",
+      by: "Infinix / NewbiesTeam",
+      title: "Official XOS 16.3 (Android 16) Released for Infinix GT 20 Pro",
+      body: "Infinix has officially released the major Android 16 and XOS 16.3.0 update (Build: X6871-16.3.0.155SP20) for the GT 20 Pro (Global - OP Market). This massive 8.8 GB release introduces the GlowSpace Superfluid UI design with translucent glass styling, enhanced MindHub AI search and real-time NMT subtitles, live wallpapers, superfluid Control Center and status bar transitions, unified privacy password, enhanced call recording, and the 2026-09-05 security patch.",
+      image: "assets/updates/upd-xos16.webp",
+      url: "https://android.googleapis.com/packages/ota-api/package/744f47c66b26e36501d6106360708d3e4dbd6ac1.zip",
+      linkLabel: "Download Stock OTA (8.8 GB)",
+    },
     {
       id: "upd-app-121",
       date: "2026-10-18",
