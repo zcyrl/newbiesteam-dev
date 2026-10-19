@@ -515,8 +515,15 @@
               </select>
             </div>
             <div class="form-group">
-              <label>Category Group</label>
-              <input type="text" id="mod-category" placeholder="e.g. Recovery, Root Tools, Audio">
+              <label>Category Group <span class="req">*</span></label>
+              <select id="mod-category-select">
+                <option value="Ofox Recovery">Ofox Recovery</option>
+                <option value="Fenrir">Fenrir</option>
+                <option value="Penumbra &amp; Debugging">Penumbra &amp; Debugging</option>
+                <option value="Rooted Apps toolkit">Rooted Apps toolkit</option>
+                <option value="__custom__">+ Custom Category...</option>
+              </select>
+              <input type="text" id="mod-category" class="hidden" placeholder="Enter custom category name..." style="margin-top: 8px;">
             </div>
           </div>
 
