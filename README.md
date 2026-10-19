@@ -2,7 +2,21 @@
 
 Internal developer portal and Android application for Softbrick and the NewbiesTeam to upload custom ROMs, screenshots, guides, modules, and changelogs directly from their phones.
 
-> **Repository**: Private GitHub repository at [`zcyrl/newbiesteam-dev`](https://github.com/zcyrl/newbiesteam-dev). Access is restricted to authorized team members.
+> **Private Repository**: [`zcyrl/newbiesteam-dev`](https://github.com/zcyrl/newbiesteam-dev)
+
+---
+
+## 📦 Direct APK Downloads
+
+Download the compiled Dev APK directly from this repository page or via the high-speed in-app CDN:
+
+| Package | Version | Size | Direct GitHub Download | In-App CDN Mirror |
+| :--- | :--- | :--- | :--- | :--- |
+| **`NewbiesDev.apk`** | Latest (`v1.1.0`) | 5.65 MB | [⬇️ Download `NewbiesDev.apk`](https://github.com/zcyrl/newbiesteam-dev/raw/main/NewbiesDev.apk) | [⚡ Surge CDN](https://newbiesteam.surge.sh/assets/dev/NewbiesDev.apk) |
+| **`NewbiesDev-v1.1.0.apk`** | `v1.1.0` (Build 2) | 5.65 MB | [⬇️ Download `NewbiesDev-v1.1.0.apk`](https://github.com/zcyrl/newbiesteam-dev/raw/main/NewbiesDev-v1.1.0.apk) | [⚡ Surge CDN](https://newbiesteam.surge.sh/assets/dev/NewbiesDev-v1.1.0.apk) |
+
+* **GitHub Release Page**: Available under [Releases `v1.1.0`](https://github.com/zcyrl/newbiesteam-dev/releases/tag/v1.1.0).
+* **In-App Delivery**: If you already have the Dev App installed, open the app, tap **Dev APK Updates**, and tap **Download & Install Dev APK** to update seamlessly without entering GitHub credentials.
 
 ---
 
