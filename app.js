@@ -458,6 +458,17 @@ async function checkPersistentSession() {
     try {
       const result = await verifyKeyOnline(saved.key);
       if (result && result.ok) {
+        // Check session version: if server incremented key_version, invalidate stale session
+        if (result.key_version && saved.key_version && result.key_version > saved.key_version) {
+          clearPersistentSession();
+          showScreen("gatekeeper");
+          const msg = "Your session was reset by Admin. Please re-enter your key to link this device.";
+          if (keyError) keyError.textContent = "ℹ️ " + msg;
+          showAlertModal("Session Reset", msg);
+          showToast(msg);
+          return;
+        }
+
         // Check single-user lock
         if (result.bound_device_id && result.bound_device_id !== currentDevId) {
           showScreen("gatekeeper");
@@ -476,6 +487,10 @@ async function checkPersistentSession() {
           photo: saved.photo || null,
           deviceId: currentDevId
         };
+        if (!saved.key_version || saved.key_version !== result.key_version) {
+          saved.key_version = result.key_version || 1;
+          savePersistentSession(saved);
+        }
 
         applyUserProfileUI();
         showScreen("dashboard");
@@ -587,6 +602,7 @@ function setupEventListeners() {
         role: result.role,
         canAutoPush: result.canAutoPush,
         deviceId: currentDevId,
+        key_version: result.key_version || 1,
         setupDone: true,
         activatedAt: new Date().toISOString()
       };
@@ -805,6 +821,7 @@ async function completeLogin(devName, avatarPhoto) {
     role: pendingKeyObj.role,
     canAutoPush: pendingKeyObj.canAutoPush,
     deviceId: currentDevId,
+    key_version: pendingKeyObj.key_version || 1,
     setupDone: true,
     activatedAt: new Date().toISOString()
   };
