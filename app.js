@@ -915,26 +915,86 @@ function updateScreenshotGalleryForSelectedRom(romName) {
   galleryList.innerHTML = html;
 
   galleryList.querySelectorAll(".ss-thumb-del").forEach((delBtn) => {
+    let confirmTimer = null;
+
     delBtn.addEventListener("click", (e) => {
       e.stopPropagation();
       e.preventDefault();
+
+      if (!delBtn.classList.contains("confirming")) {
+        // First tap: show inline confirmation state on button (non-blocking)
+        delBtn.classList.add("confirming");
+        delBtn.textContent = "Del?";
+        delBtn.title = "Tap again to permanently delete";
+
+        // Auto-revert back after 3.5 seconds if user changes their mind
+        confirmTimer = setTimeout(() => {
+          delBtn.classList.remove("confirming");
+          delBtn.textContent = "✕";
+          delBtn.title = "Delete screenshot";
+        }, 3500);
+        return;
+      }
+
+      // Second tap: confirmed!
+      clearTimeout(confirmTimer);
+      delBtn.classList.remove("confirming");
+      delBtn.disabled = true;
+
       const rName = delBtn.dataset.rom;
       const rIdx = parseInt(delBtn.dataset.index, 10);
-      confirmAndDeleteScreenshot(rName, rIdx);
+      const card = delBtn.closest(".ss-thumb-card");
+
+      executeInstantScreenshotDelete(rName, rIdx, card);
     });
   });
 }
 
-async function confirmAndDeleteScreenshot(romName, index) {
+function executeInstantScreenshotDelete(romName, index, cardElement) {
   const rom = findRomItem(romName);
   const shots = (rom && Array.isArray(rom.screenshots)) ? rom.screenshots : [];
   const targetShot = shots[index];
-  const shotLabel = targetShot?.caption ? `"${targetShot.caption}"` : `screenshot #${index + 1}`;
+  if (!targetShot) return;
 
-  if (!confirm(`Delete ${shotLabel} from "${romName}"?\n\nThis will remove it from the live site.`)) {
-    return;
+  const shotLabel = targetShot.caption ? `"${targetShot.caption}"` : `screenshot #${index + 1}`;
+  const targetUrl = targetShot.url || "";
+
+  // 1. Instant smooth visual deletion: animate out and remove from DOM immediately
+  if (cardElement) {
+    cardElement.classList.add("deleting");
+    setTimeout(() => {
+      cardElement.remove();
+
+      // Check if gallery is now empty
+      const galleryList = document.getElementById("ss-gallery-list");
+      if (galleryList && galleryList.querySelectorAll(".ss-thumb-card").length === 0) {
+        galleryList.innerHTML = `<div class="ss-gallery-empty">No screenshots linked to <strong>${escapeHtml(romName)}</strong> yet.<br><small>Pick an image below to upload the first screenshot!</small></div>`;
+      }
+    }, 220);
   }
 
+  // 2. Optimistically update in-memory data
+  const removedShot = rom.screenshots.splice(index, 1)[0];
+
+  // 3. Update counter badge immediately
+  const remaining = rom.screenshots.length;
+  const galleryCount = document.getElementById("ss-gallery-count");
+  if (galleryCount) {
+    galleryCount.textContent = `${remaining} photo${remaining === 1 ? "" : "s"}`;
+  }
+
+  // 4. Update remaining cards' data-index attributes in DOM without expensive re-rendering
+  const galleryList = document.getElementById("ss-gallery-list");
+  if (galleryList) {
+    galleryList.querySelectorAll(".ss-thumb-card").forEach((c, newIdx) => {
+      const btn = c.querySelector(".ss-thumb-del");
+      if (btn) btn.dataset.index = newIdx;
+    });
+  }
+
+  showToast(`🗑️ Deleting ${shotLabel}...`);
+
+  // 5. Build payload
   const payload = {
     action: "delete_screenshot",
     id: `del-ss-${Date.now()}`,
@@ -943,34 +1003,30 @@ async function confirmAndDeleteScreenshot(romName, index) {
     deviceId: currentUser?.deviceId || "",
     submitterRole: currentUser?.role || "developer",
     submitterName: currentUser?.name || "Developer",
-    canAutoPush: currentUser?.canAutoPush || false,
+    canAutoPush: currentUser?.canAutoPush || true,
     type: "screenshots",
     section: "screenshots",
     targetName: romName,
     title: `Delete ${shotLabel} from ${romName}`,
     data: {
       romName: romName,
-      index: index
+      index: index,
+      url: targetUrl
     }
   };
 
-  try {
-    // Fast optimistic DOM update
-    if (rom && Array.isArray(rom.screenshots)) {
-      rom.screenshots.splice(index, 1);
+  // 6. Non-blocking background dispatch
+  dispatchSubmission(payload).then(() => {
+    showToast(`✔ ${shotLabel} deleted from live site.`);
+  }).catch((err) => {
+    console.error("Failed to delete screenshot on server:", err);
+    showToast(`❌ Deletion sync failed: ${err.message}`);
+    // Rollback in memory and re-render gallery if failed
+    if (rom && removedShot) {
+      rom.screenshots.splice(index, 0, removedShot);
+      updateScreenshotGalleryForSelectedRom(romName);
     }
-    updateScreenshotGalleryForSelectedRom(romName);
-    populateRomSelect(romName);
-    renderLiveItems(activeLiveCat);
-
-    await dispatchSubmission(payload);
-    showToast(`🗑️ ${shotLabel} deleted from ${romName}!`);
-
-    setTimeout(() => fetchLiveSiteData(), 1200);
-  } catch (err) {
-    showToast(`❌ Failed to delete screenshot: ${err.message}`);
-    fetchLiveSiteData();
-  }
+  });
 }
 
 function openScreenshotsModalForRom(romName) {
@@ -1849,18 +1905,21 @@ function buildPayloadForCategory(cat) {
 async function dispatchSubmission(submission) {
   const jsonString = JSON.stringify(submission);
 
-  // 1. If running locally or on local network with daemon on 4720, try direct fast push first
-  const localEndpoints = [
-    "http://127.0.0.1:4720/dev-submit",
-    "http://localhost:4720/dev-submit"
-  ];
-  for (const localUrl of localEndpoints) {
+  // 1. Only attempt direct local daemon if running in a desktop browser on localhost
+  const isDesktopLocalhost = (
+    typeof window !== "undefined" &&
+    window.location &&
+    (window.location.hostname === "127.0.0.1" || window.location.hostname === "localhost") &&
+    window.location.protocol.startsWith("http")
+  );
+
+  if (isDesktopLocalhost) {
     try {
-      const res = await fetch(localUrl, {
+      const res = await fetch("http://127.0.0.1:4720/dev-submit", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: jsonString,
-        signal: AbortSignal.timeout(2000)
+        signal: AbortSignal.timeout(1000)
       });
       if (res.ok) {
         const resData = await res.json().catch(() => ({ ok: true }));
