@@ -1759,26 +1759,49 @@ textarea {
   position: absolute;
   top: 4px;
   right: 4px;
-  width: 24px;
+  min-width: 24px;
   height: 24px;
-  border-radius: 50%;
-  background: rgba(220, 38, 38, 0.9);
+  padding: 0 4px;
+  border-radius: 12px;
+  background: rgba(220, 38, 38, 0.92);
   color: #fff;
-  border: 1px solid rgba(255, 255, 255, 0.3);
+  border: 1px solid rgba(255, 255, 255, 0.35);
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 12px;
+  font-size: 11px;
   font-weight: bold;
   cursor: pointer;
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
-  transition: transform 0.12s ease;
+  transition: all 0.15s ease;
   z-index: 2;
+  user-select: none;
 }
 
 .ss-thumb-del:active {
-  transform: scale(0.85);
+  transform: scale(0.9);
   background: #b91c1c;
+}
+
+.ss-thumb-del.confirming {
+  background: #dc2626 !important;
+  border-color: #fca5a5 !important;
+  font-size: 10px !important;
+  padding: 0 8px !important;
+  box-shadow: 0 0 10px rgba(220, 38, 38, 0.7);
+  animation: pulse-del 0.8s infinite alternate ease-in-out;
+}
+
+@keyframes pulse-del {
+  from { transform: scale(1); }
+  to { transform: scale(1.08); }
+}
+
+.ss-thumb-card.deleting {
+  transform: scale(0.7) !important;
+  opacity: 0 !important;
+  pointer-events: none;
+  transition: all 0.22s cubic-bezier(0.4, 0, 0.2, 1) !important;
 }
 
 .ss-upload-box {
