@@ -28,38 +28,38 @@ const CONFIG = {
     "NBT-DEV1-ZPYYluKXiW1kZxsoOWiFx3I": {
       role: "team",
       name: "Team Member 1",
-      canAutoPush: false,
+      canAutoPush: true,
       status: "active",
       revoked: false,
       bound_device_id: null,
       bound_user_name: null,
       bound_photo: null,
       headline: "Team Member 1 Active",
-      description: "Updates & News post immediately. ROMs, Guides, and Screenshots are sent to the terminal tool for confirmation."
+      description: "Full access enabled. Any ROM, guide, screenshot, or news you upload or edit is auto-pushed live immediately."
     },
     "NBT-DEV2-p1CXkO2WfRLCROYFivPN5UH": {
       role: "team",
       name: "Team Member 2",
-      canAutoPush: false,
+      canAutoPush: true,
       status: "active",
       revoked: false,
       bound_device_id: null,
       bound_user_name: null,
       bound_photo: null,
       headline: "Team Member 2 Active",
-      description: "Updates & News post immediately. ROMs, Guides, and Screenshots are sent to the terminal tool for confirmation."
+      description: "Full access enabled. Any ROM, guide, screenshot, or news you upload or edit is auto-pushed live immediately."
     },
     "NBT-DEV3-nbqMbAwxXaHuObtNzPr2d6B": {
       role: "team",
       name: "Team Member 3",
-      canAutoPush: false,
+      canAutoPush: true,
       status: "active",
       revoked: false,
       bound_device_id: null,
       bound_user_name: null,
       bound_photo: null,
       headline: "Team Member 3 Active",
-      description: "Updates & News post immediately. ROMs, Guides, and Screenshots are sent to the terminal tool for confirmation."
+      description: "Full access enabled. Any ROM, guide, screenshot, or news you upload or edit is auto-pushed live immediately."
     },
     "NBT-DEV4-ptRLMWQkMiQSQrouMT9ZB06": {
       role: "team",
