@@ -8,6 +8,7 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
+import android.graphics.Bitmap
 import android.graphics.Color
 import android.net.Uri
 import android.os.Build
@@ -208,6 +209,7 @@ class MainActivity : AppCompatActivity() {
         settings.useWideViewPort = true
         settings.loadWithOverviewMode = true
         settings.cacheMode = WebSettings.LOAD_DEFAULT
+        settings.userAgentString = "${settings.userAgentString} NewbiesDevAndroid/${BuildConfig.VERSION_NAME} (Build ${BuildConfig.VERSION_CODE})"
 
         webView.addJavascriptInterface(AndroidBridge(this), "AndroidBridge")
 
@@ -280,8 +282,14 @@ class MainActivity : AppCompatActivity() {
         }
 
         webView.webViewClient = object : WebViewClient() {
+            override fun onPageStarted(view: WebView?, url: String?, favicon: Bitmap?) {
+                super.onPageStarted(view, url, favicon)
+                injectNativeBridgeState(view)
+            }
+
             override fun onPageFinished(view: WebView?, url: String?) {
                 super.onPageFinished(view, url)
+                injectNativeBridgeState(view)
                 swipeRefresh.isRefreshing = false
             }
 
@@ -346,6 +354,26 @@ class MainActivity : AppCompatActivity() {
         })
     }
 
+    private fun injectNativeBridgeState(view: WebView?) {
+        val script = """
+            (function() {
+                try {
+                    window.__NBT_APP_VERSION__ = "${BuildConfig.VERSION_NAME}";
+                    window.__NBT_BUILD_CODE__ = "${BuildConfig.VERSION_CODE}";
+                    window.__NBT_IS_APP__ = true;
+                    if (window.dispatchEvent) {
+                        window.dispatchEvent(new CustomEvent("nbt:app-ready", {
+                            detail: { version: "${BuildConfig.VERSION_NAME}", build: "${BuildConfig.VERSION_CODE}" }
+                        }));
+                    }
+                } catch (e) {
+                    console.error("NBT dev bridge error:", e);
+                }
+            })();
+        """.trimIndent()
+        view?.evaluateJavascript(script, null)
+    }
+
     override fun onDestroy() {
         super.onDestroy()
         if (onDownloadCompleteReceiver != null) {
@@ -394,6 +422,18 @@ class MainActivity : AppCompatActivity() {
         }
 
         @android.webkit.JavascriptInterface
+        fun getAppVersion(): String = BuildConfig.VERSION_NAME
+
+        @android.webkit.JavascriptInterface
+        fun getAppVersionCode(): Long = BuildConfig.VERSION_CODE.toLong()
+
+        @android.webkit.JavascriptInterface
+        fun isAndroidApp(): Boolean = true
+
+        @android.webkit.JavascriptInterface
+        fun getAppInfo(): String = """{"appName":"NewbiesDev","versionName":"${BuildConfig.VERSION_NAME}","versionCode":${BuildConfig.VERSION_CODE},"isNativeApp":true}"""
+
+        @android.webkit.JavascriptInterface
         fun showToast(msg: String) {
             activity.runOnUiThread {
                 Toast.makeText(activity, msg, Toast.LENGTH_SHORT).show()
@@ -406,16 +446,6 @@ class MainActivity : AppCompatActivity() {
                 (activity as? MainActivity)?.downloadApk(url, fileName)
             }
             return true
-        }
-
-        @android.webkit.JavascriptInterface
-        fun getAppVersion(): String {
-            return "1.2.0"
-        }
-
-        @android.webkit.JavascriptInterface
-        fun getAppVersionCode(): Int {
-            return 3
         }
     }
 }
