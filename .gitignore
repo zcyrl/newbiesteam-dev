@@ -1,0 +1,10 @@
+# Gradle and Android build artifacts
+.gradle/
+build/
+**/build/
+**/.gradle/
+**/local.properties
+*.iml
+.idea/
+.DS_Store
+*.apk
