@@ -70,6 +70,8 @@ class MainActivity : AppCompatActivity() {
         swipeRefresh = findViewById(R.id.swipeRefresh)
         webView = findViewById(R.id.webView)
 
+        checkVersionAndWipeSessionOnUpdate()
+
         setupDownloadReceiver()
         setupWebView()
         setupSwipeRefresh()
@@ -77,6 +79,26 @@ class MainActivity : AppCompatActivity() {
 
         // Load offline embedded assets
         webView.loadUrl("file:///android_asset/index.html")
+    }
+
+    private fun checkVersionAndWipeSessionOnUpdate() {
+        try {
+            val prefs = getSharedPreferences("newbies_dev_prefs", Context.MODE_PRIVATE)
+            val savedVersionCode = prefs.getInt("saved_app_version_code", -1)
+            val currentVersionCode = BuildConfig.VERSION_CODE
+
+            if (savedVersionCode != -1 && savedVersionCode != currentVersionCode) {
+                // App was updated to a new version!
+                // Wipe saved developer session and clear WebStorage so key is re-requested once
+                prefs.edit()
+                    .remove("saved_dev_state")
+                    .putInt("saved_app_version_code", currentVersionCode)
+                    .commit()
+                android.webkit.WebStorage.getInstance().deleteAllData()
+            } else if (savedVersionCode == -1) {
+                prefs.edit().putInt("saved_app_version_code", currentVersionCode).commit()
+            }
+        } catch (_: Exception) {}
     }
 
     private fun setupEdgeToEdge() {
@@ -390,7 +412,10 @@ class MainActivity : AppCompatActivity() {
 
         @android.webkit.JavascriptInterface
         fun saveDevState(json: String): Boolean {
-            return prefs.edit().putString("saved_dev_state", json).commit()
+            return prefs.edit()
+                .putString("saved_dev_state", json)
+                .putInt("saved_app_version_code", BuildConfig.VERSION_CODE)
+                .commit()
         }
 
         @android.webkit.JavascriptInterface
