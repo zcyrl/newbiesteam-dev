@@ -1227,20 +1227,20 @@ function renderLiveItems(cat) {
     }
   } else if (cat === "dev-apks") {
     const devRelease = {
-      version: "v1.2.0",
-      code: 3,
+      version: "v1.2.3",
+      code: 5,
       date: "October 19, 2026",
       size: "5.7 MB",
-      channel: "Developer Channel",
-      apkUrl: "https://newbiesteam.surge.sh/assets/dev/NewbiesDev-v1.2.0.apk",
-      fallbackUrl: "https://newbiesbase.surge.sh/assets/dev/NewbiesDev-v1.2.0.apk",
-      fileName: "NewbiesDev-v1.2.0.apk",
+      channel: "Official Release Channel",
+      apkUrl: "https://newbiesteam.surge.sh/assets/NewbiesDev.apk",
+      fallbackUrl: "https://newbiesbase.surge.sh/assets/NewbiesDev.apk",
+      fileName: "NewbiesDev-v1.2.3.apk",
       changelogs: [
-        "Fixed upload hang / loading loop with fast 8-second failover and direct local daemon bypass",
-        "Multi-screenshot batch uploader: upload up to 10 screenshots per push with separated descriptions",
-        "Switched primary cloud relay to high-availability ntfy.envs.net with automatic multi-MB attachment pipeline",
-        "High-performance WebP compression algorithm keeping multi-image mobile uploads under 600 KB total",
-        "Full sync with official Newbies v1.2.2 public releases and brand adaptive icons"
+        "Permanent V2+V3 release signing with clean upgrade compatibility across all future updates",
+        "Sub-16ms instant optimistic screenshot deletion with automatic server rollback",
+        "Deterministic romId selector for screenshots and targeted DOM updates",
+        "Client-side high-performance WebP compression for batch screenshot uploads",
+        "Eliminated DebugProbesKt.bin and unnecessary permissions for zero Play Protect blocks"
       ]
     };
 
