@@ -22,15 +22,50 @@ window.SITE = {
   roms: [
     {
       title: "Latest",
-      feature: {
-        name: "OxygenOS 16.0.10 V1",
-        date: "upcoming",
-        image: "assets/oxygenos16.webp",
-        width: 1200,
-        height: 675,
-        alt: "OxygenOS 16 for X6871",
-        url: "",
-      },
+      items: [
+        {
+          name: "XOS 16.3 Official",
+          date: "2026-10-19",
+          by: "TransShit",
+          image: "assets/screenshots/rom-1792416360-1792416360555.webp",
+          alt: "XOS 16.3 Official for X6871 by TransShit",
+          url: "https://android.googleapis.com/packages/ota-api/package/744f47c66b26e36501d6106360708d3e4dbd6ac1.zip",
+          details: {
+            base: "Gt 20 pro",
+            changelogs: [
+              "Update Version:",
+              "X6871-16.3.0.155SP20(OP008PF001AZ)",
+              "Android Version:",
+              "1. Upgraded from Android 15 to Android 16 for enhanced security, more features, and a better user experience",
+              "OS Version:",
+              "1. Upgraded from XOS 15.1.2 to XOS 16.3.0 for a smarter user interface and a refreshed look for your device.",
+              "Size: 8811.2 MB",
+            ],
+          },
+          screenshots: [
+            {
+              url: "assets/screenshots/ss-1792419929-1-1792419929312.webp",
+              caption: "Banner",
+            },
+            {
+              url: "assets/screenshots/ss-1792419929-2-1792419929500.webp",
+              caption: "Homescreen",
+            },
+          ],
+          romId: "rom_xos_16_3_official_41bc",
+        },
+        {
+          name: "OxygenOS 16.0.10 V1",
+          date: "upcoming",
+          image: "assets/oxygenos16.webp",
+          width: 1200,
+          height: 675,
+          alt: "OxygenOS 16 for X6871",
+          url: "",
+          note: "Work in progress port",
+          romId: "rom_oxygenos_16_0_10_v_7960",
+        },
+      ],
     },
     {
       title: "Port ROMs",
@@ -107,6 +142,7 @@ window.SITE = {
               height: 1280,
             },
           ],
+          romId: "rom_hios_16_3_3bdc",
         },
         {
           name: "HyperOS 3 V2",
@@ -154,6 +190,7 @@ window.SITE = {
               caption: "Homescreen",
             },
           ],
+          romId: "rom_hyperos_3_v2_2de2",
         },
         {
           name: "XOS 16 V2",
@@ -182,6 +219,49 @@ window.SITE = {
             ],
             bugs: ["No major bugs reported"],
           },
+          screenshots: [
+            {
+              url: "assets/screenshots/ss-1792411593-1-1792411593715.webp",
+              caption: "Banner",
+            },
+            {
+              url: "assets/screenshots/ss-1792411593-2-1792411594265.webp",
+              caption: "Lockscreen",
+            },
+            {
+              url: "assets/screenshots/ss-1792411593-3-1792411594975.webp",
+              caption: "Statusbar",
+            },
+            {
+              url: "assets/screenshots/ss-1792411593-4-1792411595797.webp",
+              caption: "DTS sound",
+            },
+            {
+              url: "assets/screenshots/ss-1792411593-5-1792411596619.webp",
+              caption: "Homescreen",
+            },
+            {
+              url: "assets/screenshots/ss-1792412127-1-1792412127382.webp",
+              caption: "Banner",
+            },
+            {
+              url: "assets/screenshots/ss-1792412127-2-1792412128124.webp",
+              caption: "Lockscreen",
+            },
+            {
+              url: "assets/screenshots/ss-1792412127-3-1792412129021.webp",
+              caption: "Statusbar",
+            },
+            {
+              url: "assets/screenshots/ss-1792412127-4-1792412129974.webp",
+              caption: "DTS sound",
+            },
+            {
+              url: "assets/screenshots/ss-1792412127-5-1792412130753.webp",
+              caption: "Homescreen",
+            },
+          ],
+          romId: "rom_xos_16_v2_8610",
         },
       ],
     },
@@ -209,6 +289,7 @@ window.SITE = {
               "Do not replace stock kernel (below v248) or Wi-Fi Hotspot will break",
             ],
           },
+          romId: "rom_pixelos_a16_ea74",
         },
         {
           name: "Axion-V2.4",
@@ -238,6 +319,7 @@ window.SITE = {
               "Do not replace stock kernel (below v248) or Wi-Fi Hotspot will break",
             ],
           },
+          romId: "rom_axion_v2_4_316b",
         },
         {
           name: "InfinityX-V3.7",
@@ -261,6 +343,7 @@ window.SITE = {
               "Do not replace stock kernel (below v248) or Wi-Fi Hotspot will break",
             ],
           },
+          romId: "rom_infinityx_v3_7_a442",
         },
       ],
     },
@@ -268,25 +351,36 @@ window.SITE = {
       title: "Flashable firmware",
       items: [
         {
+          name: "XOS 16.3.0 (Android 16)",
+          note: "Official Stock OTA • 8.8 GB • Security Patch: 2026-09-05",
+          guide: "flash-port-rom",
+          url: "https://android.googleapis.com/packages/ota-api/package/744f47c66b26e36501d6106360708d3e4dbd6ac1.zip",
+          romId: "rom_xos_16_3_0_android_20ae",
+        },
+        {
           name: "XOS 15.1.2.180",
           guide: "flash-port-rom",
           url: "https://sourceforge.net/projects/rama982/files/FLASHABLE/X6871-15.1.2.180SP05-OP001PF001AZ-recovery-ab.zip",
+          romId: "rom_xos_15_1_2_180_f895",
         },
         {
           name: "XOS 15.1.2.165",
           guide: "flash-port-rom",
           url: "https://sourceforge.net/projects/rama982/files/FLASHABLE/X6871-15.1.2.165SP05%28OP001PF001AZ%29-recovery-ab.zip/download",
+          romId: "rom_xos_15_1_2_165_3534",
         },
         {
           name: "XOS 15.0.3",
           note: "Used for downgrading",
           guide: "downgrade-xos",
           url: "https://android.googleapis.com/packages/ota-api/package/3746a289a46815c7cd869c3b0d3f10b04dd40be5.zip",
+          romId: "rom_xos_15_0_3_eaf0",
         },
         {
           name: "XOS 14",
           guide: "flash-port-rom",
           url: "https://sourceforge.net/projects/rama982/files/FLASHABLE/X6871-H962CF-U-OP-250217V2673-recovery-ab.zip/download",
+          romId: "rom_xos_14_4fa6",
         },
       ],
     },
@@ -297,6 +391,7 @@ window.SITE = {
           name: "XOS 15.1.2.165",
           guide: "flash-port-rom",
           url: "https://drive.google.com/file/d/1Y4N5pD61gTSJ9g4YZRPmvHjP1zdKacWi/view?usp=drivesdk",
+          romId: "rom_xos_15_1_2_165_3534",
         },
       ],
     },
@@ -307,11 +402,13 @@ window.SITE = {
           name: "Boot.img 15.1.2.180",
           guide: "patched-and-gki-kernels",
           url: "https://drive.google.com/file/d/1G3OScojgJh14RPlUPWTO50RI-hADRaoq/view?usp=drive_link",
+          romId: "rom_boot_img_15_1_2_18_9062",
         },
         {
           name: "Boot.img 15.1.2.165",
           guide: "patched-and-gki-kernels",
           url: "https://drive.google.com/file/d/1oaj5JJ4QhfEU7SICymqS2Rxzn_Oii8zq/view?usp=drive_link",
+          romId: "rom_boot_img_15_1_2_16_53c3",
         },
       ],
     },
@@ -515,8 +612,7 @@ window.SITE = {
         "https://github.com/zcyrl/newbiesteam-app/releases/tag/v1.2.0",
       size: "5.0 MB",
       badge: "Release",
-      summary:
-        "Background update checks, edge-to-edge layout & swipe refresh.",
+      summary: "Background update checks, edge-to-edge layout & swipe refresh.",
       changelog: [
         "Background update check for newly added ROMs and modules.",
         "Edge-to-edge immersive layout and transparent system bars.",
@@ -582,6 +678,17 @@ window.SITE = {
     },
   ],
   updates: [
+    {
+      id: "upd-xos16-official",
+      date: "2026-10-19",
+      tag: "Official Firmware",
+      by: "Infinix / NewbiesTeam",
+      title: "Official XOS 16.3 (Android 16) Released for Infinix GT 20 Pro",
+      body: "Infinix has officially released the major Android 16 and XOS 16.3.0 update (Build: X6871-16.3.0.155SP20) for the GT 20 Pro (Global - OP Market). This massive 8.8 GB release introduces the GlowSpace Superfluid UI design with translucent glass styling, enhanced MindHub AI search and real-time NMT subtitles, live wallpapers, superfluid Control Center and status bar transitions, unified privacy password, enhanced call recording, and the 2026-09-05 security patch.",
+      image: "assets/updates/upd-xos16.webp",
+      url: "https://android.googleapis.com/packages/ota-api/package/744f47c66b26e36501d6106360708d3e4dbd6ac1.zip",
+      linkLabel: "Download Stock OTA (8.8 GB)",
+    },
     {
       id: "upd-app-121",
       date: "2026-10-18",

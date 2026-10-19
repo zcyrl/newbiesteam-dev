@@ -27,39 +27,39 @@ const CONFIG = {
     },
     "NBT-DEV1-ZPYYluKXiW1kZxsoOWiFx3I": {
       role: "team",
-      name: "Team Member 1",
+      name: "MBuTT3178",
       canAutoPush: true,
       status: "active",
       revoked: false,
       bound_device_id: null,
       bound_user_name: null,
       bound_photo: null,
-      headline: "Team Member 1 Active",
-      description: "Full access enabled. Any ROM, guide, screenshot, or news you upload or edit is auto-pushed live immediately."
+      headline: "MBuTT3178 (Developer)",
+      description: "Team developer access enabled. Upload or edit ROMs, guides, screenshots, and news directly to live site."
     },
     "NBT-DEV2-p1CXkO2WfRLCROYFivPN5UH": {
       role: "team",
-      name: "Team Member 2",
+      name: "Mehraann",
       canAutoPush: true,
       status: "active",
       revoked: false,
       bound_device_id: null,
       bound_user_name: null,
       bound_photo: null,
-      headline: "Team Member 2 Active",
-      description: "Full access enabled. Any ROM, guide, screenshot, or news you upload or edit is auto-pushed live immediately."
+      headline: "Mehraann (Developer)",
+      description: "Team developer access enabled. Upload or edit ROMs, guides, screenshots, and news directly to live site."
     },
     "NBT-DEV3-nbqMbAwxXaHuObtNzPr2d6B": {
       role: "team",
-      name: "Team Member 3",
+      name: "fjrXTR",
       canAutoPush: true,
       status: "active",
       revoked: false,
       bound_device_id: null,
       bound_user_name: null,
       bound_photo: null,
-      headline: "Team Member 3 Active",
-      description: "Full access enabled. Any ROM, guide, screenshot, or news you upload or edit is auto-pushed live immediately."
+      headline: "fjrXTR (Developer)",
+      description: "Team developer access enabled. Upload or edit ROMs, guides, screenshots, and news directly to live site."
     },
     "NBT-DEV4-ptRLMWQkMiQSQrouMT9ZB06": {
       role: "team",
@@ -886,8 +886,9 @@ function populateRomSelect(selectedRomName) {
       html += `<optgroup label="${escapeHtml(group.title || "ROMs")}">`;
       list.forEach((r) => {
         const scCount = Array.isArray(r.screenshots) ? r.screenshots.length : 0;
-        const isSel = (currentVal === r.name) ? "selected" : "";
-        html += `<option value="${escapeHtml(r.name)}" ${isSel}>${escapeHtml(r.name)} (${scCount} 📸)</option>`;
+        const isSel = (currentVal === r.name || (r.romId && currentVal === r.romId)) ? "selected" : "";
+        const idLabel = r.romId ? ` [${r.romId}]` : "";
+        html += `<option value="${escapeHtml(r.name)}" data-rom-id="${escapeHtml(r.romId || '')}" ${isSel}>${escapeHtml(r.name)}${idLabel} (${scCount} 📸)</option>`;
       });
       html += `</optgroup>`;
     }
@@ -934,7 +935,7 @@ function updateScreenshotGalleryForSelectedRom(romName) {
     html += `
       <div class="ss-thumb-card" title="${escapeHtml(caption)}">
         <button type="button" class="ss-thumb-del" title="Delete screenshot" data-rom="${escapeHtml(romName)}" data-index="${idx}">✕</button>
-        <img src="${imgUrl}" alt="${escapeHtml(caption)}" class="ss-thumb-img" loading="lazy" onerror="this.onerror=null; this.src='data:image/svg+xml;utf8,<svg xmlns=\\\'http://www.w3.org/2000/svg\\\' width=\\\'88\\\' height=\\\'120\\\' viewBox=\\\'0 0 88 120\\\'><rect fill=\\\'%23222\\\' width=\\\'88\\\' height=\\\'120\\\'/><text fill=\\\'%23777\\\' x=\\\'44\\\' y=\\\'60\\\' text-anchor=\\\'middle\\\' font-size=\\\'10\\\'>No Preview</text></svg>';">
+        <img src="${imgUrl}" alt="${escapeHtml(caption)}" class="ss-thumb-img" loading="lazy" decoding="async" onerror="this.onerror=null; this.src='data:image/svg+xml;utf8,<svg xmlns=\\\'http://www.w3.org/2000/svg\\\' width=\\\'88\\\' height=\\\'120\\\' viewBox=\\\'0 0 88 120\\\'><rect fill=\\\'%23222\\\' width=\\\'88\\\' height=\\\'120\\\'/><text fill=\\\'%23777\\\' x=\\\'44\\\' y=\\\'60\\\' text-anchor=\\\'middle\\\' font-size=\\\'10\\\'>No Preview</text></svg>';">
         <div class="ss-thumb-caption">${escapeHtml(caption)}</div>
       </div>
     `;
@@ -942,37 +943,19 @@ function updateScreenshotGalleryForSelectedRom(romName) {
   galleryList.innerHTML = html;
 
   galleryList.querySelectorAll(".ss-thumb-del").forEach((delBtn) => {
-    let confirmTimer = null;
-
     delBtn.addEventListener("click", (e) => {
       e.stopPropagation();
       e.preventDefault();
-
-      if (!delBtn.classList.contains("confirming")) {
-        // First tap: show inline confirmation state on button (non-blocking)
-        delBtn.classList.add("confirming");
-        delBtn.textContent = "Del?";
-        delBtn.title = "Tap again to permanently delete";
-
-        // Auto-revert back after 3.5 seconds if user changes their mind
-        confirmTimer = setTimeout(() => {
-          delBtn.classList.remove("confirming");
-          delBtn.textContent = "✕";
-          delBtn.title = "Delete screenshot";
-        }, 3500);
-        return;
-      }
-
-      // Second tap: confirmed!
-      clearTimeout(confirmTimer);
-      delBtn.classList.remove("confirming");
       delBtn.disabled = true;
 
       const rName = delBtn.dataset.rom;
       const rIdx = parseInt(delBtn.dataset.index, 10);
       const card = delBtn.closest(".ss-thumb-card");
 
-      executeInstantScreenshotDelete(rName, rIdx, card);
+      // Optimistic instant delete via requestAnimationFrame (<16ms, zero freeze!)
+      requestAnimationFrame(() => {
+        executeInstantScreenshotDelete(rName, rIdx, card);
+      });
     });
   });
 }
@@ -986,18 +969,17 @@ function executeInstantScreenshotDelete(romName, index, cardElement) {
   const shotLabel = targetShot.caption ? `"${targetShot.caption}"` : `screenshot #${index + 1}`;
   const targetUrl = targetShot.url || "";
 
-  // 1. Instant smooth visual deletion: animate out and remove from DOM immediately
+  // 1. Instant optimistic DOM removal (<16ms, zero UI freeze)
+  const parentGallery = cardElement ? cardElement.parentElement : null;
+  const nextSibling = cardElement ? cardElement.nextSibling : null;
   if (cardElement) {
-    cardElement.classList.add("deleting");
-    setTimeout(() => {
-      cardElement.remove();
+    cardElement.remove();
+  }
 
-      // Check if gallery is now empty
-      const galleryList = document.getElementById("ss-gallery-list");
-      if (galleryList && galleryList.querySelectorAll(".ss-thumb-card").length === 0) {
-        galleryList.innerHTML = `<div class="ss-gallery-empty">No screenshots linked to <strong>${escapeHtml(romName)}</strong> yet.<br><small>Pick an image below to upload the first screenshot!</small></div>`;
-      }
-    }, 220);
+  // Check if gallery is now empty
+  const galleryList = document.getElementById("ss-gallery-list");
+  if (galleryList && galleryList.querySelectorAll(".ss-thumb-card").length === 0) {
+    galleryList.innerHTML = `<div class="ss-gallery-empty">No screenshots linked to <strong>${escapeHtml(romName)}</strong> yet.<br><small>Pick an image below to upload the first screenshot!</small></div>`;
   }
 
   // 2. Optimistically update in-memory data
@@ -1010,8 +992,7 @@ function executeInstantScreenshotDelete(romName, index, cardElement) {
     galleryCount.textContent = `${remaining} photo${remaining === 1 ? "" : "s"}`;
   }
 
-  // 4. Update remaining cards' data-index attributes in DOM without expensive re-rendering
-  const galleryList = document.getElementById("ss-gallery-list");
+  // 4. Update remaining cards' data-index attributes in DOM without full-tree re-rendering
   if (galleryList) {
     galleryList.querySelectorAll(".ss-thumb-card").forEach((c, newIdx) => {
       const btn = c.querySelector(".ss-thumb-del");
@@ -1030,13 +1011,15 @@ function executeInstantScreenshotDelete(romName, index, cardElement) {
     deviceId: currentUser?.deviceId || "",
     submitterRole: currentUser?.role || "developer",
     submitterName: currentUser?.name || "Developer",
-    canAutoPush: currentUser?.canAutoPush || true,
+    canAutoPush: true,
     type: "screenshots",
     section: "screenshots",
     targetName: romName,
+    romId: rom.romId || "",
     title: `Delete ${shotLabel} from ${romName}`,
     data: {
       romName: romName,
+      romId: rom.romId || "",
       index: index,
       url: targetUrl
     }
@@ -1047,11 +1030,19 @@ function executeInstantScreenshotDelete(romName, index, cardElement) {
     showToast(`✔ ${shotLabel} deleted from live site.`);
   }).catch((err) => {
     console.error("Failed to delete screenshot on server:", err);
-    showToast(`❌ Deletion sync failed: ${err.message}`);
-    // Rollback in memory and re-render gallery if failed
+    showToast(`❌ Deletion failed: ${err.message}. Restoring...`);
+    // Rollback in memory and re-insert the card element
     if (rom && removedShot) {
       rom.screenshots.splice(index, 0, removedShot);
-      updateScreenshotGalleryForSelectedRom(romName);
+      if (cardElement && parentGallery) {
+        if (nextSibling && nextSibling.parentNode === parentGallery) {
+          parentGallery.insertBefore(cardElement, nextSibling);
+        } else {
+          parentGallery.appendChild(cardElement);
+        }
+      } else {
+        updateScreenshotGalleryForSelectedRom(romName);
+      }
     }
   });
 }
@@ -1417,11 +1408,11 @@ function attachLiveActionListeners() {
 
 function findRomItem(name, cat) {
   for (const group of window.SITE?.roms || []) {
-    if ((!cat || group.title === cat) && group.feature && group.feature.name === name) {
+    if ((!cat || group.title === cat) && group.feature && (group.feature.name === name || group.feature.romId === name)) {
       return group.feature;
     }
     if ((!cat || group.title === cat) && Array.isArray(group.items)) {
-      const f = group.items.find((x) => x.name === name);
+      const f = group.items.find((x) => x.name === name || x.romId === name);
       if (f) return f;
     }
   }
@@ -1880,7 +1871,10 @@ function buildPayloadForCategory(cat) {
       };
     }
     case "screenshots": {
-      const romName = (document.getElementById("ss-rom-select")?.value || "").trim();
+      const romSelect = document.getElementById("ss-rom-select");
+      const romName = (romSelect?.value || "").trim();
+      const selectedOption = romSelect?.selectedOptions?.[0];
+      const romId = selectedOption?.dataset?.romId || (findRomItem(romName)?.romId) || "";
 
       const shots = selectedScreenshots.map((item, idx) => {
         const inputEl = document.querySelector(`.ss-item-caption-input[data-id="${item.id}"]`);
@@ -1895,6 +1889,7 @@ function buildPayloadForCategory(cat) {
 
       return {
         romName,
+        romId,
         screenshots: shots,
         caption: shots.length > 0 ? shots[0].caption : "",
         imageBase64: shots.length > 0 ? shots[0].imageBase64 : ""
@@ -2296,7 +2291,7 @@ function renderSelectedScreenshots() {
     html += `
       <div class="ss-item-card" data-id="${item.id}">
         <div class="ss-item-thumb-wrap">
-          <img src="${item.base64}" class="ss-item-thumb" alt="Screenshot #${index + 1}">
+          <img src="${item.base64}" class="ss-item-thumb" alt="Screenshot #${index + 1}" loading="lazy" decoding="async">
           <span class="ss-item-index">#${index + 1}</span>
         </div>
         <div class="ss-item-body">
@@ -2321,12 +2316,35 @@ function renderSelectedScreenshots() {
     });
   });
 
-  // Listeners for delete buttons
+  // Listeners for delete buttons: instant optimistic removal (<16ms, zero DOM re-render)
   container.querySelectorAll(".ss-item-del-btn").forEach((btn) => {
     btn.addEventListener("click", () => {
       const id = btn.dataset.id;
-      selectedScreenshots = selectedScreenshots.filter((x) => x.id !== id);
-      renderSelectedScreenshots();
+      const card = btn.closest(".ss-item-card");
+
+      requestAnimationFrame(() => {
+        if (card) card.remove();
+        selectedScreenshots = selectedScreenshots.filter((x) => x.id !== id);
+
+        const counter = document.getElementById("ss-batch-counter");
+        const clearBtn = document.getElementById("btn-clear-all-screenshots");
+        if (counter) counter.textContent = `${selectedScreenshots.length} / 10 selected`;
+        if (clearBtn) clearBtn.classList.toggle("hidden", selectedScreenshots.length === 0);
+
+        if (selectedScreenshots.length === 0) {
+          container.innerHTML = `
+            <div class="ss-empty-hint" id="ss-empty-placeholder">
+              <svg viewBox="0 0 24 24" width="30" height="30" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg>
+              <span>No screenshots selected yet. Tap the button above to pick up to 10 photos from your phone gallery.</span>
+            </div>`;
+        } else {
+          // Re-index remaining cards in place without wiping innerHTML
+          container.querySelectorAll(".ss-item-card").forEach((c, idx) => {
+            const badge = c.querySelector(".ss-item-index");
+            if (badge) badge.textContent = `#${idx + 1}`;
+          });
+        }
+      });
     });
   });
 }
