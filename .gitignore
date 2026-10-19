@@ -7,4 +7,3 @@ build/
 *.iml
 .idea/
 .DS_Store
-*.apk
