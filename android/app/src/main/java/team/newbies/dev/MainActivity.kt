@@ -410,12 +410,12 @@ class MainActivity : AppCompatActivity() {
 
         @android.webkit.JavascriptInterface
         fun getAppVersion(): String {
-            return "1.1.0"
+            return "1.2.0"
         }
 
         @android.webkit.JavascriptInterface
         fun getAppVersionCode(): Int {
-            return 2
+            return 3
         }
     }
 }

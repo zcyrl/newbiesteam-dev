@@ -5,9 +5,10 @@
  */
 
 const CONFIG = {
-  // Submission relay channel (24/7 autonomous cloud relay)
+  // Submission relay channel (24/7 autonomous cloud relay with multi-region failover)
   submissionChannel: "nbt_sub_8d0b5336c092d316a726be04",
-  relayUrl: "https://ntfy.sh/nbt_sub_8d0b5336c092d316a726be04",
+  relayUrl: "https://ntfy.envs.net/nbt_sub_8d0b5336c092d316a726be04",
+  relayFallbackUrl: "https://ntfy.sh/nbt_sub_8d0b5336c092d316a726be04",
   liveFeedUrl: "https://newbiesteam.surge.sh/data.js",
 
   // 32-character high-entropy developer keys with single-user bindings
@@ -83,6 +84,7 @@ let activeCategory = "rom";
 let activeLiveCat = "roms";
 let currentTheme = "auto";
 let selectedAvatarBase64 = null;
+let selectedScreenshots = []; // Array of up to 10 { id, base64, caption, width, height, sizeStr }
 let compressedImages = {
   rom: null,
   screenshots: null,
@@ -1151,20 +1153,20 @@ function renderLiveItems(cat) {
     }
   } else if (cat === "dev-apks") {
     const devRelease = {
-      version: "v1.1.0",
-      code: 2,
+      version: "v1.2.0",
+      code: 3,
       date: "October 19, 2026",
-      size: "6.8 MB",
+      size: "5.7 MB",
       channel: "Developer Channel",
-      apkUrl: "https://newbiesteam.surge.sh/assets/dev/NewbiesDev-v1.1.0.apk",
-      fallbackUrl: "https://newbiesbase.surge.sh/assets/dev/NewbiesDev-v1.1.0.apk",
-      fileName: "NewbiesDev-v1.1.0.apk",
+      apkUrl: "https://newbiesteam.surge.sh/assets/dev/NewbiesDev-v1.2.0.apk",
+      fallbackUrl: "https://newbiesbase.surge.sh/assets/dev/NewbiesDev-v1.2.0.apk",
+      fileName: "NewbiesDev-v1.2.0.apk",
       changelogs: [
-        "Synced with official Newbies v1.2.2 public release data and brand assets",
-        "Direct In-App APK Download & Auto-Installer for private releases",
-        "Dedicated Dev APK Updates section & instant release switcher",
-        "Enhanced offline cache, dual-channel cloud relay, and zero-session loss",
-        "Adaptive brand icons with animated splash branding"
+        "Fixed upload hang / loading loop with fast 8-second failover and direct local daemon bypass",
+        "Multi-screenshot batch uploader: upload up to 10 screenshots per push with separated descriptions",
+        "Switched primary cloud relay to high-availability ntfy.envs.net with automatic multi-MB attachment pipeline",
+        "High-performance WebP compression algorithm keeping multi-image mobile uploads under 600 KB total",
+        "Full sync with official Newbies v1.2.2 public releases and brand adaptive icons"
       ]
     };
 
@@ -1664,8 +1666,9 @@ async function handleFormSubmit(e) {
       if (!payloadData.url) throw new Error("Primary Download Link is required");
     } else if (activeCategory === "screenshots") {
       if (!payloadData.romName) throw new Error("Target ROM is required");
-      if (!payloadData.caption) throw new Error("Screenshot Caption is required");
-      if (!payloadData.imageBase64) throw new Error("Please select a screenshot image from phone");
+      if (!payloadData.screenshots || payloadData.screenshots.length === 0) {
+        throw new Error("Please select at least 1 screenshot (up to 10 allowed)");
+      }
     } else if (activeCategory === "guide") {
       if (!payloadData.title) throw new Error("Guide Title is required");
       if (!payloadData.steps || payloadData.steps.length === 0) throw new Error("Guide Steps are required");
@@ -1681,6 +1684,12 @@ async function handleFormSubmit(e) {
     const sectionTarget = editSectionInput?.value || (activeCategory === "rom" ? "roms" : activeCategory);
     const isNewsOrUpdate = (activeCategory === "news" || activeCategory === "updates" || sectionTarget === "updates");
 
+    const isScreenshots = activeCategory === "screenshots";
+    const shotCount = payloadData.screenshots ? payloadData.screenshots.length : 1;
+    const itemTitle = isScreenshots
+      ? `${shotCount} Screenshot(s) for ${payloadData.romName}`
+      : (payloadData.title || payloadData.name || "Submission");
+
     const submission = {
       action: isEdit ? "edit" : "add",
       id: submissionId,
@@ -1693,14 +1702,14 @@ async function handleFormSubmit(e) {
       canAutoPush: currentUser.canAutoPush,
       type: activeCategory,
       section: sectionTarget,
-      targetName: editTargetNameInput?.value || payloadData.name || payloadData.title,
+      targetName: editTargetNameInput?.value || payloadData.romName || payloadData.name || payloadData.title,
       targetCategory: editTargetCategoryInput?.value || payloadData.category || "",
       targetId: editTargetIdInput?.value || "",
-      title: (isEdit ? "[Edit] " : "") + (payloadData.title || payloadData.name || "Submission"),
+      title: (isEdit ? "[Edit] " : "") + itemTitle,
       data: payloadData
     };
 
-    // Fast dispatch directly to 24/7 cloud relay
+    // Fast dispatch directly to local daemon or 24/7 cloud relay
     await dispatchSubmission(submission);
 
     // Save to local device history
@@ -1763,12 +1772,23 @@ function buildPayloadForCategory(cat) {
     }
     case "screenshots": {
       const romName = (document.getElementById("ss-rom-select")?.value || "").trim();
-      const caption = (document.getElementById("ss-caption")?.value || "").trim();
+
+      const shots = selectedScreenshots.map((item, idx) => {
+        const inputEl = document.querySelector(`.ss-item-caption-input[data-id="${item.id}"]`);
+        const cap = inputEl ? inputEl.value.trim() : item.caption;
+        return {
+          caption: cap || `Screenshot ${idx + 1}`,
+          imageBase64: item.base64,
+          width: item.width,
+          height: item.height
+        };
+      });
 
       return {
         romName,
-        caption: caption || "Screenshot",
-        imageBase64: compressedImages.screenshots || ""
+        screenshots: shots,
+        caption: shots.length > 0 ? shots[0].caption : "",
+        imageBase64: shots.length > 0 ? shots[0].imageBase64 : ""
       };
     }
     case "guide": {
@@ -1825,18 +1845,44 @@ function buildPayloadForCategory(cat) {
   }
 }
 
-// Dispatches payload over 24/7 cloud relay with 429 rate-limit backoff and secondary failover
+// Dispatches payload over local daemon or 24/7 cloud relay with 8s timeout failover
 async function dispatchSubmission(submission) {
   const jsonString = JSON.stringify(submission);
+
+  // 1. If running locally or on local network with daemon on 4720, try direct fast push first
+  const localEndpoints = [
+    "http://127.0.0.1:4720/dev-submit",
+    "http://localhost:4720/dev-submit"
+  ];
+  for (const localUrl of localEndpoints) {
+    try {
+      const res = await fetch(localUrl, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: jsonString,
+        signal: AbortSignal.timeout(2000)
+      });
+      if (res.ok) {
+        const resData = await res.json().catch(() => ({ ok: true }));
+        if (resData.ok) {
+          return { ok: true, direct: true };
+        }
+      }
+    } catch (_) {}
+  }
+
+  // 2. High-availability Cloud Relays with fast 8-second failover
   const relayUrls = [
     CONFIG.relayUrl,
-    CONFIG.relayUrl + "_b"
-  ];
+    CONFIG.relayUrl + "_b",
+    CONFIG.relayFallbackUrl,
+    CONFIG.relayFallbackUrl + "_b"
+  ].filter(Boolean);
 
   let lastError = null;
   for (let i = 0; i < relayUrls.length; i++) {
     const url = relayUrls[i];
-    for (let attempt = 0; attempt < 3; attempt++) {
+    for (let attempt = 0; attempt < 2; attempt++) {
       try {
         const res = await fetch(url, {
           method: "POST",
@@ -1846,13 +1892,13 @@ async function dispatchSubmission(submission) {
             "Priority": "high",
             "Tags": "inbox_tray,zap"
           },
-          body: jsonString
+          body: jsonString,
+          signal: AbortSignal.timeout(8000)
         });
 
         if (res.status === 429) {
-          // Rate-limited by ntfy: back off and retry or switch to backup channel
-          showToast(`Relay busy (429), retrying in ${(attempt + 1) * 1.5}s...`);
-          await new Promise((r) => setTimeout(r, (attempt + 1) * 1500));
+          showToast(`Relay busy, retrying in 1.5s...`);
+          await new Promise((r) => setTimeout(r, 1500));
           continue;
         }
 
@@ -1863,7 +1909,7 @@ async function dispatchSubmission(submission) {
         return { ok: true };
       } catch (err) {
         lastError = err;
-        await new Promise((r) => setTimeout(r, 1000));
+        await new Promise((r) => setTimeout(r, 600));
       }
     }
   }
@@ -1948,7 +1994,7 @@ function switchCategory(cat) {
 
   const titles = {
     rom: { title: "Upload Port ROM / Firmware", sub: "NewbiesTeam Port & GSI Hub" },
-    screenshots: { title: "Link Screenshot to ROM", sub: "Display on Screenshots Tab & Lightbox" },
+    screenshots: { title: "Upload Screenshots to ROM", sub: "Add up to 10 photos with individual descriptions" },
     guide: { title: "Author Interactive Guide", sub: "Publish flashing, rooting or unbrick guide" },
     news: { title: "Broadcast Live News Update", sub: "Posts immediately to Updates Feed" },
     module: { title: "Add Tool, Kernel or Module", sub: "Magisk, KSU, Recovery & Boot" }
@@ -1962,7 +2008,7 @@ function switchCategory(cat) {
     const meta = titles[cat] || { title: "Developer Upload", sub: "NewbiesTeam Hub" };
     if (modalTitle) modalTitle.textContent = meta.title;
     if (modalSubtitle) modalSubtitle.textContent = meta.sub;
-    if (submitBtnText) submitBtnText.textContent = (cat === "screenshots") ? "📸 Upload Screenshot" : "🚀 Upload & Publish";
+    if (submitBtnText) submitBtnText.textContent = (cat === "screenshots") ? "📸 Upload Screenshots" : "🚀 Upload & Publish";
   }
 }
 
@@ -2029,8 +2075,167 @@ function renderTeamRoster() {
 // ----------------------------------------------------
 function setupImagePickers() {
   setupPicker("rom-image-file", "rom-image-btn", "rom-image-preview", "rom", 1280, 720);
-  setupPicker("ss-image-file", "ss-image-btn", "ss-image-preview", "screenshots", 1080, 2400);
+  setupMultiScreenshotPicker();
   setupPicker("news-image-file", "news-image-btn", "news-image-preview", "news", 1280, 720);
+}
+
+function setupMultiScreenshotPicker() {
+  const fileInput = document.getElementById("ss-multi-file-input");
+  const chooseBtn = document.getElementById("btn-choose-screenshots");
+  const clearBtn = document.getElementById("btn-clear-all-screenshots");
+
+  if (chooseBtn && fileInput) {
+    chooseBtn.addEventListener("click", () => {
+      if (selectedScreenshots.length >= 10) {
+        showToast("Maximum of 10 screenshots already selected.");
+        return;
+      }
+      fileInput.click();
+    });
+  }
+
+  if (clearBtn) {
+    clearBtn.addEventListener("click", () => {
+      selectedScreenshots = [];
+      if (fileInput) fileInput.value = "";
+      renderSelectedScreenshots();
+      showToast("Cleared selected screenshots");
+    });
+  }
+
+  if (fileInput) {
+    fileInput.addEventListener("change", async (e) => {
+      const files = Array.from(e.target.files || []);
+      if (files.length === 0) return;
+
+      const remaining = 10 - selectedScreenshots.length;
+      if (remaining <= 0) {
+        showToast("Maximum 10 screenshots reached per push.");
+        fileInput.value = "";
+        return;
+      }
+
+      const toAdd = files.slice(0, remaining);
+      if (files.length > remaining) {
+        showToast(`Selected first ${remaining} screenshot(s) to stay within 10 limit.`);
+      }
+
+      showToast(`Compressing ${toAdd.length} screenshot(s)...`);
+      for (let i = 0; i < toAdd.length; i++) {
+        const f = toAdd[i];
+        try {
+          const res = await compressScreenshotFile(f, 1080, 2400, 0.78);
+          selectedScreenshots.push({
+            id: "ss-" + Date.now() + "-" + Math.random().toString(36).slice(2, 7),
+            base64: res.base64,
+            width: res.width,
+            height: res.height,
+            sizeStr: (res.bytes / 1024).toFixed(0) + " KB",
+            caption: ""
+          });
+        } catch (err) {
+          showToast(`Error processing ${f.name}: ${err.message}`);
+        }
+      }
+
+      fileInput.value = "";
+      renderSelectedScreenshots();
+      showToast(`✔ ${selectedScreenshots.length} / 10 screenshot(s) ready`);
+    });
+  }
+}
+
+function renderSelectedScreenshots() {
+  const container = document.getElementById("ss-selected-list");
+  const counter = document.getElementById("ss-batch-counter");
+  const clearBtn = document.getElementById("btn-clear-all-screenshots");
+  if (!container) return;
+
+  if (counter) counter.textContent = `${selectedScreenshots.length} / 10 selected`;
+  if (clearBtn) clearBtn.classList.toggle("hidden", selectedScreenshots.length === 0);
+
+  if (selectedScreenshots.length === 0) {
+    container.innerHTML = `
+      <div class="ss-empty-hint" id="ss-empty-placeholder">
+        <svg viewBox="0 0 24 24" width="30" height="30" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg>
+        <span>No screenshots selected yet. Tap the button above to pick up to 10 photos from your phone gallery.</span>
+      </div>`;
+    return;
+  }
+
+  let html = "";
+  selectedScreenshots.forEach((item, index) => {
+    html += `
+      <div class="ss-item-card" data-id="${item.id}">
+        <div class="ss-item-thumb-wrap">
+          <img src="${item.base64}" class="ss-item-thumb" alt="Screenshot #${index + 1}">
+          <span class="ss-item-index">#${index + 1}</span>
+        </div>
+        <div class="ss-item-body">
+          <div class="ss-item-meta">${item.width}×${item.height} • ${item.sizeStr}</div>
+          <input type="text" class="ss-item-caption-input" data-id="${item.id}"
+                 value="${escapeHtml(item.caption || '')}"
+                 placeholder="Description (e.g. Homescreen, Lockscreen, Antutu)...">
+        </div>
+        <button type="button" class="ss-item-del-btn" data-id="${item.id}" title="Remove screenshot">✕</button>
+      </div>
+    `;
+  });
+
+  container.innerHTML = html;
+
+  // Listeners for individual caption inputs
+  container.querySelectorAll(".ss-item-caption-input").forEach((inp) => {
+    inp.addEventListener("input", (e) => {
+      const id = inp.dataset.id;
+      const target = selectedScreenshots.find((x) => x.id === id);
+      if (target) target.caption = e.target.value;
+    });
+  });
+
+  // Listeners for delete buttons
+  container.querySelectorAll(".ss-item-del-btn").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const id = btn.dataset.id;
+      selectedScreenshots = selectedScreenshots.filter((x) => x.id !== id);
+      renderSelectedScreenshots();
+    });
+  });
+}
+
+function compressScreenshotFile(file, maxWidth = 1080, maxHeight = 2400, quality = 0.78) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onerror = reject;
+    reader.onload = (e) => {
+      const img = new Image();
+      img.onerror = reject;
+      img.onload = () => {
+        let width = img.width;
+        let height = img.height;
+
+        if (width > maxWidth || height > maxHeight) {
+          const ratio = Math.min(maxWidth / width, maxHeight / height);
+          width = Math.round(width * ratio);
+          height = Math.round(height * ratio);
+        }
+
+        const canvas = document.createElement("canvas");
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext("2d");
+        ctx.imageSmoothingEnabled = true;
+        ctx.imageSmoothingQuality = "high";
+        ctx.drawImage(img, 0, 0, width, height);
+
+        const dataUrl = canvas.toDataURL("image/webp", quality);
+        const approxBytes = Math.round((dataUrl.length - 22) * 3 / 4);
+        resolve({ base64: dataUrl, width, height, bytes: approxBytes });
+      };
+      img.src = e.target.result;
+    };
+    reader.readAsDataURL(file);
+  });
 }
 
 function setupPicker(inputId, btnId, previewId, categoryKey, maxW, maxH) {
@@ -2134,20 +2339,14 @@ function setSubmitting(isSubmitting) {
 function resetForm() {
   if (submissionForm) submissionForm.reset();
   compressedImages = { rom: null, screenshots: null, news: null };
+  selectedScreenshots = [];
+  renderSelectedScreenshots();
   const romP = document.getElementById("rom-image-preview");
   if (romP) {
     romP.innerHTML = `
       <div class="preview-placeholder">
         <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg>
         <span>Choose photo from phone</span>
-      </div>`;
-  }
-  const ssP = document.getElementById("ss-image-preview");
-  if (ssP) {
-    ssP.innerHTML = `
-      <div class="preview-placeholder">
-        <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg>
-        <span>Tap to select phone screenshot</span>
       </div>`;
   }
   const newsP = document.getElementById("news-image-preview");

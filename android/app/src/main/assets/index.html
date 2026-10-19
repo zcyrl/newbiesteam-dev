@@ -107,7 +107,7 @@
       <div class="app-bar-left">
         <img src="icons/icon-192.png" class="bar-logo" alt="Logo">
         <div>
-          <div class="bar-title">NewbiesDev <span class="badge-app-ver" id="app-ver-badge">v1.1.0</span></div>
+          <div class="bar-title">NewbiesDev <span class="badge-app-ver" id="app-ver-badge">v1.2.0</span></div>
           <div id="bar-user-name" class="bar-subtitle">Developer</div>
         </div>
       </div>
@@ -191,7 +191,7 @@
         <button class="action-card" data-category="dev-apk">
           <div class="action-icon action-icon-apk">📦</div>
           <div class="action-name">Dev APK Updates</div>
-          <div class="action-desc">In-App Download (v1.1.0)</div>
+          <div class="action-desc">In-App Download (v1.2.0)</div>
         </button>
 
         <button class="action-card" data-category="site-link">
@@ -224,7 +224,7 @@
         </button>
         <button class="m3-chip" data-live-cat="dev-apks">
           <span>Dev APK Updates</span>
-          <span class="m3-chip-count" id="count-dev-apks">v1.1.0</span>
+          <span class="m3-chip-count" id="count-dev-apks">v1.2.0</span>
         </button>
       </div>
 
@@ -377,25 +377,30 @@
             </div>
           </div>
 
-          <!-- 3. Upload New Screenshot -->
+          <!-- 3. Upload Screenshots (Up to 10 with individual descriptions) -->
           <div class="ss-upload-box">
-            <div class="ss-divider-label">Add New Screenshot to ROM</div>
-
-            <div class="form-group">
-              <label>Screenshot Caption <span class="req">*</span></label>
-              <input type="text" id="ss-caption" placeholder="e.g. Homescreen, Lockscreen, Control Center, Antutu Score">
+            <div class="ss-upload-header">
+              <div>
+                <div class="ss-divider-label">Add Screenshots to ROM</div>
+                <div class="ss-upload-subhint">Select up to 10 screenshots per push with separated descriptions</div>
+              </div>
+              <span id="ss-batch-counter" class="ss-batch-badge">0 / 10 selected</span>
             </div>
 
-            <div class="form-group">
-              <label>Select Screenshot Image from Phone <span class="req">*</span></label>
-              <div class="file-picker-box">
-                <input type="file" id="ss-image-file" accept="image/*" class="file-input">
-                <div id="ss-image-preview" class="image-preview-slot">
-                  <div class="preview-placeholder">
-                    <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg>
-                    <span>Tap to select phone screenshot</span>
-                  </div>
-                </div>
+            <div class="ss-picker-actions">
+              <input type="file" id="ss-multi-file-input" accept="image/*" multiple style="display:none;">
+              <button type="button" id="btn-choose-screenshots" class="btn-ss-add">
+                <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg>
+                <span>Choose Photos from Gallery (1 to 10)</span>
+              </button>
+              <button type="button" id="btn-clear-all-screenshots" class="btn-ss-clear hidden">Clear All</button>
+            </div>
+
+            <!-- Dynamic list of selected screenshots with preview & individual description -->
+            <div id="ss-selected-list" class="ss-selected-list">
+              <div class="ss-empty-hint" id="ss-empty-placeholder">
+                <svg viewBox="0 0 24 24" width="30" height="30" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg>
+                <span>No screenshots selected yet. Tap the button above to pick up to 10 photos from your phone gallery.</span>
               </div>
             </div>
           </div>
