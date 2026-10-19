@@ -10,58 +10,8 @@ const CONFIG = {
   relayUrl: "https://ntfy.envs.net/nbt_sub_8d0b5336c092d316a726be04",
   relayFallbackUrl: "https://ntfy.sh/nbt_sub_8d0b5336c092d316a726be04",
   liveFeedUrl: "https://newbiesteam.surge.sh/data.js",
-
-  // 32-character high-entropy developer keys with single-user bindings
-  keys: {
-    "NBT-ADM-2IdtYOnmHqVgzpKF9ctRdUGB": {
-      role: "admin",
-      name: "Softbrick (Admin)",
-      canAutoPush: true,
-      status: "active",
-      revoked: false,
-      bound_device_id: "a9d9d2e5-b608-4703-8a7e-2b40b39ffc11",
-      bound_user_name: "Softbrick",
-      bound_photo: null,
-      headline: "Master Admin Active",
-      description: "Full access enabled. Any ROM, guide, screenshot, or news you upload is auto-pushed live immediately."
-    },
-    "NBT-DEV1-ZPYYluKXiW1kZxsoOWiFx3I": {
-      role: "team",
-      name: "MBuTT3178",
-      canAutoPush: true,
-      status: "active",
-      revoked: false,
-      bound_device_id: null,
-      bound_user_name: null,
-      bound_photo: null,
-      headline: "MBuTT3178 Active",
-      description: "Updates & News post immediately. ROMs, Guides, and Screenshots are sent to the terminal tool for confirmation."
-    },
-    "NBT-DEV2-p1CXkO2WfRLCROYFivPN5UH": {
-      role: "team",
-      name: "Mehraann",
-      canAutoPush: true,
-      status: "active",
-      revoked: false,
-      bound_device_id: "e02ba6a5-d541-48a8-b9ef-d1f3e12ea1f1",
-      bound_user_name: "Mehraann",
-      bound_photo: null,
-      headline: "Mehraann Active",
-      description: "Updates & News post immediately. ROMs, Guides, and Screenshots are sent to the terminal tool for confirmation."
-    },
-    "NBT-DEV3-nbqMbAwxXaHuObtNzPr2d6B": {
-      role: "team",
-      name: "fjrXTR",
-      canAutoPush: true,
-      status: "active",
-      revoked: false,
-      bound_device_id: "cbd8c53c-f652-4575-afd4-aeb05e137c10",
-      bound_user_name: "fjrXTR",
-      bound_photo: null,
-      headline: "fjrXTR Active",
-      description: "Updates & News post immediately. ROMs, Guides, and Screenshots are sent to the terminal tool for confirmation."
-    },
-  }
+  authManifestUrl: "https://newbiesteam.surge.sh/auth-manifest.json",
+  authManifestFallbackUrl: "https://newbiesbase.surge.sh/auth-manifest.json"
 };
 
 // Global State
@@ -133,6 +83,19 @@ function getPersistentSession() {
   return null;
 }
 
+function clearPersistentSession() {
+  currentKey = null;
+  currentUser = null;
+  try {
+    localStorage.removeItem("nbt_dev_saved_session");
+  } catch (_) {}
+  if (window.AndroidBridge && typeof window.AndroidBridge.clearDevState === "function") {
+    try {
+      window.AndroidBridge.clearDevState();
+    } catch (_) {}
+  }
+}
+
 function cleanKeyString(raw) {
   if (!raw) return "";
   return String(raw)
@@ -142,21 +105,112 @@ function cleanKeyString(raw) {
     .replace(/\s+/g, "");
 }
 
-function findKey(entered) {
-  const clean = cleanKeyString(entered);
-  if (!clean) return null;
+async function sha256Hex(str) {
+  const enc = new TextEncoder();
+  const data = enc.encode(str);
+  const hashBuf = await crypto.subtle.digest("SHA-256", data);
+  const hashArr = Array.from(new Uint8Array(hashBuf));
+  return hashArr.map(b => b.toString(16).padStart(2, "0")).join("");
+}
 
-  if (CONFIG.keys[clean]) {
-    return { keyString: clean, ...CONFIG.keys[clean] };
+async function fetchOnlineAuthManifest() {
+  const urls = [
+    `${CONFIG.authManifestUrl}?t=${Date.now()}`,
+    `${CONFIG.authManifestFallbackUrl}?t=${Date.now()}`,
+    `auth-manifest.json?t=${Date.now()}`
+  ];
+  for (const url of urls) {
+    try {
+      const resp = await fetch(url, { cache: "no-store", headers: { "Cache-Control": "no-cache" } });
+      if (resp.ok) {
+        const data = await resp.json();
+        if (data && data.keys) {
+          try {
+            localStorage.setItem("nbt_cached_auth_manifest", JSON.stringify(data));
+          } catch (_) {}
+          return data;
+        }
+      }
+    } catch (_) {}
   }
+  try {
+    const cached = localStorage.getItem("nbt_cached_auth_manifest");
+    if (cached) return JSON.parse(cached);
+  } catch (_) {}
+  return null;
+}
 
-  const lowerClean = clean.toLowerCase();
-  for (const [k, v] of Object.entries(CONFIG.keys)) {
-    if (k.toLowerCase() === lowerClean) {
-      return { keyString: k, ...v };
+async function verifyKeyOnline(rawKey) {
+  const clean = cleanKeyString(rawKey);
+  if (!clean) return { ok: false, error: "Please enter your 32-character developer key." };
+  let hash;
+  try {
+    hash = await sha256Hex(clean);
+  } catch (err) {
+    return { ok: false, error: "Crypto SHA-256 not supported in browser environment." };
+  }
+  const manifest = await fetchOnlineAuthManifest();
+  if (!manifest || !manifest.keys) {
+    return { ok: false, error: "Unable to verify developer key online. Check network connection." };
+  }
+  let matched = null;
+  for (const [slotId, item] of Object.entries(manifest.keys)) {
+    if (item.key_hash && item.key_hash.toLowerCase() === hash.toLowerCase()) {
+      matched = { slotId, ...item };
+      break;
     }
   }
-  return null;
+  if (!matched) {
+    return { ok: false, error: "Invalid 32-character key. Check spelling or contact Admin." };
+  }
+  if (matched.revoked) {
+    return { ok: false, revoked: true, error: "Your developer key was rotated or revoked by Admin." };
+  }
+  return {
+    ok: true,
+    keyString: clean,
+    keyHash: hash,
+    slot: matched.slotId,
+    name: matched.name || matched.slotId,
+    role: matched.role || "team",
+    canAutoPush: Boolean(matched.can_auto_push),
+    bound_device_id: matched.bound_device_id,
+    bound_user_name: matched.bound_user_name,
+    key_version: matched.key_version || 1
+  };
+}
+
+let presenceInterval = null;
+function sendPresenceHeartbeat() {
+  if (!currentKey || !currentUser) return;
+  const payload = {
+    type: "presence",
+    key: currentKey,
+    deviceId: getDeviceId(),
+    name: currentUser.name,
+    appVersion: "NewbiesDev v1.2.3",
+    timestamp: Date.now()
+  };
+  try {
+    fetch(CONFIG.relayUrl, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload)
+    }).catch(() => {});
+  } catch (_) {}
+  try {
+    fetch("http://127.0.0.1:4720/api/presence", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload)
+    }).catch(() => {});
+  } catch (_) {}
+}
+
+function startPresenceHeartbeat() {
+  if (presenceInterval) clearInterval(presenceInterval);
+  sendPresenceHeartbeat();
+  presenceInterval = setInterval(sendPresenceHeartbeat, 60000);
 }
 
 // ----------------------------------------------------
@@ -364,11 +418,11 @@ function cacheDOMElements() {
 // ----------------------------------------------------
 // 4. App Initialization
 // ----------------------------------------------------
-function initApp() {
+async function initApp() {
   cacheDOMElements();
   initTheme();
   setupEventListeners();
-  checkPersistentSession();
+  await checkPersistentSession();
   renderHistory();
   fetchLiveSiteData();
 }
@@ -396,42 +450,47 @@ function closeAlertModal() {
   }
 }
 
-function checkPersistentSession() {
+async function checkPersistentSession() {
   const saved = getPersistentSession();
   const currentDevId = getDeviceId();
 
   if (saved && saved.key) {
-    const keyObj = findKey(saved.key);
-    if (keyObj) {
-      if (keyObj.revoked || keyObj.status === "revoked") {
-        showScreen("gatekeeper");
-        keyError.textContent = "⛔ ACCESS DENIED: Your key was revoked by Softbrick.";
-        return;
-      }
+    try {
+      const result = await verifyKeyOnline(saved.key);
+      if (result && result.ok) {
+        // Check single-user lock
+        if (result.bound_device_id && result.bound_device_id !== currentDevId) {
+          showScreen("gatekeeper");
+          const msg = "This key is bound to another phone (" + (result.bound_user_name || "Device") + ").";
+          if (keyError) keyError.textContent = "⛔ " + msg;
+          showAlertModal("Access Restricted", msg);
+          showToast(msg);
+          return;
+        }
 
-      // Check single-user lock
-      if (keyObj.bound_device_id && keyObj.bound_device_id !== currentDevId) {
+        // Restore session permanently
+        currentKey = result.keyString;
+        currentUser = {
+          ...result,
+          name: saved.name || result.name,
+          photo: saved.photo || null,
+          deviceId: currentDevId
+        };
+
+        applyUserProfileUI();
+        showScreen("dashboard");
+        startPresenceHeartbeat();
+        return;
+      } else if (result && result.revoked) {
+        clearPersistentSession();
         showScreen("gatekeeper");
-        const msg = "This key is used by another member.";
-        keyError.textContent = "⛔ " + msg;
-        showAlertModal("Access Restricted", msg);
+        const msg = "Your developer key was rotated or revoked by Admin.";
+        if (keyError) keyError.textContent = "⛔ " + msg;
+        showAlertModal("Session Terminated", msg);
         showToast(msg);
         return;
       }
-
-      // Restore session permanently
-      currentKey = keyObj.keyString;
-      currentUser = {
-        ...keyObj,
-        name: saved.name || keyObj.name,
-        photo: saved.photo || null,
-        deviceId: currentDevId
-      };
-
-      applyUserProfileUI();
-      showScreen("dashboard");
-      return;
-    }
+    } catch (_) {}
   }
 
   // No saved session -> show gatekeeper
@@ -490,57 +549,67 @@ function setupEventListeners() {
   }
 
   // Step 1: Key Gatekeeper Form Submit & Button Click
-  const handleKeyVerification = () => {
+  const handleKeyVerification = async () => {
     const rawEntered = devKeyInput ? devKeyInput.value : "";
-    const keyObj = findKey(rawEntered);
-
-    if (!keyObj) {
-      if (keyError) keyError.textContent = "Invalid 32-character key. Check spelling or contact Softbrick.";
-      return;
+    if (unlockBtn) {
+      unlockBtn.disabled = true;
+      unlockBtn.textContent = "Verifying...";
     }
-
-    if (keyObj.revoked || keyObj.status === "revoked") {
-      if (keyError) keyError.textContent = `⛔ ACCESS DENIED: Key for ${keyObj.name} has been REVOKED by Softbrick.`;
-      return;
-    }
-
-    const currentDevId = getDeviceId();
-    // Check Single-User Device Lock
-    if (keyObj.bound_device_id && keyObj.bound_device_id !== currentDevId) {
-      const msg = "This key is used by another member.";
-      if (keyError) keyError.textContent = "⛔ " + msg;
-      showAlertModal("Access Restricted", msg);
-      showToast(msg);
-      return;
-    }
-
     if (keyError) keyError.textContent = "";
-    pendingKeyObj = keyObj;
 
-    // Immediately persist developer session so key is never requested again!
-    const saved = getPersistentSession();
-    const defaultName = keyObj.name.replace(/\s*\(Owner\)/i, "");
-    const session = {
-      key: keyObj.keyString,
-      name: (saved && saved.name) ? saved.name : defaultName,
-      photo: (saved && saved.photo) ? saved.photo : null,
-      role: keyObj.role,
-      canAutoPush: keyObj.canAutoPush,
-      deviceId: currentDevId,
-      setupDone: true,
-      activatedAt: new Date().toISOString()
-    };
-    savePersistentSession(session);
+    try {
+      const result = await verifyKeyOnline(rawEntered);
+      if (!result || !result.ok) {
+        if (keyError) keyError.textContent = (result && result.error) || "Invalid key. Check spelling or contact Admin.";
+        return;
+      }
 
-    // If profile setup was previously completed, enter directly
-    if (saved && saved.setupDone) {
-      completeLogin(session.name, session.photo);
-      return;
+      const currentDevId = getDeviceId();
+      // Check Single-User Device Lock
+      if (result.bound_device_id && result.bound_device_id !== currentDevId) {
+        const msg = "This key is bound to another phone (" + (result.bound_user_name || "Device") + ").";
+        if (keyError) keyError.textContent = "⛔ " + msg;
+        showAlertModal("Access Restricted", msg);
+        showToast(msg);
+        return;
+      }
+
+      pendingKeyObj = result;
+
+      // Immediately persist developer session so key is never requested again!
+      const saved = getPersistentSession();
+      const defaultName = result.name.replace(/\s*\(Owner\)/i, "");
+      const session = {
+        key: result.keyString,
+        key_hash: result.keyHash,
+        name: (saved && saved.name) ? saved.name : defaultName,
+        photo: (saved && saved.photo) ? saved.photo : null,
+        role: result.role,
+        canAutoPush: result.canAutoPush,
+        deviceId: currentDevId,
+        setupDone: true,
+        activatedAt: new Date().toISOString()
+      };
+      savePersistentSession(session);
+
+      // If profile setup was previously completed, enter directly
+      if (saved && saved.setupDone) {
+        completeLogin(session.name, session.photo);
+        startPresenceHeartbeat();
+        return;
+      }
+
+      // Step 2: Show Profile Onboarding Screen
+      if (setupNameInput) setupNameInput.value = session.name;
+      showScreen("profile-setup");
+    } catch (e) {
+      if (keyError) keyError.textContent = "Verification failed: " + e.message;
+    } finally {
+      if (unlockBtn) {
+        unlockBtn.disabled = false;
+        unlockBtn.textContent = "Unlock Developer Hub →";
+      }
     }
-
-    // Step 2: Show Profile Onboarding Screen
-    if (setupNameInput) setupNameInput.value = session.name;
-    showScreen("profile-setup");
   };
 
   if (keyForm) {
@@ -714,15 +783,15 @@ function setupEventListeners() {
   }
 }
 
-function completeLogin(devName, avatarPhoto) {
+async function completeLogin(devName, avatarPhoto) {
   if (!pendingKeyObj) {
     const saved = getPersistentSession();
     if (saved && saved.key) {
-      pendingKeyObj = findKey(saved.key);
+      pendingKeyObj = await verifyKeyOnline(saved.key);
     }
   }
 
-  if (!pendingKeyObj) {
+  if (!pendingKeyObj || !pendingKeyObj.ok) {
     showScreen("gatekeeper");
     return;
   }
@@ -730,6 +799,7 @@ function completeLogin(devName, avatarPhoto) {
   const currentDevId = getDeviceId();
   const session = {
     key: pendingKeyObj.keyString,
+    key_hash: pendingKeyObj.keyHash,
     name: devName || pendingKeyObj.name,
     photo: avatarPhoto || null,
     role: pendingKeyObj.role,
@@ -756,6 +826,7 @@ function completeLogin(devName, avatarPhoto) {
   applyUserProfileUI();
   showScreen("dashboard");
   showToast(`Welcome, ${session.name}!`);
+  startPresenceHeartbeat();
 
   dispatchDeviceClaim(session).catch(() => {});
 }
@@ -2141,16 +2212,19 @@ function closeRosterModal() {
   }
 }
 
-function renderTeamRoster() {
+async function renderTeamRoster() {
   if (!rosterListContainer) return;
   rosterListContainer.innerHTML = "";
 
-  const allKeys = Object.entries(CONFIG.keys);
-  allKeys.forEach(([keyStr, dev]) => {
-    const isMe = currentKey === keyStr;
+  const manifest = await fetchOnlineAuthManifest();
+  const keysObj = (manifest && manifest.keys) ? manifest.keys : {};
+  const allEntries = Object.entries(keysObj);
+
+  allEntries.forEach(([slotId, dev]) => {
+    const isMe = (currentUser && (currentUser.slot === slotId || currentUser.keyString === currentKey));
     const isRevoked = dev.revoked || dev.status === "revoked";
     const displayName = (isMe && currentUser?.name) ? currentUser.name : (dev.bound_user_name || dev.name);
-    const photoSrc = (isMe && currentUser?.photo) ? currentUser.photo : (dev.bound_photo || "icons/icon-192.png");
+    const photoSrc = (isMe && currentUser?.photo) ? currentUser.photo : "icons/icon-192.png";
 
     const item = document.createElement("div");
     item.className = `roster-dev-item ${isMe ? "is-me" : ""}`;
@@ -2165,16 +2239,17 @@ function renderTeamRoster() {
       statusClass = "color: #60a5fa;";
     }
 
+    const canAuto = Boolean(dev.can_auto_push || dev.role === "admin");
     item.innerHTML = `
       <div class="dev-item-avatar">
         <img src="${escapeHtml(photoSrc)}" alt="${escapeHtml(displayName)}">
       </div>
       <div class="dev-item-info">
         <div class="dev-item-name">${escapeHtml(displayName)} ${isMe ? '<span style="color:var(--accent); font-size:11px;">(You)</span>' : ''}</div>
-        <div class="dev-item-status" style="${statusClass}">${statusText} · ${dev.role.toUpperCase()}</div>
+        <div class="dev-item-status" style="${statusClass}">${statusText} · ${(dev.role || 'team').toUpperCase()}</div>
       </div>
       <div class="badge-pill ${dev.role === 'admin' ? 'badge-admin' : 'badge-team'}">
-        ${dev.role === 'admin' ? 'AUTO-PUSH' : 'MODERATED'}
+        ${canAuto ? 'AUTO-PUSH' : 'MODERATED'}
       </div>
     `;
     rosterListContainer.appendChild(item);
