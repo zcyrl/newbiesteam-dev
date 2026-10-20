@@ -2459,6 +2459,15 @@
       if (cats.indexOf(c) === -1) cats.push(c);
     });
     var frag = document.createDocumentFragment();
+
+    var noticeText = (g && g.notice) || S.guidesNotice;
+    if (noticeText) {
+      var nb = el("div", "warn guides-notice");
+      nb.appendChild(el("strong", "", "Notice"));
+      nb.appendChild(el("p", "", noticeText));
+      frag.appendChild(nb);
+    }
+
     if (!items.length) {
       var p = el("section", "panel");
       p.appendChild(el("h2", "", (g && g.title) || "Guides"));
