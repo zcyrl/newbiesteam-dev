@@ -91,6 +91,10 @@
     "matrixx": { tab: "roms", slug: "project-matrixx-11-1-0" },
     "pixel": { tab: "roms", slug: "pixel-experience" },
     "lineage": { tab: "roms", slug: "lineageos" },
+    "xos-15-0-3": { tab: "roms", slug: "xos-15-0-3" },
+    "xos15-0-3": { tab: "roms", slug: "xos-15-0-3" },
+    "xos-15-1-2-180": { tab: "roms", slug: "xos-15-1-2-180" },
+    "xos15-1-2-180": { tab: "roms", slug: "xos-15-1-2-180" },
 
     // Guides
     "unlock": { tab: "guides", slug: "unlock-bootloader" },
@@ -189,7 +193,9 @@
     "unlock-bootloader": "#guides/unlock-bootloader",
     "lock-bootloader": "#guides/lock-bootloader",
     "ofox-flash": "#guides/ofox-flash",
-    "xos16-local-update": "#guides/xos16-local-update"
+    "xos16-local-update": "#guides/xos16-local-update",
+    "xos-15-0-3": "#roms/xos-15-0-3",
+    "xos-15-1-2-180": "#roms/xos-15-1-2-180"
   };
 
   function getItemCanonicalHash(it, tabName) {
@@ -2526,7 +2532,14 @@
             a.rel = "noopener noreferrer";
           }
         } else {
-          a.href = m[1].charAt(0) === "#" ? m[1] : "#guides/" + encodeURIComponent(m[1]);
+          var targetHash = m[1].charAt(0) === "#" ? m[1] : "#guides/" + encodeURIComponent(m[1]);
+          a.href = targetHash;
+          a.addEventListener("click", function (ev) {
+            if (location.hash === targetHash) {
+              ev.preventDefault();
+              route();
+            }
+          });
         }
         e.appendChild(a);
       } else if (/^https?:\/\/[^\s<)]+$/.test(part)) {
