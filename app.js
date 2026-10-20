@@ -1,2722 +1,3808 @@
-/**
- * NewbiesDev Hub — Mobile Developer Client Engine v3 (Material 3 Adaptive)
- * Direct Web Data Sync, Real-Time Content Editing & Deletion,
- * Single-User Device Lock, and Native 120 FPS Performance.
- */
+(function () {
+  "use strict";
 
-const CONFIG = {
-  // Submission relay channel (24/7 autonomous cloud relay with multi-region failover)
-  submissionChannel: "nbt_sub_8d0b5336c092d316a726be04",
-  relayUrl: "https://ntfy.envs.net/nbt_sub_8d0b5336c092d316a726be04",
-  relayFallbackUrl: "https://ntfy.sh/nbt_sub_8d0b5336c092d316a726be04",
-  liveFeedUrl: "https://newbiesteam.surge.sh/data.js",
-  authManifestUrl: "https://newbiesteam.surge.sh/auth-manifest.json",
-  authManifestFallbackUrl: "https://newbiesbase.surge.sh/auth-manifest.json"
-};
+  var S = window.SITE || {};
+  var view = document.getElementById("view");
+  var hero = document.getElementById("hero");
+  var tabsBox = document.getElementById("tabs");
+  var logo = document.getElementById("logo");
+  var metaTheme = document.getElementById("meta-theme");
+  var ADMIN_API = "http://127.0.0.1:4720";
+  var isHost = false;
 
-// Global State
-let currentKey = null;
-let currentUser = null;
-let pendingKeyObj = null;
-let activeCategory = "rom";
-let activeLiveCat = "roms";
-let currentTheme = "auto";
-let selectedAvatarBase64 = null;
-let selectedScreenshots = []; // Array of up to 10 { id, base64, caption, width, height, sizeStr }
-let compressedImages = {
-  rom: null,
-  screenshots: null,
-  news: null
-};
-
-// ----------------------------------------------------
-// 1. Device UUID Generation & Single-User Persistence
-// ----------------------------------------------------
-function getDeviceId() {
-  if (window.AndroidBridge && typeof window.AndroidBridge.getDeviceId === "function") {
-    try {
-      const bridgeId = window.AndroidBridge.getDeviceId();
-      if (bridgeId) return String(bridgeId);
-    } catch (_) {}
-  }
-  let localId = null;
-  try {
-    localId = localStorage.getItem("nbt_device_uuid");
-  } catch (_) {}
-  if (!localId) {
-    localId = "dev-" + Math.random().toString(36).substring(2, 10) + "-" + Date.now().toString(36);
-    try {
-      localStorage.setItem("nbt_device_uuid", localId);
-    } catch (_) {}
-  }
-  return localId;
-}
-
-function savePersistentSession(sessionData) {
-  const jsonStr = JSON.stringify(sessionData);
-  try {
-    localStorage.setItem("nbt_dev_saved_session", jsonStr);
-  } catch (_) {}
-
-  if (window.AndroidBridge && typeof window.AndroidBridge.saveDevState === "function") {
-    try {
-      window.AndroidBridge.saveDevState(jsonStr);
-    } catch (_) {}
-  }
-}
-
-function getPersistentSession() {
-  if (window.AndroidBridge && typeof window.AndroidBridge.getDevState === "function") {
-    try {
-      const raw = window.AndroidBridge.getDevState();
-      if (raw && typeof raw === "string" && raw.trim().startsWith("{")) {
-        return JSON.parse(raw);
-      }
-    } catch (_) {}
-  }
-  try {
-    const raw = localStorage.getItem("nbt_dev_saved_session");
-    if (raw && typeof raw === "string" && raw.trim().startsWith("{")) {
-      return JSON.parse(raw);
-    }
-  } catch (_) {}
-  return null;
-}
-
-function clearPersistentSession() {
-  currentKey = null;
-  currentUser = null;
-  try {
-    localStorage.removeItem("nbt_dev_saved_session");
-  } catch (_) {}
-  if (window.AndroidBridge && typeof window.AndroidBridge.clearDevState === "function") {
-    try {
-      window.AndroidBridge.clearDevState();
-    } catch (_) {}
-  }
-}
-
-function cleanKeyString(raw) {
-  if (!raw) return "";
-  return String(raw)
-    .trim()
-    .replace(/^["']+|["']+$/g, "")
-    .replace(/[\u200B-\u200D\uFEFF]/g, "")
-    .replace(/\s+/g, "");
-}
-
-async function sha256Hex(str) {
-  const enc = new TextEncoder();
-  const data = enc.encode(str);
-  const hashBuf = await crypto.subtle.digest("SHA-256", data);
-  const hashArr = Array.from(new Uint8Array(hashBuf));
-  return hashArr.map(b => b.toString(16).padStart(2, "0")).join("");
-}
-
-async function fetchOnlineAuthManifest() {
-  const urls = [
-    `${CONFIG.authManifestUrl}?t=${Date.now()}`,
-    `${CONFIG.authManifestFallbackUrl}?t=${Date.now()}`,
-    `auth-manifest.json?t=${Date.now()}`
+  var TABS = [
+    ["roms", "ROMs"],
+    ["app", "App"],
+    ["modules", "Modules"],
+    ["kernels", "Kernels"],
+    ["recovery", "Recovery & Tools"],
+    ["screenshots", "Screenshots"],
+    ["updates", "Updates"],
+    ["guides", "Guides"]
   ];
-  for (const url of urls) {
+
+  function el(tag, cls, text) {
+    var e = document.createElement(tag);
+    if (cls) e.className = cls;
+    if (text !== undefined && text !== null) e.textContent = text;
+    return e;
+  }
+
+  function safeUrl(u) {
+    if (!u) return null;
+    if (u.charAt(0) === "#") return u;
     try {
-      const resp = await fetch(url, { cache: "no-store", headers: { "Cache-Control": "no-cache" } });
-      if (resp.ok) {
-        const data = await resp.json();
-        if (data && data.keys) {
-          try {
-            localStorage.setItem("nbt_cached_auth_manifest", JSON.stringify(data));
-          } catch (_) {}
-          return data;
-        }
-      }
-    } catch (_) {}
-  }
-  try {
-    const cached = localStorage.getItem("nbt_cached_auth_manifest");
-    if (cached) return JSON.parse(cached);
-  } catch (_) {}
-  return null;
-}
-
-async function verifyKeyOnline(rawKey) {
-  const clean = cleanKeyString(rawKey);
-  if (!clean) return { ok: false, error: "Please enter your 32-character developer key." };
-  let hash;
-  try {
-    hash = await sha256Hex(clean);
-  } catch (err) {
-    return { ok: false, error: "Crypto SHA-256 not supported in browser environment." };
-  }
-  const manifest = await fetchOnlineAuthManifest();
-  if (!manifest || !manifest.keys) {
-    return { ok: false, error: "Unable to verify developer key online. Check network connection." };
-  }
-  let matched = null;
-  for (const [slotId, item] of Object.entries(manifest.keys)) {
-    if (item.key_hash && item.key_hash.toLowerCase() === hash.toLowerCase()) {
-      matched = { slotId, ...item };
-      break;
-    }
-  }
-  if (!matched) {
-    return { ok: false, error: "Invalid 32-character key. Check spelling or contact Admin." };
-  }
-  if (matched.revoked) {
-    return { ok: false, revoked: true, error: "Your developer key was rotated or revoked by Admin." };
-  }
-  return {
-    ok: true,
-    keyString: clean,
-    keyHash: hash,
-    slot: matched.slotId,
-    name: matched.name || matched.slotId,
-    role: matched.role || "team",
-    canAutoPush: Boolean(matched.can_auto_push),
-    bound_device_id: matched.bound_device_id,
-    bound_user_name: matched.bound_user_name,
-    key_version: matched.key_version || 1
-  };
-}
-
-let presenceInterval = null;
-function sendPresenceHeartbeat() {
-  if (!currentKey || !currentUser) return;
-  const payload = {
-    type: "presence",
-    key: currentKey,
-    deviceId: getDeviceId(),
-    name: currentUser.name,
-    appVersion: "NewbiesDev v1.2.3",
-    timestamp: Date.now()
-  };
-  try {
-    fetch(CONFIG.relayUrl, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload)
-    }).catch(() => {});
-  } catch (_) {}
-  try {
-    fetch("http://127.0.0.1:4720/api/presence", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload)
-    }).catch(() => {});
-  } catch (_) {}
-}
-
-function startPresenceHeartbeat() {
-  if (presenceInterval) clearInterval(presenceInterval);
-  sendPresenceHeartbeat();
-  presenceInterval = setInterval(sendPresenceHeartbeat, 60000);
-}
-
-// ----------------------------------------------------
-// 2. Material 3 Adaptive Theme System
-// ----------------------------------------------------
-function initTheme() {
-  try {
-    const saved = localStorage.getItem("nbt_dev_theme") || "auto";
-    setTheme(saved);
-  } catch (_) {
-    setTheme("auto");
-  }
-
-  // Listen to OS changes when in Auto mode
-  if (window.matchMedia) {
-    window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => {
-      if (currentTheme === "auto") {
-        applyThemeDOM("auto");
-      }
-    });
-  }
-}
-
-function setTheme(theme) {
-  currentTheme = theme;
-  try {
-    localStorage.setItem("nbt_dev_theme", theme);
-  } catch (_) {}
-  applyThemeDOM(theme);
-}
-
-function applyThemeDOM(theme) {
-  const root = document.documentElement;
-  const iconSpan = document.getElementById("theme-btn-icon");
-  const labelSpan = document.getElementById("theme-btn-label");
-
-  if (theme === "auto") {
-    root.removeAttribute("data-theme");
-    if (iconSpan) iconSpan.textContent = "🌓";
-    if (labelSpan) labelSpan.textContent = "Auto";
-  } else if (theme === "dark") {
-    root.setAttribute("data-theme", "dark");
-    if (iconSpan) iconSpan.textContent = "🌙";
-    if (labelSpan) labelSpan.textContent = "Dark";
-  } else if (theme === "light") {
-    root.setAttribute("data-theme", "light");
-    if (iconSpan) iconSpan.textContent = "☀️";
-    if (labelSpan) labelSpan.textContent = "Light";
-  }
-}
-
-function toggleTheme() {
-  if (currentTheme === "auto") {
-    setTheme("dark");
-  } else if (currentTheme === "dark") {
-    setTheme("light");
-  } else {
-    setTheme("auto");
-  }
-  showToast(`Theme: ${currentTheme.toUpperCase()}`);
-}
-
-// ----------------------------------------------------
-// 3. DOM Elements Cache
-// ----------------------------------------------------
-let gatekeeperScreen;
-let profileSetupScreen;
-let dashboardScreen;
-let keyForm;
-let devKeyInput;
-let keyError;
-let toggleKeyBtn;
-let unlockBtn;
-
-let profileSetupForm;
-let setupAvatarTrigger;
-let setupAvatarPreview;
-let setupPhotoInput;
-let setupChoosePhotoBtn;
-let setupNameInput;
-let setupError;
-let setupSubmitBtn;
-
-let barUserName;
-let devProfilePill;
-let pillAvatarImg;
-let pillDevName;
-let themeToggleBtn;
-
-let syncBanner;
-let syncDot;
-let syncStatusText;
-let syncRefreshBtn;
-
-let rosterModal;
-let closeRosterBtn;
-let myProfileAvatar;
-let myProfileName;
-let myProfileRole;
-let rosterListContainer;
-
-let statusCard;
-let statusHeadline;
-let statusDescription;
-
-let fabPlus;
-let uploadModal;
-let modalCloseBtn;
-let modalTitle;
-let modalSubtitle;
-let catTabs;
-let actionCards;
-
-let submissionForm;
-let formActionInput;
-let editSectionInput;
-let editTargetNameInput;
-let editTargetCategoryInput;
-let editTargetIdInput;
-let submitBtn;
-let submitBtnText;
-let submitSpinner;
-let toast;
-let historyContainer;
-
-let liveCategoryChips;
-let liveItemsContainer;
-
-let alertModal;
-let alertTitle;
-let alertMessage;
-let alertDismissBtn;
-
-function cacheDOMElements() {
-  gatekeeperScreen = document.getElementById("gatekeeper-screen");
-  profileSetupScreen = document.getElementById("profile-setup-screen");
-  dashboardScreen = document.getElementById("dashboard-screen");
-
-  keyForm = document.getElementById("key-form");
-  devKeyInput = document.getElementById("dev-key-input");
-  keyError = document.getElementById("key-error");
-  toggleKeyBtn = document.getElementById("toggle-key-visibility");
-  unlockBtn = document.getElementById("unlock-btn");
-
-  profileSetupForm = document.getElementById("profile-setup-form");
-  setupAvatarTrigger = document.getElementById("setup-avatar-trigger");
-  setupAvatarPreview = document.getElementById("setup-avatar-preview");
-  setupPhotoInput = document.getElementById("setup-photo-input");
-  setupChoosePhotoBtn = document.getElementById("setup-choose-photo-btn");
-  setupNameInput = document.getElementById("setup-name-input");
-  setupError = document.getElementById("setup-error");
-  setupSubmitBtn = document.getElementById("setup-submit-btn");
-
-  barUserName = document.getElementById("bar-user-name");
-  devProfilePill = document.getElementById("dev-profile-pill");
-  pillAvatarImg = document.getElementById("pill-avatar-img");
-  pillDevName = document.getElementById("pill-dev-name");
-  themeToggleBtn = document.getElementById("theme-toggle-btn");
-
-  syncBanner = document.getElementById("sync-banner");
-  syncDot = document.getElementById("sync-dot");
-  syncStatusText = document.getElementById("sync-status-text");
-  syncRefreshBtn = document.getElementById("sync-refresh-btn");
-
-  rosterModal = document.getElementById("roster-modal");
-  closeRosterBtn = document.getElementById("close-roster-btn");
-  myProfileAvatar = document.getElementById("my-profile-avatar");
-  myProfileName = document.getElementById("my-profile-name");
-  myProfileRole = document.getElementById("my-profile-role");
-  rosterListContainer = document.getElementById("roster-list-container");
-
-  statusCard = document.getElementById("status-card");
-  statusHeadline = document.getElementById("status-headline");
-  statusDescription = document.getElementById("status-description");
-
-  fabPlus = document.getElementById("fab-plus");
-  uploadModal = document.getElementById("upload-modal");
-  modalCloseBtn = document.getElementById("modal-close-btn");
-  modalTitle = document.getElementById("modal-title");
-  modalSubtitle = document.getElementById("modal-subtitle");
-  catTabs = document.querySelectorAll(".cat-tab");
-  actionCards = document.querySelectorAll(".action-card");
-
-  submissionForm = document.getElementById("submission-form");
-  formActionInput = document.getElementById("form-action");
-  editSectionInput = document.getElementById("edit-section");
-  editTargetNameInput = document.getElementById("edit-target-name");
-  editTargetCategoryInput = document.getElementById("edit-target-category");
-  editTargetIdInput = document.getElementById("edit-target-id");
-  submitBtn = document.getElementById("submit-btn");
-  submitBtnText = document.getElementById("submit-btn-text");
-  submitSpinner = document.getElementById("submit-spinner");
-  toast = document.getElementById("toast");
-  historyContainer = document.getElementById("history-container");
-
-  liveCategoryChips = document.getElementById("live-category-chips");
-  liveItemsContainer = document.getElementById("live-items-container");
-
-  alertModal = document.getElementById("alert-modal");
-  alertTitle = document.getElementById("alert-title");
-  alertMessage = document.getElementById("alert-message");
-  alertDismissBtn = document.getElementById("alert-dismiss-btn");
-}
-
-// ----------------------------------------------------
-// 4. App Initialization
-// ----------------------------------------------------
-async function initApp() {
-  cacheDOMElements();
-  initTheme();
-  setupEventListeners();
-  await checkPersistentSession();
-  renderHistory();
-  fetchLiveSiteData();
-}
-
-if (document.readyState === "loading") {
-  document.addEventListener("DOMContentLoaded", initApp);
-} else {
-  initApp();
-}
-
-// Popup Alert Modal for Duplicate Single-User Rejection
-function showAlertModal(title, message) {
-  if (alertTitle) alertTitle.textContent = title || "Access Restricted";
-  if (alertMessage) alertMessage.textContent = message || "This key is used by another member.";
-  if (alertModal) {
-    alertModal.classList.add("active");
-    alertModal.classList.add("open");
-  }
-}
-
-function closeAlertModal() {
-  if (alertModal) {
-    alertModal.classList.remove("active");
-    alertModal.classList.remove("open");
-  }
-}
-
-async function checkPersistentSession() {
-  const saved = getPersistentSession();
-  const currentDevId = getDeviceId();
-
-  if (saved && saved.key) {
-    try {
-      const result = await verifyKeyOnline(saved.key);
-      if (result && result.ok) {
-        // Check session version: if server incremented key_version, invalidate stale session
-        if (result.key_version && saved.key_version && result.key_version > saved.key_version) {
-          clearPersistentSession();
-          showScreen("gatekeeper");
-          const msg = "Your session was reset by Admin. Please re-enter your key to link this device.";
-          if (keyError) keyError.textContent = "ℹ️ " + msg;
-          showAlertModal("Session Reset", msg);
-          showToast(msg);
-          return;
-        }
-
-        // Check single-user lock
-        if (result.bound_device_id && result.bound_device_id !== currentDevId) {
-          showScreen("gatekeeper");
-          const msg = "This key is bound to another phone (" + (result.bound_user_name || "Device") + ").";
-          if (keyError) keyError.textContent = "⛔ " + msg;
-          showAlertModal("Access Restricted", msg);
-          showToast(msg);
-          return;
-        }
-
-        // Restore session permanently
-        currentKey = result.keyString;
-        currentUser = {
-          ...result,
-          name: saved.name || result.name,
-          photo: saved.photo || null,
-          deviceId: currentDevId
-        };
-        if (!saved.key_version || saved.key_version !== result.key_version) {
-          saved.key_version = result.key_version || 1;
-          savePersistentSession(saved);
-        }
-
-        applyUserProfileUI();
-        showScreen("dashboard");
-        startPresenceHeartbeat();
-        return;
-      } else if (result && result.revoked) {
-        clearPersistentSession();
-        showScreen("gatekeeper");
-        const msg = "Your developer key was rotated or revoked by Admin.";
-        if (keyError) keyError.textContent = "⛔ " + msg;
-        showAlertModal("Session Terminated", msg);
-        showToast(msg);
-        return;
-      }
-    } catch (_) {}
-  }
-
-  // No saved session -> show gatekeeper
-  showScreen("gatekeeper");
-}
-
-// ----------------------------------------------------
-// 5. Event Listeners Setup
-// ----------------------------------------------------
-function setupEventListeners() {
-  // Theme Toggle Button
-  if (themeToggleBtn) {
-    themeToggleBtn.addEventListener("click", toggleTheme);
-  }
-
-  // Live Sync Refresh Button
-  if (syncRefreshBtn) {
-    syncRefreshBtn.addEventListener("click", async () => {
-      syncRefreshBtn.disabled = true;
-      syncRefreshBtn.textContent = "⏳ Syncing...";
-      await fetchLiveSiteData(true);
-      syncRefreshBtn.disabled = false;
-      syncRefreshBtn.textContent = "🔄 Sync Surge";
-    });
-  }
-
-  // Live Category Filter Chips
-  if (liveCategoryChips) {
-    const chips = liveCategoryChips.querySelectorAll(".m3-chip");
-    chips.forEach((chip) => {
-      chip.addEventListener("click", () => {
-        chips.forEach((c) => c.classList.remove("active"));
-        chip.classList.add("active");
-        activeLiveCat = chip.dataset.liveCat;
-        renderLiveItems(activeLiveCat);
-      });
-    });
-  }
-
-  // Alert Modal Dismiss Button
-  if (alertDismissBtn) {
-    alertDismissBtn.addEventListener("click", closeAlertModal);
-  }
-  if (alertModal) {
-    alertModal.addEventListener("click", (e) => {
-      if (e.target === alertModal) closeAlertModal();
-    });
-  }
-
-  // Password Visibility Toggle
-  if (toggleKeyBtn && devKeyInput) {
-    toggleKeyBtn.addEventListener("click", () => {
-      const isPass = devKeyInput.type === "password";
-      devKeyInput.type = isPass ? "text" : "password";
-    });
-  }
-
-  // Step 1: Key Gatekeeper Form Submit & Button Click
-  const handleKeyVerification = async () => {
-    const rawEntered = devKeyInput ? devKeyInput.value : "";
-    if (unlockBtn) {
-      unlockBtn.disabled = true;
-      unlockBtn.textContent = "Verifying...";
-    }
-    if (keyError) keyError.textContent = "";
-
-    try {
-      const result = await verifyKeyOnline(rawEntered);
-      if (!result || !result.ok) {
-        if (keyError) keyError.textContent = (result && result.error) || "Invalid key. Check spelling or contact Admin.";
-        return;
-      }
-
-      const currentDevId = getDeviceId();
-      // Check Single-User Device Lock
-      if (result.bound_device_id && result.bound_device_id !== currentDevId) {
-        const msg = "This key is bound to another phone (" + (result.bound_user_name || "Device") + ").";
-        if (keyError) keyError.textContent = "⛔ " + msg;
-        showAlertModal("Access Restricted", msg);
-        showToast(msg);
-        return;
-      }
-
-      pendingKeyObj = result;
-
-      // Immediately persist developer session so key is never requested again!
-      const saved = getPersistentSession();
-      const defaultName = result.name.replace(/\s*\(Owner\)/i, "");
-      const session = {
-        key: result.keyString,
-        key_hash: result.keyHash,
-        name: (saved && saved.name) ? saved.name : defaultName,
-        photo: (saved && saved.photo) ? saved.photo : null,
-        role: result.role,
-        canAutoPush: result.canAutoPush,
-        deviceId: currentDevId,
-        key_version: result.key_version || 1,
-        setupDone: true,
-        activatedAt: new Date().toISOString()
-      };
-      savePersistentSession(session);
-
-      // If profile setup was previously completed, enter directly
-      if (saved && saved.setupDone) {
-        completeLogin(session.name, session.photo);
-        startPresenceHeartbeat();
-        return;
-      }
-
-      // Step 2: Show Profile Onboarding Screen
-      if (setupNameInput) setupNameInput.value = session.name;
-      showScreen("profile-setup");
+      var x = new URL(u, location.href);
+      return /^https?:$/.test(x.protocol) ? x.href : null;
     } catch (e) {
-      if (keyError) keyError.textContent = "Verification failed: " + e.message;
-    } finally {
-      if (unlockBtn) {
-        unlockBtn.disabled = false;
-        unlockBtn.textContent = "Unlock Developer Hub →";
-      }
+      return null;
     }
+  }
+
+  function prefersCalm() {
+    return !!(window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches);
+  }
+
+  /* ---------- deep linking, slugs, toasts, and aliases ---------- */
+  function slugify(str) {
+    if (!str) return "";
+    return String(str)
+      .toLowerCase()
+      .trim()
+      .replace(/\./g, "-")
+      .replace(/[^\w\s-]/g, "")
+      .replace(/[\s_-]+/g, "-")
+      .replace(/^-+|-+$/g, "");
+  }
+
+  var SLUG_ALIASES = {
+    // Recovery & Tools
+    "ofox": { tab: "recovery", slug: "ofox-r-12-0-xos-15-1-2" },
+    "orangefox": { tab: "recovery", slug: "ofox-r-12-0-xos-15-1-2" },
+    "orangefox-recovery": { tab: "recovery", slug: "ofox-r-12-0-xos-15-1-2" },
+    "ofox-recovery": { tab: "recovery", slug: "ofox-r-12-0-xos-15-1-2" },
+    "twrp": { tab: "recovery", slug: "ofox-r-12-0-xos-15-1-2" },
+    "fenrir": { tab: "recovery", slug: "fenrir-a15" },
+    "fenrir-a15": { tab: "recovery", slug: "fenrir-a15" },
+    "fenrir-a14": { tab: "recovery", slug: "fenrir-a14" },
+
+    // Universal & OEM Modules
+    "remalwack": { tab: "modules", slug: "re-malwack-v8-2" },
+    "re-malwack": { tab: "modules", slug: "re-malwack-v8-2" },
+    "malwack": { tab: "modules", slug: "re-malwack-v8-2" },
+    "viper": { tab: "modules", slug: "viper4android-v2-1-1" },
+    "viper4android": { tab: "modules", slug: "viper4android-v2-1-1" },
+    "v4a": { tab: "modules", slug: "viper4android-v2-1-1" },
+    "hios-xos-fixes": { tab: "modules", slug: "hios-xos-fixes" },
+    "xos-fixes": { tab: "modules", slug: "hios-xos-fixes" },
+    "stock-touch": { tab: "modules", slug: "stock-touch-bbk" },
+
+    // Kernels
+    "vortex": { tab: "kernels", slug: "vortex" },
+    "zixine": { tab: "kernels", slug: "zixine" },
+    "ksu": { tab: "kernels", slug: "ksu-12845-hios-14-0-0-122-145" },
+
+    // ROMs
+    "hyperos": { tab: "roms", slug: "hyperos-2-0-by-softbrick" },
+    "flyme": { tab: "roms", slug: "flyme-11-25-7-15-by-softbrick" },
+    "originos": { tab: "roms", slug: "originos-5-by-softbrick" },
+    "coloros": { tab: "roms", slug: "coloros-15-v2" },
+    "hios": { tab: "roms", slug: "hios-14-official-firmware" },
+    "matrixx": { tab: "roms", slug: "project-matrixx-11-1-0" },
+    "pixel": { tab: "roms", slug: "pixel-experience" },
+    "lineage": { tab: "roms", slug: "lineageos" },
+
+    // Guides
+    "unlock": { tab: "guides", slug: "unlock-bootloader" },
+    "unlock-bootloader": { tab: "guides", slug: "unlock-bootloader" },
+    "lock-bootloader": { tab: "guides", slug: "lock-bootloader" },
+    "ofox-flash": { tab: "guides", slug: "ofox-flash" },
+    "flash-port-rom": { tab: "guides", slug: "flash-port-rom" },
+    "flash-aosp-rom": { tab: "guides", slug: "flash-aosp-rom" },
+    "patched-and-gki-kernels": { tab: "guides", slug: "patched-and-gki-kernels" },
+    "flash-fenrir": { tab: "guides", slug: "flash-fenrir" },
+    "downgrade-xos": { tab: "guides", slug: "downgrade-xos" },
+    "xos16-local-update": { tab: "guides", slug: "xos16-local-update" },
+    "xos-16-local-update": { tab: "guides", slug: "xos16-local-update" },
+    "local-update": { tab: "guides", slug: "xos16-local-update" },
+
+    // App
+    "app": { tab: "app", slug: "" },
+    "apk": { tab: "app", slug: "" },
+    "v1.2.1": { tab: "app", slug: "newbiesteam-app-v1-2-1" },
+    "v1-2-1": { tab: "app", slug: "newbiesteam-app-v1-2-1" },
+    "v1.2.0": { tab: "app", slug: "newbiesteam-app-v1-2-0" },
+    "v1-2-0": { tab: "app", slug: "newbiesteam-app-v1-2-0" }
   };
 
-  if (keyForm) {
-    keyForm.addEventListener("submit", (e) => {
-      e.preventDefault();
-      handleKeyVerification();
+  var toastTimer = null;
+  var toastEl = null;
+
+  function showToast(msg, duration) {
+    if (!toastEl) {
+      toastEl = document.createElement("div");
+      toastEl.className = "nb-toast";
+      toastEl.setAttribute("role", "status");
+      toastEl.setAttribute("aria-live", "polite");
+      document.body.appendChild(toastEl);
+    }
+    toastEl.textContent = msg;
+    toastEl.classList.add("is-visible");
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(function () {
+      if (toastEl) toastEl.classList.remove("is-visible");
+    }, duration || 2400);
+  }
+
+  function fallbackCopyText(text) {
+    try {
+      var ta = document.createElement("textarea");
+      ta.value = text;
+      ta.style.position = "fixed";
+      ta.style.opacity = "0";
+      document.body.appendChild(ta);
+      ta.focus();
+      ta.select();
+      document.execCommand("copy");
+      document.body.removeChild(ta);
+    } catch (e) {}
+  }
+
+  function copyElementDeepLink(name, hashPath) {
+    var fullUrl = window.location.origin + window.location.pathname + hashPath;
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(fullUrl).then(function () {
+        showToast("📋 Link copied: " + hashPath);
+      }).catch(function () {
+        fallbackCopyText(fullUrl);
+        showToast("📋 Link copied: " + hashPath);
+      });
+    } else {
+      fallbackCopyText(fullUrl);
+      showToast("📋 Link copied: " + hashPath);
+    }
+  }
+
+  function highlightElement(el) {
+    if (!el) return;
+    el.classList.remove("card-target-highlight");
+    void el.offsetWidth;
+    el.classList.add("card-target-highlight");
+    setTimeout(function () {
+      el.classList.remove("card-target-highlight");
+    }, 2600);
+  }
+
+  var PREFERRED_ALIASES = {
+    "ofox-r-12-0-xos-15-1-2": "#ofox",
+    "re-malwack-v8-2": "#re-malwack",
+    "viper4android-v2-1-1": "#viper",
+    "vortex": "#vortex",
+    "zixine": "#zixine",
+    "hyperos-2-0-by-softbrick": "#hyperos",
+    "flyme-11-25-7-15-by-softbrick": "#flyme",
+    "originos-5-by-softbrick": "#originos",
+    "coloros-15-v2": "#coloros",
+    "hios-14-official-firmware": "#hios",
+    "newbiesteam-app-v1-2-1": "#app/v1-2-1",
+    "newbiesteam-app-v1-2-0": "#app/v1-2-0",
+    "unlock-bootloader": "#guides/unlock-bootloader",
+    "lock-bootloader": "#guides/lock-bootloader",
+    "ofox-flash": "#guides/ofox-flash",
+    "xos16-local-update": "#guides/xos16-local-update"
+  };
+
+  function getItemCanonicalHash(it, tabName) {
+    var s = slugify((it && (it.name || it.title || it.version)) || "");
+    var tab = tabName || "roms";
+    if (PREFERRED_ALIASES[s]) {
+      return PREFERRED_ALIASES[s];
+    }
+    return "#" + tab + "/" + s;
+  }
+
+  function resolveRouteHash(hashString) {
+    var raw = (hashString || location.hash || "").replace(/^#\/?/, "").trim();
+    if (!raw) return { tab: "roms", slug: "" };
+
+    var lowerRaw = raw.toLowerCase();
+    if (SLUG_ALIASES[lowerRaw]) {
+      return { tab: SLUG_ALIASES[lowerRaw].tab, slug: SLUG_ALIASES[lowerRaw].slug };
+    }
+
+    var parts = raw.split("/").map(function (p) {
+      try { return decodeURIComponent(p); } catch (e) { return p; }
     });
-  }
-  if (unlockBtn) {
-    unlockBtn.addEventListener("click", (e) => {
-      e.preventDefault();
-      handleKeyVerification();
-    });
-  }
 
-  // Avatar Choose Click Handlers
-  if (setupAvatarTrigger && setupPhotoInput) {
-    setupAvatarTrigger.addEventListener("click", () => setupPhotoInput.click());
-  }
-  if (setupChoosePhotoBtn && setupPhotoInput) {
-    setupChoosePhotoBtn.addEventListener("click", () => setupPhotoInput.click());
-  }
+    var firstPart = (parts[0] || "").toLowerCase();
+    var isKnownTab = TABS.some(function (t) { return t[0] === firstPart; });
 
-  if (setupPhotoInput) {
-    setupPhotoInput.addEventListener("change", async (e) => {
-      const file = e.target.files && e.target.files[0];
-      if (!file) return;
-
-      try {
-        showToast("Processing photo...");
-        const compressed = await compressAvatar(file);
-        selectedAvatarBase64 = compressed;
-        if (setupAvatarPreview) setupAvatarPreview.src = compressed;
-        showToast("✔ Profile photo ready");
-      } catch (err) {
-        showToast("Failed to process photo: " + err.message);
+    if (isKnownTab) {
+      var tab = firstPart;
+      var slug = parts.slice(1).join("/");
+      var lowerSlug = slug.toLowerCase();
+      if (SLUG_ALIASES[lowerSlug] && SLUG_ALIASES[lowerSlug].tab === tab) {
+        slug = SLUG_ALIASES[lowerSlug].slug;
       }
+      return { tab: tab, slug: slug };
+    }
+
+    if (SLUG_ALIASES[firstPart]) {
+      return { tab: SLUG_ALIASES[firstPart].tab, slug: SLUG_ALIASES[firstPart].slug };
+    }
+
+    var target = findItemGlobally(lowerRaw);
+    if (target) {
+      return { tab: target.tab, slug: target.slug };
+    }
+
+    return { tab: "roms", slug: "" };
+  }
+
+  function findItemGlobally(query) {
+    if (!query) return null;
+    var qClean = slugify(query);
+
+    var guides = (S.guides && S.guides.items) || [];
+    for (var gi = 0; gi < guides.length; gi++) {
+      var g = guides[gi];
+      if (g.slug === qClean || slugify(g.title) === qClean || qClean.indexOf(g.slug) !== -1) {
+        return { tab: "guides", slug: g.slug };
+      }
+    }
+
+    var searchTabs = ["recovery", "modules", "kernels", "roms", "app"];
+    for (var ti = 0; ti < searchTabs.length; ti++) {
+      var tabKey = searchTabs[ti];
+      if (tabKey === "app") {
+        var rels = S.appReleases || [];
+        for (var ri = 0; ri < rels.length; ri++) {
+          var rel = rels[ri];
+          var rSlug = slugify(rel.name || ("app-" + rel.version));
+          if (rSlug.indexOf(qClean) !== -1 || qClean.indexOf(slugify(rel.version)) !== -1) {
+            return { tab: "app", slug: rSlug };
+          }
+        }
+      } else {
+        var groups = S[tabKey] || [];
+        for (var grpi = 0; grpi < groups.length; grpi++) {
+          var grp = groups[grpi];
+          if (slugify(grp.title) === qClean) {
+            return { tab: tabKey, slug: slugify(grp.title) };
+          }
+          if (grp.feature && slugify(grp.feature.name).indexOf(qClean) !== -1) {
+            return { tab: tabKey, slug: slugify(grp.feature.name) };
+          }
+          var items = grp.items || [];
+          for (var ii = 0; ii < items.length; ii++) {
+            var it = items[ii];
+            var itSlug = slugify(it.name);
+            if (itSlug === qClean || itSlug.indexOf(qClean) !== -1 || qClean.indexOf(itSlug) !== -1) {
+              return { tab: tabKey, slug: itSlug };
+            }
+          }
+        }
+      }
+    }
+    return null;
+  }
+
+  function findTargetElement(slug) {
+    if (!slug) return null;
+    var clean = slugify(slug);
+    var el = document.getElementById("item-" + clean) ||
+             document.getElementById("panel-" + clean) ||
+             document.getElementById(clean);
+    if (el) return el;
+
+    el = view.querySelector('[data-slug="' + clean + '"]');
+    if (el) return el;
+
+    var tagged = view.querySelectorAll("[data-slug]");
+    for (var i = 0; i < tagged.length; i++) {
+      var s = tagged[i].getAttribute("data-slug");
+      if (s && (s.indexOf(clean) !== -1 || clean.indexOf(s) !== -1)) {
+        return tagged[i];
+      }
+    }
+
+    var panels = view.querySelectorAll(".panel");
+    for (var j = 0; j < panels.length; j++) {
+      var h2 = panels[j].querySelector("h2");
+      if (h2 && slugify(h2.textContent) === clean) {
+        return panels[j];
+      }
+    }
+    return null;
+  }
+
+  function getInstalledAppVersion() {
+    // 1. Direct native AndroidBridge call
+    if (window.AndroidBridge && typeof window.AndroidBridge.getAppVersion === "function") {
+      try {
+        var bridgeVer = window.AndroidBridge.getAppVersion();
+        if (bridgeVer) {
+          var cleanBridge = String(bridgeVer).trim().replace(/^v/i, "");
+          if (cleanBridge) return cleanBridge;
+        }
+      } catch (e) {}
+    }
+    // 2. Direct injected global from native WebView
+    if (window.__NBT_APP_VERSION__) {
+      var direct = String(window.__NBT_APP_VERSION__).trim().replace(/^v/i, "");
+      if (direct) return direct;
+    }
+    // 3. UserAgent match: NewbiesTeamAndroid/1.2.3 or NewbiesDevAndroid/1.2.3
+    var appMatch = navigator.userAgent.match(/Newbies(?:Team|Dev)Android\/([0-9]+(?:\.[0-9]+)*)/i);
+    if (appMatch && appMatch[1]) {
+      return appMatch[1];
+    }
+    return null;
+  }
+
+  function getInstalledAppBuildCode() {
+    // 1. Direct native AndroidBridge call
+    if (window.AndroidBridge && typeof window.AndroidBridge.getAppVersionCode === "function") {
+      try {
+        var code = window.AndroidBridge.getAppVersionCode();
+        if (code !== undefined && code !== null && String(code) !== "0") {
+          return String(code).trim();
+        }
+      } catch (e) {}
+    }
+    // 2. Direct injected global from native WebView
+    if (window.__NBT_BUILD_CODE__) {
+      return String(window.__NBT_BUILD_CODE__).trim();
+    }
+    // 3. UserAgent match: (Build 8)
+    var buildMatch = navigator.userAgent.match(/Newbies(?:Team|Dev)Android\/[^\s]+ \(Build (\d+)\)/i);
+    if (buildMatch && buildMatch[1]) {
+      return buildMatch[1];
+    }
+    return null;
+  }
+
+  function openAboutModal() {
+    var existing = document.getElementById("ksu-about-modal");
+    if (existing) existing.remove();
+
+    var installedVer = getInstalledAppVersion();
+    var buildCode = getInstalledAppBuildCode();
+    var latestRelease = (S.appReleases && S.appReleases[0]) || { version: "v1.2.3" };
+    var cleanLatest = (latestRelease.version || "1.2.3").replace(/^v/i, "");
+    var dispVer = installedVer ? ("v" + installedVer + (buildCode ? " (" + buildCode + ")" : "")) : ("v" + cleanLatest);
+
+    var modal = el("div", "ksu-modal-backdrop");
+    modal.id = "ksu-about-modal";
+    modal.setAttribute("role", "dialog");
+    modal.setAttribute("aria-modal", "true");
+    modal.setAttribute("aria-label", "About NewbiesTeam");
+
+    var card = el("div", "ksu-about-sheet");
+
+    // Header with back arrow & title
+    var head = el("div", "ksu-sheet-head");
+    var backBtn = el("button", "ksu-back-btn");
+    backBtn.setAttribute("type", "button");
+    backBtn.setAttribute("aria-label", "Close About dialog");
+    backBtn.innerHTML = '<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>';
+    backBtn.addEventListener("click", closeAboutModal);
+    head.appendChild(backBtn);
+
+    var headTitle = el("div", "ksu-sheet-head-title", "About");
+    head.appendChild(headTitle);
+
+    var closeBtn = el("button", "ksu-close-btn");
+    closeBtn.setAttribute("type", "button");
+    closeBtn.setAttribute("aria-label", "Close");
+    closeBtn.innerHTML = '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>';
+    closeBtn.addEventListener("click", closeAboutModal);
+    head.appendChild(closeBtn);
+    card.appendChild(head);
+
+    // Hero section: Centered Logo + App Name + Version (matching SukiSU/KSU screenshot)
+    var hero = el("div", "ksu-about-hero");
+
+    var logoWrap = el("div", "ksu-logo-wrap");
+    var logoImg = el("img", "ksu-about-logo");
+    logoImg.src = "assets/newbies-app-logo.svg";
+    logoImg.alt = "NewbiesTeam Logo";
+    logoImg.width = 96;
+    logoImg.height = 96;
+    logoWrap.appendChild(logoImg);
+    hero.appendChild(logoWrap);
+
+    var appTitle = el("h2", "ksu-about-title", "NewbiesTeam");
+    hero.appendChild(appTitle);
+
+    var verBadge = el("div", "ksu-about-version", dispVer);
+    hero.appendChild(verBadge);
+
+    var devBadge = el("div", "ksu-about-device", "Infinix GT 20 Pro • X6871");
+    hero.appendChild(devBadge);
+
+    card.appendChild(hero);
+
+    // Action Cards Group (GitHub, Telegram, Website)
+    var actionsGroup = el("div", "ksu-card-group");
+
+    // GitHub
+    var ghLink = el("a", "ksu-list-item");
+    ghLink.href = "https://github.com/zcyrl/newbiesteam-app";
+    ghLink.target = "_blank";
+    ghLink.rel = "noopener noreferrer";
+    ghLink.innerHTML = '<div class="ksu-item-icon"><svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/></svg></div><div class="ksu-item-label">View source code at GitHub</div><div class="ksu-item-arrow"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M9 18l6-6-6-6"/></svg></div>';
+    actionsGroup.appendChild(ghLink);
+
+    // Telegram
+    var tgLink = el("a", "ksu-list-item");
+    tgLink.href = "https://t.me/NewbiesTeamBase";
+    tgLink.target = "_blank";
+    tgLink.rel = "noopener noreferrer";
+    tgLink.innerHTML = '<div class="ksu-item-icon"><svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm5.894 8.221l-1.97 9.28c-.145.658-.537.818-1.084.508l-3-2.21-1.446 1.394c-.16.16-.295.295-.605.295l.213-3.053 5.56-5.023c.242-.213-.054-.333-.373-.12l-6.871 4.326-2.962-.924c-.643-.204-.657-.643.136-.953l11.57-4.461c.537-.197 1.006.128.832.941z"/></svg></div><div class="ksu-item-label">Join our Telegram channel</div><div class="ksu-item-arrow"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M9 18l6-6-6-6"/></svg></div>';
+    actionsGroup.appendChild(tgLink);
+
+    // Official Web Portal
+    var webLink = el("a", "ksu-list-item");
+    webLink.href = "https://newbiesteam.surge.sh";
+    webLink.target = "_blank";
+    webLink.rel = "noopener noreferrer";
+    webLink.innerHTML = '<div class="ksu-item-icon"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1 4-10z"/></svg></div><div class="ksu-item-label">Official Web Portal</div><div class="ksu-item-arrow"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M9 18l6-6-6-6"/></svg></div>';
+    actionsGroup.appendChild(webLink);
+
+    card.appendChild(actionsGroup);
+
+    // Credits Section — Core Team & Roles
+    var creditsGroup = el("div", "ksu-card-group ksu-credits-box");
+    var credTitle = el("div", "ksu-credits-title", "Core Team & Roles");
+    creditsGroup.appendChild(credTitle);
+
+    var teamMembers = [
+      {
+        name: "Softbrick",
+        handle: "@zcyrl",
+        tg: "https://t.me/zcyrl",
+        role: "Web/App maintainer and Tester",
+        iconSvg: '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/><polyline points="7 8 10 10 7 12"/><line x1="12" y1="12" x2="16" y2="12"/></svg>'
+      },
+      {
+        name: "Abdul",
+        handle: "@MBuTT3178",
+        tg: "https://t.me/MBuTT3178",
+        role: "Porter and Team Owner",
+        iconSvg: '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="2"/><rect x="9" y="9" width="6" height="6"/><line x1="9" y1="1" x2="9" y2="4"/><line x1="15" y1="1" x2="15" y2="4"/><line x1="9" y1="20" x2="9" y2="23"/><line x1="15" y1="20" x2="15" y2="23"/><line x1="20" y1="9" x2="23" y2="9"/><line x1="20" y1="14" x2="23" y2="14"/><line x1="1" y1="9" x2="4" y2="9"/><line x1="1" y1="14" x2="4" y2="14"/></svg>'
+      },
+      {
+        name: "Mehraann",
+        handle: "@mehraann19",
+        tg: "https://t.me/mehraann19",
+        role: "Developer and Porter",
+        iconSvg: '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/><line x1="14" y1="4" x2="10" y2="20"/></svg>'
+      },
+      {
+        name: "Samarth",
+        handle: "@FruitJuiceFx",
+        tg: "https://t.me/FruitJuiceFx",
+        role: "Banner artist and Tester",
+        iconSvg: '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="13.5" cy="6.5" r=".7" fill="currentColor"/><circle cx="17.5" cy="10.5" r=".7" fill="currentColor"/><circle cx="8.5" cy="7.5" r=".7" fill="currentColor"/><circle cx="6.5" cy="12.5" r=".7" fill="currentColor"/><path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.926 0 1.648-.746 1.648-1.688 0-.437-.18-.835-.437-1.125-.29-.289-.438-.652-.438-1.125a1.64 1.64 0 0 1 1.668-1.668h1.996c3.051 0 5.563-2.512 5.563-5.563C22 6.5 17.5 2 12 2z"/></svg>'
+      }
+    ];
+
+    teamMembers.forEach(function (m) {
+      var row = el("div", "ksu-credit-item");
+      row.innerHTML =
+        '<div class="ksu-credit-icon" aria-hidden="true">' + m.iconSvg + '</div>' +
+        '<div class="ksu-credit-info">' +
+          '<div class="ksu-credit-name-row">' +
+            '<span class="ksu-credit-name">' + m.name + '</span>' +
+            '<a href="' + m.tg + '" target="_blank" rel="noopener noreferrer" class="ksu-credit-handle">' + m.handle + '</a>' +
+          '</div>' +
+          '<div class="ksu-credit-role">' + m.role + '</div>' +
+        '</div>';
+      creditsGroup.appendChild(row);
+    });
+
+    card.appendChild(creditsGroup);
+
+    // Tagline / Signoff
+    var signoff = el("div", "ksu-about-footer", "Control your phone, ROM, Theme and ideas.<br><small>Unofficial GT 20 Pro Community</small>");
+    card.appendChild(signoff);
+
+    modal.appendChild(card);
+    document.body.appendChild(modal);
+
+    modal.addEventListener("click", function (e) {
+      if (e.target === modal) closeAboutModal();
+    });
+
+    requestAnimationFrame(function () {
+      modal.classList.add("is-active");
     });
   }
 
-  // Step 3: Complete Profile Setup & Save State Permanently
-  const handleProfileSubmit = () => {
-    const chosenName = setupNameInput ? setupNameInput.value.trim() : "";
-    if (!chosenName) {
-      if (setupError) setupError.textContent = "Please enter your developer name.";
+  function closeAboutModal() {
+    var modal = document.getElementById("ksu-about-modal");
+    if (!modal) return;
+    modal.classList.remove("is-active");
+    setTimeout(function () {
+      if (modal && modal.parentNode) modal.parentNode.removeChild(modal);
+    }, 220);
+  }
+
+  document.addEventListener("keydown", function (e) {
+    if (e.key === "Escape") {
+      closeAboutModal();
+    }
+  });
+
+  function syncFooterAppVersion() {
+    var footerAppVer = document.getElementById("footer-app-ver");
+    if (!footerAppVer) return;
+
+    footerAppVer.innerHTML =
+      '<div class="footer-bottom-actions">' +
+        '<button type="button" class="footer-app-pill footer-about-btn" id="footer-about-btn" title="About NewbiesTeam" aria-label="About NewbiesTeam">' +
+          '<span class="footer-about-icon">ⓘ</span> About' +
+        '</button>' +
+      '</div>';
+
+    var aboutBtn = document.getElementById("footer-about-btn");
+    if (aboutBtn) {
+      aboutBtn.addEventListener("click", function (e) {
+        e.preventDefault();
+        openAboutModal();
+      });
+    }
+  }
+
+  window.addEventListener("nbt:app-ready", function () {
+    syncFooterAppVersion();
+  });
+
+  function tryAndroidAppHandoff() {
+    if (!/Android/i.test(navigator.userAgent)) return;
+    if (/NewbiesTeamAndroid/i.test(navigator.userAgent)) return;
+    try {
+      if (sessionStorage.getItem("nb_app_handoff_tried") === "1") return;
+      sessionStorage.setItem("nb_app_handoff_tried", "1");
+    } catch (e) {}
+
+    var targetHash = location.hash || "";
+    var intentUrl = "intent://newbiesteam.surge.sh/" + targetHash + "#Intent;scheme=https;package=team.newbies.app;S.browser_fallback_url=" + encodeURIComponent(location.href) + ";end";
+    window.location.href = intentUrl;
+  }
+
+  /* ---------- nav, liquid glass cover, telegram, credit, theme ---------- */
+  var tabLinks = [];
+  TABS.forEach(function (t) {
+    var a = el("a", "tab", t[1]);
+    a.href = "#" + t[0];
+    a.dataset.tab = t[0];
+    tabsBox.appendChild(a);
+    tabLinks.push(a);
+  });
+
+  var tabGlass = el("span", "tab-glass no-trans");
+  tabGlass.setAttribute("aria-hidden", "true");
+  var tabGlassLens = el("span", "tab-glass-lens no-trans");
+  tabGlassLens.setAttribute("aria-hidden", "true");
+  tabsBox.appendChild(tabGlass);
+  tabsBox.appendChild(tabGlassLens);
+
+  var tabGlassReady = false;
+  var padX = 2;
+  var padY = 1;
+
+  function syncTabsFade() {
+    var maxScroll = tabsBox.scrollWidth - tabsBox.clientWidth;
+    if (maxScroll <= 2) {
+      tabsBox.classList.remove("fade-l", "fade-r", "fade-lr");
       return;
     }
-    completeLogin(chosenName, selectedAvatarBase64);
-  };
-
-  if (profileSetupForm) {
-    profileSetupForm.addEventListener("submit", (e) => {
-      e.preventDefault();
-      handleProfileSubmit();
-    });
+    var sl = tabsBox.scrollLeft;
+    var fadeL = sl > 4;
+    var fadeR = sl < maxScroll - 4;
+    tabsBox.classList.toggle("fade-lr", fadeL && fadeR);
+    tabsBox.classList.toggle("fade-l", fadeL && !fadeR);
+    tabsBox.classList.toggle("fade-r", !fadeL && fadeR);
   }
-  if (setupSubmitBtn) {
-    setupSubmitBtn.addEventListener("click", (e) => {
-      e.preventDefault();
-      handleProfileSubmit();
-    });
-  }
+  tabsBox.addEventListener("scroll", syncTabsFade, { passive: true });
 
-  // Dev Profile Corner Pill Click (Expands Current Devs Roster)
-  if (devProfilePill) devProfilePill.addEventListener("click", openRosterModal);
-  if (closeRosterBtn) closeRosterBtn.addEventListener("click", closeRosterModal);
-  if (rosterModal) {
-    rosterModal.addEventListener("click", (e) => {
-      if (e.target === rosterModal) closeRosterModal();
-    });
-  }
+  function syncTabGlass(activeEl, animate) {
+    if (!activeEl) {
+      tabGlass.style.opacity = "0";
+      tabGlassLens.style.opacity = "0";
+      tabGlassReady = false;
+      syncTabsFade();
+      return;
+    }
+    var toX = activeEl.offsetLeft - padX;
+    var toY = activeEl.offsetTop - padY;
+    var toW = activeEl.offsetWidth + padX * 2;
+    var toH = activeEl.offsetHeight + padY * 2;
+    var toTf = "translate3d(" + toX + "px," + toY + "px,0)";
 
-  // FAB Plus Button Click
-  if (fabPlus) {
-    fabPlus.addEventListener("click", () => {
-      openAddModal(activeCategory);
-    });
-  }
-
-  // Action Cards Tap
-  if (actionCards) {
-    actionCards.forEach((card) => {
-      card.addEventListener("click", () => {
-        const cat = card.dataset.category;
-        if (cat === "site-link") {
-          window.open("https://newbiesteam.surge.sh", "_blank");
-          return;
-        }
-        if (cat === "dev-apk") {
-          const devChip = document.querySelector('.m3-chip[data-live-cat="dev-apks"]');
-          if (devChip) {
-            document.querySelectorAll(".m3-chip").forEach((c) => c.classList.remove("active"));
-            devChip.classList.add("active");
-            activeLiveCat = "dev-apks";
-            renderLiveItems(activeLiveCat);
-            const liveSec = document.getElementById("live-items-container");
-            if (liveSec) liveSec.scrollIntoView({ behavior: "smooth" });
-          }
-          return;
-        }
-        openAddModal(cat);
+    if (!animate || !tabGlassReady || prefersCalm()) {
+      tabGlass.classList.add("no-trans");
+      tabGlassLens.classList.add("no-trans");
+      tabGlass.style.width = toW + "px";
+      tabGlass.style.height = toH + "px";
+      tabGlass.style.transform = toTf;
+      tabGlass.style.opacity = "1";
+      tabGlassLens.style.width = toW + "px";
+      tabGlassLens.style.height = toH + "px";
+      tabGlassLens.style.transform = toTf;
+      tabGlassLens.style.opacity = "1";
+      tabGlassReady = true;
+      syncTabsFade();
+      requestAnimationFrame(function () {
+        requestAnimationFrame(function () {
+          tabGlass.classList.remove("no-trans");
+          tabGlassLens.classList.remove("no-trans");
+        });
       });
-    });
+      return;
+    }
+
+    tabGlass.classList.remove("no-trans");
+    tabGlassLens.classList.remove("no-trans");
+    tabGlass.style.width = toW + "px";
+    tabGlass.style.height = toH + "px";
+    tabGlass.style.transform = toTf;
+    tabGlass.style.opacity = "1";
+    tabGlassLens.style.width = toW + "px";
+    tabGlassLens.style.height = toH + "px";
+    tabGlassLens.style.transform = toTf;
+    tabGlassLens.style.opacity = "1";
+    syncTabsFade();
   }
 
-  // Upload Modal Controls
-  if (modalCloseBtn) modalCloseBtn.addEventListener("click", closeModal);
-  if (uploadModal) {
-    uploadModal.addEventListener("click", (e) => {
-      if (e.target === uploadModal) closeModal();
-    });
+  /* Allow dragging/sliding the Liquid Glass pill across tabs by mouse or touch */
+  var dragActive = false;
+  var dragHoveredTab = null;
+
+  function findTabAtClientX(clientX) {
+    var best = null;
+    var bestDist = Infinity;
+    for (var i = 0; i < tabLinks.length; i++) {
+      var a = tabLinks[i];
+      var r = a.getBoundingClientRect();
+      if (clientX >= r.left && clientX <= r.right) return a;
+      var center = (r.left + r.right) * 0.5;
+      var dist = Math.abs(clientX - center);
+      if (dist < bestDist) {
+        bestDist = dist;
+        best = a;
+      }
+    }
+    return best;
   }
 
-  // Category Tabs inside Modal
-  if (catTabs) {
-    catTabs.forEach((tab) => {
-      tab.addEventListener("click", () => {
-        switchCategory(tab.dataset.type);
-      });
-    });
-  }
+  tabsBox.addEventListener("pointerdown", function (e) {
+    if (e.button && e.button !== 0) return;
+    if (e.pointerType === "touch" && tabsBox.scrollWidth > tabsBox.clientWidth + 4) return;
+    var startTab = e.target.closest("a.tab");
+    if (!startTab) return;
+    var startX = e.clientX;
+    var moved = false;
 
-  // Target ROM select change listener for Screenshots Gallery
-  const ssRomSelect = document.getElementById("ss-rom-select");
-  if (ssRomSelect) {
-    ssRomSelect.addEventListener("change", () => {
-      updateScreenshotGalleryForSelectedRom(ssRomSelect.value);
-    });
-  }
+    function onMove(ev) {
+      if (Math.abs(ev.clientX - startX) > 6) moved = true;
+      if (!moved) return;
+      dragActive = true;
+      var overTab = findTabAtClientX(ev.clientX);
+      if (overTab && overTab !== dragHoveredTab) {
+        dragHoveredTab = overTab;
+        syncTabGlass(overTab, true);
+      }
+    }
 
-  // Mod section & category dropdown dynamic switcher
-  const modSecSelect = document.getElementById("mod-section");
-  const modCatSelect = document.getElementById("mod-category-select");
-  const modCatInput = document.getElementById("mod-category");
-
-  if (modSecSelect) {
-    modSecSelect.addEventListener("change", () => {
-      updateModCategoryDropdown(modSecSelect.value);
-    });
-  }
-
-  if (modCatSelect && modCatInput) {
-    modCatSelect.addEventListener("change", () => {
-      if (modCatSelect.value === "__custom__") {
-        modCatInput.classList.remove("hidden");
-        modCatInput.value = "";
-        modCatInput.focus();
+    function onUp() {
+      window.removeEventListener("pointermove", onMove);
+      window.removeEventListener("pointerup", onUp);
+      window.removeEventListener("pointercancel", onUp);
+      if (dragActive && dragHoveredTab) {
+        var targetHash = dragHoveredTab.getAttribute("href");
+        dragActive = false;
+        var finalTab = dragHoveredTab;
+        dragHoveredTab = null;
+        if (targetHash && location.hash !== targetHash) {
+          location.hash = targetHash;
+        } else {
+          syncTabGlass(finalTab, true);
+        }
       } else {
-        modCatInput.classList.add("hidden");
-        modCatInput.value = modCatSelect.value;
+        dragActive = false;
+        dragHoveredTab = null;
       }
+    }
+
+    window.addEventListener("pointermove", onMove, { passive: true });
+    window.addEventListener("pointerup", onUp);
+    window.addEventListener("pointercancel", onUp);
+  });
+
+  var lastWinW = window.innerWidth;
+  window.addEventListener("resize", function () {
+    syncTabsFade();
+    if (window.innerWidth === lastWinW) return;
+    lastWinW = window.innerWidth;
+    var cur = tabsBox.querySelector('a.tab[aria-current="page"]');
+    if (cur) syncTabGlass(cur, false);
+  });
+  if (document.fonts && document.fonts.ready) {
+    document.fonts.ready.then(function () {
+      var cur = tabsBox.querySelector('a.tab[aria-current="page"]');
+      if (cur && !tabGlassReady) syncTabGlass(cur, false);
+      syncTabsFade();
     });
   }
 
-  // Initialize dropdown with default selection
-  updateModCategoryDropdown(modSecSelect?.value || "recovery");
-
-  // Image Upload Triggers
-  setupImagePickers();
-
-  // Main Submission Form Submit
-  if (submitBtn) {
-    submitBtn.addEventListener("click", handleFormSubmit);
-  }
-  if (submissionForm) {
-    submissionForm.addEventListener("submit", handleFormSubmit);
-  }
-  const modalCancelBtn = document.getElementById("modal-cancel-btn");
-  if (modalCancelBtn) {
-    modalCancelBtn.addEventListener("click", closeModal);
-  }
-}
-
-async function completeLogin(devName, avatarPhoto) {
-  if (!pendingKeyObj) {
-    const saved = getPersistentSession();
-    if (saved && saved.key) {
-      pendingKeyObj = await verifyKeyOnline(saved.key);
-    }
-  }
-
-  if (!pendingKeyObj || !pendingKeyObj.ok) {
-    showScreen("gatekeeper");
-    return;
-  }
-
-  const currentDevId = getDeviceId();
-  const session = {
-    key: pendingKeyObj.keyString,
-    key_hash: pendingKeyObj.keyHash,
-    name: devName || pendingKeyObj.name,
-    photo: avatarPhoto || null,
-    role: pendingKeyObj.role,
-    canAutoPush: pendingKeyObj.canAutoPush,
-    deviceId: currentDevId,
-    key_version: pendingKeyObj.key_version || 1,
-    setupDone: true,
-    activatedAt: new Date().toISOString()
-  };
-
-  savePersistentSession(session);
-
-  pendingKeyObj.bound_device_id = currentDevId;
-  pendingKeyObj.bound_user_name = session.name;
-  pendingKeyObj.bound_photo = session.photo;
-
-  currentKey = pendingKeyObj.keyString;
-  currentUser = {
-    ...pendingKeyObj,
-    name: session.name,
-    photo: session.photo,
-    deviceId: currentDevId
-  };
-
-  applyUserProfileUI();
-  showScreen("dashboard");
-  showToast(`Welcome, ${session.name}!`);
-  startPresenceHeartbeat();
-
-  dispatchDeviceClaim(session).catch(() => {});
-}
-
-function applyUserProfileUI() {
-  if (!currentUser) return;
-
-  if (barUserName) barUserName.textContent = currentUser.name;
-  if (pillDevName) pillDevName.textContent = currentUser.name;
-
-  if (currentUser.photo) {
-    if (pillAvatarImg) pillAvatarImg.src = currentUser.photo;
-    if (myProfileAvatar) myProfileAvatar.src = currentUser.photo;
+  var tg = document.getElementById("tg");
+  var ftg = document.getElementById("footer-tg");
+  var tgUrl = safeUrl(S.telegram);
+  if (tgUrl) {
+    if (tg) tg.href = tgUrl;
+    if (ftg) ftg.href = tgUrl;
   } else {
-    if (pillAvatarImg) pillAvatarImg.src = "icons/icon-192.png";
-    if (myProfileAvatar) myProfileAvatar.src = "icons/icon-192.png";
+    if (tg) tg.hidden = true;
+    if (ftg) ftg.hidden = true;
   }
 
-  if (statusHeadline) statusHeadline.textContent = currentUser.headline || `${currentUser.name} Active`;
-  if (statusDescription) statusDescription.textContent = currentUser.description || "Developer session active.";
-  if (statusCard) statusCard.className = `card status-card ${currentUser.role === "admin" ? "" : "status-team"}`;
+  if (S.footerDisclaimer) document.getElementById("legal").textContent = S.footerDisclaimer;
+  if (S.credit) document.getElementById("credit").textContent = S.credit;
+  syncFooterAppVersion();
 
-  if (myProfileName) myProfileName.textContent = currentUser.name;
-  if (myProfileRole) {
-    myProfileRole.textContent = currentUser.role.toUpperCase();
-    myProfileRole.className = `badge-pill ${currentUser.role === "admin" ? "badge-admin" : "badge-team"}`;
+  var root = document.documentElement;
+  var themeBtn = document.getElementById("theme");
+  var themeLocked = false;
+
+  function persistTheme(next) {
+    if (metaTheme) metaTheme.setAttribute("content", next === "light" ? "#faf9f5" : "#1f1e1c");
+    try {
+      localStorage.setItem("nb-theme", next);
+    } catch (e) {}
   }
-}
 
-function showScreen(name) {
-  if (gatekeeperScreen) gatekeeperScreen.classList.remove("active");
-  if (profileSetupScreen) profileSetupScreen.classList.remove("active");
-  if (dashboardScreen) dashboardScreen.classList.remove("active");
+  themeBtn.addEventListener("click", function () {
+    if (themeLocked) return;
+    themeLocked = true;
 
-  if (name === "gatekeeper" && gatekeeperScreen) {
-    gatekeeperScreen.classList.add("active");
-  } else if (name === "profile-setup" && profileSetupScreen) {
-    profileSetupScreen.classList.add("active");
-  } else if (name === "dashboard" && dashboardScreen) {
-    dashboardScreen.classList.add("active");
-  }
-}
+    var next = (root.getAttribute("data-theme") === "light") ? "dark" : "light";
+    var rect = themeBtn.getBoundingClientRect();
+    var cx = Math.round(rect.left + rect.width * 0.5);
+    var cy = Math.round(rect.top + rect.height * 0.5);
+    var cornerDist = Math.hypot(Math.max(cx, window.innerWidth - cx), Math.max(cy, window.innerHeight - cy));
+    var maxR = Math.ceil(cornerDist * 1.25);
 
-// ----------------------------------------------------
-// 6. Live Web Data Engine (Direct Fetch & Populate)
-// ----------------------------------------------------
-async function fetchLiveSiteData(isManual = false) {
-  try {
-    const res = await fetch(`${CONFIG.liveFeedUrl}?t=${Date.now()}`, { cache: "no-store" });
-    if (res.ok) {
-      const text = await res.text();
+    if (prefersCalm() || !document.body.animate) {
+      root.classList.add("theme-switching");
+      root.setAttribute("data-theme", next);
+      persistTheme(next);
+      requestAnimationFrame(function () {
+        root.classList.remove("theme-switching");
+        themeLocked = false;
+      });
+      return;
+    }
+
+    if (typeof document.startViewTransition === "function") {
+      root.style.setProperty("--vt-x", cx + "px");
+      root.style.setProperty("--vt-y", cy + "px");
+      root.style.setProperty("--vt-r", maxR + "px");
+      root.classList.add("theme-switching");
+      var vt;
       try {
-        const fn = new Function(text);
-        fn();
-      } catch (parseErr) {
-        console.warn("Could not evaluate live surge script:", parseErr);
+        vt = document.startViewTransition(function () {
+          root.setAttribute("data-theme", next);
+          persistTheme(next);
+        });
+      } catch (err) {
+        vt = null;
       }
+      if (vt) {
+        var unlock = function () {
+          root.classList.remove("theme-switching");
+          themeLocked = false;
+        };
+        vt.finished.then(unlock, unlock);
+        return;
+      }
+      root.classList.remove("theme-switching");
     }
-  } catch (err) {
-    console.warn("Network fetch from surge failed, using baseline data.js:", err);
-  }
 
-  // Verify SITE exists
-  if (!window.SITE) {
-    window.SITE = { roms: [], updates: [], guides: [], modules: [], recovery: [], kernels: [] };
-  }
-
-  // Update Status Banner
-  if (syncDot) syncDot.className = "sync-dot";
-  if (syncStatusText) syncStatusText.textContent = `Live Web Linked • ${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
-
-  // Populate dynamic select for Screenshots
-  populateRomSelect();
-
-  // Update category chip counts & render current category
-  updateCategoryCounts();
-  renderLiveItems(activeLiveCat);
-
-  if (isManual) {
-    showToast("✔ Live site data synced from newbiesteam.surge.sh");
-  }
-}
-
-function resolveAssetUrl(url) {
-  if (!url) return "";
-  if (url.startsWith("http://") || url.startsWith("https://") || url.startsWith("data:")) {
-    return url;
-  }
-  const clean = url.replace(/^\/+/, "");
-  return `https://newbiesteam.surge.sh/${clean}`;
-}
-
-function populateRomSelect(selectedRomName) {
-  const ssRomSelect = document.getElementById("ss-rom-select");
-  if (!ssRomSelect || !window.SITE || !window.SITE.roms) return;
-
-  const currentVal = selectedRomName !== undefined ? selectedRomName : ssRomSelect.value;
-  let totalCount = 0;
-  let html = "";
-
-  (window.SITE.roms || []).forEach((group) => {
-    const list = [];
-    if (group.feature && group.feature.name) {
-      list.push(group.feature);
+    var sy = window.scrollY || 0;
+    var ripple = el("div", "theme-ripple");
+    ripple.setAttribute("data-theme", next);
+    ripple.style.clipPath = "circle(0px at " + cx + "px " + cy + "px)";
+    var inner = el("div", "theme-ripple-inner");
+    inner.style.transform = "translate3d(0," + (-sy) + "px,0)";
+    var pageEl = document.querySelector(".page");
+    var footEl = document.querySelector(".footer");
+    if (pageEl) {
+      var pageClone = pageEl.cloneNode(true);
+      var cloneTabs = pageClone.querySelector(".tabs");
+      if (cloneTabs && tabsBox.scrollLeft) cloneTabs.scrollLeft = tabsBox.scrollLeft;
+      var cloneInput = pageClone.querySelector("#q");
+      if (cloneInput && searchInput) cloneInput.value = searchInput.value;
+      inner.appendChild(pageClone);
     }
-    if (group.items && Array.isArray(group.items)) {
-      group.items.forEach((item) => {
-        if (item.name && !list.some((x) => x.name === item.name)) {
-          list.push(item);
-        }
+    if (footEl) inner.appendChild(footEl.cloneNode(true));
+    Array.prototype.forEach.call(inner.querySelectorAll("[id]"), function (n) {
+      n.removeAttribute("id");
+    });
+    ripple.appendChild(inner);
+    document.body.appendChild(ripple);
+
+    var realNavEl = document.querySelector(".page .nav-wrap");
+    var cloneNavEl = inner.querySelector(".nav-wrap");
+    if (realNavEl && cloneNavEl) {
+      var navDy = realNavEl.getBoundingClientRect().top - cloneNavEl.getBoundingClientRect().top;
+      if (Math.abs(navDy) > 0.5) cloneNavEl.style.transform = "translate3d(0," + navDy + "px,0)";
+    }
+    var cloneTabsEl = inner.querySelector(".tabs");
+    if (cloneTabsEl) cloneTabsEl.scrollLeft = tabsBox.scrollLeft;
+
+    var rAnim = ripple.animate(
+      {
+        clipPath: [
+          "circle(0px at " + cx + "px " + cy + "px)",
+          "circle(" + maxR + "px at " + cx + "px " + cy + "px)"
+        ]
+      },
+      {
+        duration: 480,
+        easing: "cubic-bezier(0.4, 0, 0.2, 1)",
+        fill: "forwards"
+      }
+    );
+    rAnim.onfinish = function () {
+      ripple.style.clipPath = "circle(" + maxR + "px at " + cx + "px " + cy + "px)";
+      root.classList.add("theme-switching");
+      root.setAttribute("data-theme", next);
+      persistTheme(next);
+      requestAnimationFrame(function () {
+        requestAnimationFrame(function () {
+          if (ripple.parentNode) ripple.parentNode.removeChild(ripple);
+          root.classList.remove("theme-switching");
+          themeLocked = false;
+        });
       });
-    }
-
-    if (list.length > 0) {
-      totalCount += list.length;
-      html += `<optgroup label="${escapeHtml(group.title || "ROMs")}">`;
-      list.forEach((r) => {
-        const scCount = Array.isArray(r.screenshots) ? r.screenshots.length : 0;
-        const isSel = (currentVal === r.name || (r.romId && currentVal === r.romId)) ? "selected" : "";
-        const idLabel = r.romId ? ` [${r.romId}]` : "";
-        html += `<option value="${escapeHtml(r.name)}" data-rom-id="${escapeHtml(r.romId || '')}" ${isSel}>${escapeHtml(r.name)}${idLabel} (${scCount} 📸)</option>`;
-      });
-      html += `</optgroup>`;
-    }
+    };
   });
 
-  ssRomSelect.innerHTML = `<option value="">-- Choose Target ROM (${totalCount} Available) --</option>` + html;
+  /* ---------- floating download card (GDrive + Mirror) ---------- */
+  var activeDlPop = null;
+  var activeDlTrigger = null;
 
-  if (currentVal) {
-    ssRomSelect.value = currentVal;
+  function closeDownloadPopover() {
+    if (activeDlPop && activeDlPop.parentNode) {
+      activeDlPop.parentNode.removeChild(activeDlPop);
+    }
+    if (activeDlTrigger) {
+      activeDlTrigger.removeAttribute("data-pop-open");
+    }
+    activeDlPop = null;
+    activeDlTrigger = null;
   }
 
-  updateScreenshotGalleryForSelectedRom(ssRomSelect.value);
-}
-
-function updateScreenshotGalleryForSelectedRom(romName) {
-  const gallerySec = document.getElementById("ss-gallery-section");
-  const galleryCount = document.getElementById("ss-gallery-count");
-  const galleryList = document.getElementById("ss-gallery-list");
-  if (!gallerySec || !galleryList) return;
-
-  if (!romName) {
-    gallerySec.classList.add("hidden");
-    galleryList.innerHTML = "";
-    return;
+  function makeSvg(viewBox, w, h, innerPaths) {
+    var ns = "http://www.w3.org/2000/svg";
+    var svg = document.createElementNS(ns, "svg");
+    svg.setAttribute("viewBox", viewBox);
+    svg.setAttribute("width", String(w));
+    svg.setAttribute("height", String(h));
+    svg.setAttribute("aria-hidden", "true");
+    innerPaths.forEach(function (p) {
+      var path = document.createElementNS(ns, "path");
+      Object.keys(p).forEach(function (k) {
+        path.setAttribute(k, p[k]);
+      });
+      svg.appendChild(path);
+    });
+    return svg;
   }
 
-  const rom = findRomItem(romName);
-  const screenshots = (rom && Array.isArray(rom.screenshots)) ? rom.screenshots : [];
-
-  gallerySec.classList.remove("hidden");
-  if (galleryCount) {
-    galleryCount.textContent = `${screenshots.length} photo${screenshots.length === 1 ? "" : "s"}`;
+  function gdriveIconNode() {
+    return makeSvg("0 0 87.3 78", 18, 16, [
+      { d: "m6.6 66.85 3.85 6.65c.8 1.4 1.95 2.5 3.3 3.3l13.75-23.8h-27.5c0 1.55.4 3.1 1.2 4.5z", fill: "#0066da" },
+      { d: "m43.65 25-13.75-23.8c-1.35.8-2.5 1.9-3.3 3.3l-25.4 44a9.06 9.06 0 0 0 -1.2 4.5h27.5z", fill: "#00ac47" },
+      { d: "m73.55 76.8c1.35-.8 2.5-1.9 3.3-3.3l1.6-2.75 7.65-13.25c.8-1.4 1.2-2.95 1.2-4.5h-27.502l5.852 11.5z", fill: "#ea4335" },
+      { d: "m43.65 25 13.75-23.8c-1.35-.8-2.9-1.2-4.5-1.2h-18.5c-1.6 0-3.15.45-4.5 1.2z", fill: "#00832d" },
+      { d: "m59.8 53h-32.3l-13.75 23.8c1.35.8 2.9 1.2 4.5 1.2h50.8c1.6 0 3.15-.45 4.5-1.2z", fill: "#2684fc" },
+      { d: "m73.4 26.5-12.7-22c-.8-1.4-1.95-2.5-3.3-3.3l-13.75 23.8 16.15 28h27.45c0-1.55-.4-3.1-1.2-4.5z", fill: "#ffba00" }
+    ]);
   }
 
-  if (screenshots.length === 0) {
-    galleryList.innerHTML = `<div class="ss-gallery-empty">No screenshots linked to <strong>${escapeHtml(romName)}</strong> yet.<br><small>Pick an image below to upload the first screenshot!</small></div>`;
-    return;
+  function mirrorIconNode() {
+    return makeSvg("0 0 24 24", 16, 16, [
+      {
+        d: "M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5",
+        fill: "none",
+        stroke: "currentColor",
+        "stroke-width": "2",
+        "stroke-linecap": "round",
+        "stroke-linejoin": "round"
+      }
+    ]);
   }
 
-  let html = "";
-  screenshots.forEach((s, idx) => {
-    const imgUrl = resolveAssetUrl(s.url);
-    const caption = s.caption || `Screenshot #${idx + 1}`;
-    html += `
-      <div class="ss-thumb-card" title="${escapeHtml(caption)}">
-        <button type="button" class="ss-thumb-del" title="Delete screenshot" data-rom="${escapeHtml(romName)}" data-index="${idx}">✕</button>
-        <img src="${imgUrl}" alt="${escapeHtml(caption)}" class="ss-thumb-img" loading="lazy" decoding="async" onerror="this.onerror=null; this.src='data:image/svg+xml;utf8,<svg xmlns=\\\'http://www.w3.org/2000/svg\\\' width=\\\'88\\\' height=\\\'120\\\' viewBox=\\\'0 0 88 120\\\'><rect fill=\\\'%23222\\\' width=\\\'88\\\' height=\\\'120\\\'/><text fill=\\\'%23777\\\' x=\\\'44\\\' y=\\\'60\\\' text-anchor=\\\'middle\\\' font-size=\\\'10\\\'>No Preview</text></svg>';">
-        <div class="ss-thumb-caption">${escapeHtml(caption)}</div>
-      </div>
-    `;
-  });
-  galleryList.innerHTML = html;
+  function githubIconNode() {
+    return makeSvg("0 0 24 24", 18, 18, [
+      {
+        d: "M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z",
+        fill: "currentColor"
+      }
+    ]);
+  }
 
-  galleryList.querySelectorAll(".ss-thumb-del").forEach((delBtn) => {
-    delBtn.addEventListener("click", (e) => {
+  function sourceforgeIconNode() {
+    return makeSvg("0 0 24 24", 18, 18, [
+      {
+        d: "M22.09 13.91c-.08-.4-.28-.77-.58-1.04-.3-.27-.69-.41-1.1-.41H17.7l1.9-5.11c.14-.38.15-.8.03-1.18-.12-.38-.37-.7-.71-.91-.34-.21-.75-.29-1.15-.22-.4.07-.76.28-1.01.59l-7.7 9.38c-.26.32-.38.73-.34 1.14.04.41.23.79.53 1.06.3.27.7.41 1.11.41h2.71l-1.9 5.11c-.14.38-.15.8-.03 1.18.12.38.37.7.71.91.34.21.75.29 1.15.22.4-.07.76-.28 1.01-.59l7.7-9.38c.26-.32.38-.73.34-1.15z",
+        fill: "#ee5924"
+      }
+    ]);
+  }
+
+  function androidIconNode() {
+    return makeSvg("0 0 24 24", 18, 18, [
+      {
+        d: "M6 18c0 .55.45 1 1 1h1v3.5c0 .83.67 1.5 1.5 1.5s1.5-.67 1.5-1.5V19h2v3.5c0 .83.67 1.5 1.5 1.5s1.5-.67 1.5-1.5V19h1c.55 0 1-.45 1-1V8H6v10zM3.5 8C2.67 8 2 8.67 2 9.5v6c0 .83.67 1.5 1.5 1.5S5 16.33 5 15.5v-6C5 8.67 4.33 8 3.5 8zm17 0c-.83 0-1.5.67-1.5 1.5v6c0 .83.67 1.5 1.5 1.5s1.5-.67 1.5-1.5v-6c0-.83-.67-1.5-1.5-1.5zm-4.97-5.84l1.3-1.3c.2-.2.2-.51 0-.71-.2-.2-.51-.2-.71 0l-1.48 1.48C13.85 1.23 12.95 1 12 1c-.96 0-1.86.23-2.66.63L7.85.15c-.2-.2-.51-.2-.71 0-.2.2-.2.51 0 .71l1.31 1.31C6.97 3.26 6 5.01 6 7h12c0-1.99-.97-3.75-2.47-4.84zM10 5H9V4h1v1zm5 0h-1V4h1v1z",
+        fill: "#3ddc84"
+      }
+    ]);
+  }
+
+  function megaIconNode() {
+    return makeSvg("0 0 24 24", 18, 18, [
+      { d: "M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2z", fill: "#d9272e" },
+      { d: "M16.5 16.5h-1.8v-4.8l-2.7 2.7-2.7-2.7v4.8H7.5V7.5h1.8l2.7 2.7 2.7-2.7h1.8v9z", fill: "#ffffff" }
+    ]);
+  }
+
+  function telegramIconNode() {
+    return makeSvg("0 0 24 24", 18, 18, [
+      { d: "M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2z", fill: "#2aabee" },
+      { d: "M9.8 14.5l-.4 3.9c.6 0 .8-.3 1.1-.6l2.7-2.6 5.6 4.1c1 .6 1.8.3 2.1-.9l3.8-17.9c.4-1.6-.6-2.3-1.6-1.9L2.1 10.3c-1.5.6-1.5 1.4-.3 1.8l5.8 1.8 13.5-8.5c.6-.4 1.2-.2.7.2z", fill: "#ffffff" }
+    ]);
+  }
+
+  function genericDownloadIconNode() {
+    return makeSvg("0 0 24 24", 18, 18, [
+      {
+        d: "M12 3v11m0 0l-4-4m4 4l4-4M4 17v2a2 2 0 002 2h12a2 2 0 002-2v-2",
+        fill: "none",
+        stroke: "currentColor",
+        "stroke-width": "2",
+        "stroke-linecap": "round",
+        "stroke-linejoin": "round"
+      }
+    ]);
+  }
+
+  function getDownloadSourceInfo(url, isMirror) {
+    var raw = (url || "").trim();
+    if (!raw || raw.charAt(0) === "#") {
+      return {
+        name: isMirror ? "Mirror Download" : "Direct Download",
+        sub: isMirror ? "Backup download server" : "Primary download link",
+        icon: isMirror ? mirrorIconNode() : genericDownloadIconNode()
+      };
+    }
+    var host = "";
+    try {
+      var parsed = new URL(raw, window.location.href);
+      host = (parsed.hostname || "").toLowerCase().replace(/^www\./, "");
+    } catch (e) {
+      var m = raw.match(/^[a-z]+:\/\/([^/:]+)/i);
+      host = m ? m[1].toLowerCase().replace(/^www\./, "") : "";
+    }
+
+    // Google Drive
+    if (host === "drive.google.com" || host === "docs.google.com") {
+      return {
+        name: isMirror ? "Google Drive (Mirror)" : "Google Drive",
+        sub: isMirror ? "Backup Google Drive link" : "Primary download link",
+        icon: gdriveIconNode()
+      };
+    }
+
+    // GitHub
+    if (host === "github.com" || host.endsWith(".github.com") || host === "raw.githubusercontent.com") {
+      return {
+        name: isMirror ? "GitHub (Mirror)" : "GitHub Releases",
+        sub: isMirror ? "Backup GitHub repository" : "Official repository release",
+        icon: githubIconNode()
+      };
+    }
+
+    // SourceForge
+    if (host === "sourceforge.net" || host.endsWith(".sourceforge.net") || host === "fsdn.com") {
+      return {
+        name: isMirror ? "SourceForge (Mirror)" : "SourceForge",
+        sub: isMirror ? "Backup SourceForge mirror" : "Fast mirrors & direct file",
+        icon: sourceforgeIconNode()
+      };
+    }
+
+    // Google Android OTA / Googleapis
+    if (host === "android.googleapis.com" || host.endsWith(".googleapis.com")) {
+      return {
+        name: isMirror ? "Google OTA (Mirror)" : "Google Android OTA",
+        sub: isMirror ? "Backup official OTA package" : "Official Android firmware",
+        icon: androidIconNode()
+      };
+    }
+
+    // MEGA
+    if (host === "mega.nz" || host === "mega.io" || host === "mega.co.nz") {
+      return {
+        name: isMirror ? "MEGA (Mirror)" : "MEGA",
+        sub: isMirror ? "Backup MEGA cloud storage" : "Encrypted cloud storage",
+        icon: megaIconNode()
+      };
+    }
+
+    // Telegram
+    if (host === "t.me" || host === "telegram.org") {
+      return {
+        name: isMirror ? "Telegram (Mirror)" : "Telegram",
+        sub: isMirror ? "Backup Telegram file" : "Community channel file",
+        icon: telegramIconNode()
+      };
+    }
+
+    var cleanName = host;
+    if (cleanName) {
+      cleanName = cleanName.charAt(0).toUpperCase() + cleanName.slice(1);
+    } else {
+      cleanName = isMirror ? "Mirror Download" : "Direct Download";
+    }
+
+    return {
+      name: isMirror ? cleanName + " (Mirror)" : cleanName,
+      sub: isMirror ? "Backup download server" : "Primary download link",
+      icon: isMirror ? mirrorIconNode() : genericDownloadIconNode()
+    };
+  }
+
+  function positionDownloadPopover() {
+    if (!activeDlPop || !activeDlTrigger) return;
+    var r = activeDlTrigger.getBoundingClientRect();
+    var popRect = activeDlPop.getBoundingClientRect();
+    var popW = popRect.width || 268;
+    var popH = popRect.height || 152;
+    var vw = window.innerWidth;
+    var vh = window.innerHeight;
+
+    var left = r.right - popW;
+    if (left < 12) left = 12;
+    if (left + popW > vw - 12) left = Math.max(12, vw - popW - 12);
+
+    var top = r.bottom + 8;
+    if (top + popH > vh - 12 && r.top - popH - 8 >= 12) {
+      top = r.top - popH - 8;
+    }
+    activeDlPop.style.left = Math.round(left) + "px";
+    activeDlPop.style.top = Math.round(top) + "px";
+  }
+
+  function openDownloadPopover(triggerEl, item) {
+    var primaryUrl = safeUrl(item && item.url);
+    if (!primaryUrl) return;
+    if (activeDlTrigger === triggerEl && activeDlPop) {
+      closeDownloadPopover();
+      return;
+    }
+    closeDownloadPopover();
+
+    var pop = el("div", "dl-popover");
+    pop.setAttribute("role", "dialog");
+    pop.setAttribute("aria-label", "Download options for " + (item.name || "file"));
+
+    var head = el("div", "dl-pop-head");
+    var titleWrap = el("div", "dl-pop-head-text");
+    titleWrap.appendChild(el("div", "dl-pop-kicker", "Choose download source"));
+    titleWrap.appendChild(el("div", "dl-pop-title", item.name || "Download file"));
+    head.appendChild(titleWrap);
+
+    var closeBtn = el("button", "dl-pop-close", "\u00d7");
+    closeBtn.type = "button";
+    closeBtn.setAttribute("aria-label", "Close download options");
+    closeBtn.addEventListener("click", function (e) {
       e.stopPropagation();
+      closeDownloadPopover();
+    });
+    head.appendChild(closeBtn);
+    pop.appendChild(head);
+
+    var actions = el("div", "dl-pop-actions");
+
+    var primaryInfo = getDownloadSourceInfo(primaryUrl, false);
+    var gBtn = el("a", "dl-pop-btn dl-pop-primary");
+    gBtn.href = primaryUrl;
+    if (primaryUrl.charAt(0) !== "#") {
+      gBtn.target = "_blank";
+      gBtn.rel = "noopener noreferrer";
+    }
+    var gIcon = el("span", "dl-pop-icon");
+    gIcon.appendChild(primaryInfo.icon);
+    gBtn.appendChild(gIcon);
+    var gTxt = el("div", "dl-pop-btn-text");
+    gTxt.appendChild(el("span", "dl-pop-btn-main", primaryInfo.name));
+    gTxt.appendChild(el("span", "dl-pop-btn-sub", primaryInfo.sub));
+    gBtn.appendChild(gTxt);
+    gBtn.appendChild(el("span", "dl-pop-arrow", "\u2197"));
+    gBtn.addEventListener("click", function () {
+      setTimeout(closeDownloadPopover, 120);
+    });
+    actions.appendChild(gBtn);
+
+    var mirrorUrl = safeUrl(item && (item.mirrorUrl || item.mirror));
+    if (mirrorUrl) {
+      var mirrorInfo = getDownloadSourceInfo(mirrorUrl, true);
+      var mLink = el("a", "dl-pop-btn dl-pop-mirror");
+      mLink.href = mirrorUrl;
+      mLink.target = "_blank";
+      mLink.rel = "noopener noreferrer";
+      var mIcon = el("span", "dl-pop-icon");
+      mIcon.appendChild(mirrorInfo.icon);
+      mLink.appendChild(mIcon);
+      var mTxt = el("div", "dl-pop-btn-text");
+      mTxt.appendChild(el("span", "dl-pop-btn-main", mirrorInfo.name));
+      mTxt.appendChild(el("span", "dl-pop-btn-sub", mirrorInfo.sub));
+      mLink.appendChild(mTxt);
+      mLink.appendChild(el("span", "dl-pop-arrow", "\u2197"));
+      mLink.addEventListener("click", function () {
+        setTimeout(closeDownloadPopover, 120);
+      });
+      actions.appendChild(mLink);
+    } else {
+      var mBtn = el("button", "dl-pop-btn dl-pop-mirror is-empty");
+      mBtn.type = "button";
+      var mIcon2 = el("span", "dl-pop-icon");
+      mIcon2.appendChild(mirrorIconNode());
+      mBtn.appendChild(mIcon2);
+      var mTxt2 = el("div", "dl-pop-btn-text");
+      var mainLbl = el("span", "dl-pop-btn-main", "Mirror");
+      var subLbl = el("span", "dl-pop-btn-sub", "No mirror link available");
+      mTxt2.appendChild(mainLbl);
+      mTxt2.appendChild(subLbl);
+      mBtn.appendChild(mTxt2);
+      mBtn.addEventListener("click", function (e) {
+        e.stopPropagation();
+        mainLbl.textContent = "No mirror link available";
+        subLbl.textContent = "Check back later if primary link is unreachable";
+        mBtn.classList.remove("shake");
+        void mBtn.offsetWidth;
+        mBtn.classList.add("shake");
+      });
+      actions.appendChild(mBtn);
+    }
+
+    pop.appendChild(actions);
+    document.body.appendChild(pop);
+
+    activeDlPop = pop;
+    activeDlTrigger = triggerEl;
+    triggerEl.setAttribute("data-pop-open", "true");
+    positionDownloadPopover();
+  }
+
+  document.addEventListener("pointerdown", function (e) {
+    if (!activeDlPop) return;
+    if (activeDlPop.contains(e.target)) return;
+    if (activeDlTrigger && activeDlTrigger.contains(e.target)) return;
+    closeDownloadPopover();
+  });
+  window.addEventListener("scroll", function () {
+    if (activeDlPop) positionDownloadPopover();
+  }, { passive: true });
+  window.addEventListener("resize", function () {
+    if (activeDlPop) closeDownloadPopover();
+  });
+  document.addEventListener("keydown", function (e) {
+    if (e.key === "Escape" && activeDlPop) closeDownloadPopover();
+  });
+
+  /* ---------- building blocks ---------- */
+  function guideRedirectNode(guideSlug) {
+    var link = el("a", "guide-redirect-link");
+    link.href = "#guides/" + encodeURIComponent(guideSlug);
+    link.appendChild(el("span", "guide-redirect-text", "Redirect to full guide"));
+    link.appendChild(el("span", "guide-redirect-arrow", "\u2192"));
+    return link;
+  }
+
+  function slugify(str) {
+    return String(str || "")
+      .toLowerCase()
+      .trim()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-+|-+$/g, "");
+  }
+
+  function romDetailsDrawer(d, guideSlug, item) {
+    var drawer = el("div", "rom-drawer");
+    var inner = el("div", "rom-drawer-inner");
+    var body = el("div", "rom-drawer-body");
+
+    if (d && d.base) {
+      var baseBox = el("div", "rom-base");
+      baseBox.appendChild(el("strong", "", "Ported from / Base:"));
+      baseBox.appendChild(document.createTextNode(d.base));
+      body.appendChild(baseBox);
+    }
+
+    function addSec(heading, items) {
+      if (!items || !items.length) return;
+      var sec = el("div", "rom-sec");
+      sec.appendChild(el("h3", "", heading));
+      var ul = el("ul");
+      items.forEach(function (line) {
+        ul.appendChild(el("li", "", line));
+      });
+      sec.appendChild(ul);
+      body.appendChild(sec);
+    }
+
+    if (d) {
+      addSec("Changelogs", d.changelogs);
+      addSec("What is fixed", d.fixed);
+      addSec("Bugs", d.bugs);
+    }
+
+    // Screenshots link or "No screenshots available" tag
+    if (item && item.name) {
+      var rSlug = slugify(item.name);
+      var romIdentifier = item.romId || rSlug;
+      var hasScreens = Array.isArray(item.screenshots) && item.screenshots.length > 0;
+      var screenSec = el("div", "rom-sec rom-sec-screenshots");
+
+      if (hasScreens) {
+        var strip = el("div", "rom-drawer-ss-strip");
+        var previewShots = item.screenshots.slice(0, 3);
+        previewShots.forEach(function (shot, pIdx) {
+          var thumb = el("a", "rom-drawer-ss-thumb");
+          thumb.href = "#screenshots/" + encodeURIComponent(romIdentifier);
+          thumb.title = shot.caption || (item.name + " screenshot " + (pIdx + 1));
+          var img = el("img", "rom-drawer-ss-img");
+          img.src = shot.url;
+          img.alt = shot.caption || "Preview " + (pIdx + 1);
+          img.loading = "lazy";
+          img.decoding = "async";
+          thumb.appendChild(img);
+          thumb.addEventListener("click", function (ev) {
+            ev.preventDefault();
+            location.hash = "#screenshots/" + encodeURIComponent(romIdentifier);
+          });
+          strip.appendChild(thumb);
+        });
+        screenSec.appendChild(strip);
+
+        var sLink = el("a", "rom-see-screenshots-btn");
+        sLink.href = "#screenshots/" + encodeURIComponent(romIdentifier);
+        sLink.title = "View screenshots for " + item.name;
+
+        var iconSpan = el("span", "btn-icon", "\uD83D\uDDBC\uFE0F");
+        var textSpan = el("span", "btn-text", "View Screenshots");
+        var countSpan = el("span", "btn-badge", "(" + item.screenshots.length + ")");
+        var arrowSpan = el("span", "btn-arrow", "\u2192");
+
+        sLink.appendChild(iconSpan);
+        sLink.appendChild(textSpan);
+        sLink.appendChild(countSpan);
+        sLink.appendChild(arrowSpan);
+        sLink.addEventListener("click", function (ev) {
+          ev.preventDefault();
+          location.hash = "#screenshots/" + encodeURIComponent(romIdentifier);
+        });
+        screenSec.appendChild(sLink);
+      } else {
+        var noScreen = el("div", "rom-no-screenshots-tag");
+        var iconSpan = el("span", "tag-icon", "\uD83D\uDCF7");
+        var textSpan = el("span", "tag-text", "No screenshots available");
+        noScreen.appendChild(iconSpan);
+        noScreen.appendChild(textSpan);
+        screenSec.appendChild(noScreen);
+      }
+      body.appendChild(screenSec);
+    }
+
+    if (guideSlug) {
+      body.appendChild(guideRedirectNode(guideSlug));
+    }
+
+    inner.appendChild(body);
+    drawer.appendChild(inner);
+    return drawer;
+  }
+
+  function guideOnlyDrawer(guideSlug) {
+    var drawer = el("div", "rom-drawer card-guide-drawer");
+    var inner = el("div", "rom-drawer-inner");
+    var body = el("div", "rom-drawer-body card-guide-body");
+    body.appendChild(guideRedirectNode(guideSlug));
+    inner.appendChild(body);
+    drawer.appendChild(inner);
+    return drawer;
+  }
+
+  function cardNode(it, tabName) {
+    var url = safeUrl(it.url);
+    var hasScreens = Array.isArray(it.screenshots) && it.screenshots.length > 0;
+    var isRomItem = it.isRom || (it.category && /rom|firmware/i.test(it.category)) || (it.details && it.details.base);
+    var hasDrawer = !!(it.details || it.guide || hasScreens || isRomItem);
+    var c = el("div", hasDrawer ? "card has-drawer" : "card");
+
+    var itemSlug = slugify(it.name);
+    c.id = "item-" + itemSlug;
+    c.setAttribute("data-slug", itemSlug);
+    if (tabName) c.setAttribute("data-tab", tabName);
+
+    var canonicalHash = getItemCanonicalHash(it, tabName);
+
+    var top = el("div", "card-top");
+    var left = el("div", "card-left");
+
+    var titleWrap = el("div", "card-title-wrap");
+    var titleAnchor = el("a", "name name-link", it.name);
+    titleAnchor.href = canonicalHash;
+    titleAnchor.title = "Direct link: " + canonicalHash + " (Right-click to copy link, or click to copy)";
+    titleAnchor.addEventListener("click", function (e) {
       e.preventDefault();
-      delBtn.disabled = true;
+      copyElementDeepLink(it.name, canonicalHash);
+      if (location.hash !== canonicalHash) {
+        history.pushState(null, "", canonicalHash);
+      }
+      highlightElement(c);
+    });
+    titleWrap.appendChild(titleAnchor);
 
-      const rName = delBtn.dataset.rom;
-      const rIdx = parseInt(delBtn.dataset.index, 10);
-      const card = delBtn.closest(".ss-thumb-card");
+    var copyBtn = el("button", "copy-link-btn");
+    copyBtn.type = "button";
+    copyBtn.setAttribute("aria-label", "Copy direct link for " + it.name);
+    copyBtn.title = "Copy direct link";
+    copyBtn.innerHTML = '<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>';
+    copyBtn.addEventListener("click", function (e) {
+      e.stopPropagation();
+      copyElementDeepLink(it.name, canonicalHash);
+    });
+    titleWrap.appendChild(copyBtn);
+    left.appendChild(titleWrap);
 
-      // Optimistic instant delete via requestAnimationFrame (<16ms, zero freeze!)
-      requestAnimationFrame(() => {
-        executeInstantScreenshotDelete(rName, rIdx, card);
+    var meta = el("div", "meta");
+    if (it.date) meta.appendChild(el("span", "", it.date));
+    if (it.by) meta.appendChild(el("span", "", "By " + it.by));
+    if (it.group) meta.appendChild(el("span", "", "Group: " + it.group));
+    if (it.note) meta.appendChild(el("span", "", it.note));
+    if (it.size) meta.appendChild(el("span", "", it.size));
+    if (meta.childNodes.length) left.appendChild(meta);
+    top.appendChild(left);
+
+    var actions = el("div", "card-actions");
+    if (hasDrawer) {
+      var infoBtn = el("button", "info-btn", "i");
+      infoBtn.type = "button";
+      infoBtn.setAttribute("aria-expanded", "false");
+      infoBtn.setAttribute("aria-label", "Show guide and info for " + it.name);
+      infoBtn.title = "View screenshots, full guide & info";
+      infoBtn.addEventListener("click", function (e) {
+        e.stopPropagation();
+        var open = c.classList.toggle("is-open");
+        infoBtn.setAttribute("aria-expanded", open ? "true" : "false");
+      });
+      actions.appendChild(infoBtn);
+    }
+
+    if (url) {
+      var dlBtn = el("a", "dl", "Download");
+      dlBtn.href = url;
+      if (url.charAt(0) !== "#") {
+        dlBtn.target = "_blank";
+        dlBtn.rel = "noopener noreferrer";
+      }
+      dlBtn.addEventListener("click", function (e) {
+        e.preventDefault();
+        e.stopPropagation();
+        openDownloadPopover(dlBtn, it);
+      });
+      actions.appendChild(dlBtn);
+    } else {
+      actions.appendChild(el("span", "dl", "Soon"));
+    }
+
+    top.appendChild(actions);
+    c.appendChild(top);
+
+    c.addEventListener("contextmenu", function (e) {
+      if (e.target.closest("a.dl") || e.target.closest(".info-btn")) return;
+      copyElementDeepLink(it.name, canonicalHash);
+    });
+
+    if (it.details || hasScreens || isRomItem) {
+      c.appendChild(romDetailsDrawer(it.details, it.guide, it));
+    } else if (it.guide) {
+      c.appendChild(guideOnlyDrawer(it.guide));
+    }
+    return c;
+  }
+
+  function featureNode(f, isPriority, tabName) {
+    var box = el("div", "feat-item");
+    var tab = tabName || "roms";
+    var itemSlug = slugify(f.name);
+    box.id = "item-" + itemSlug;
+    box.setAttribute("data-slug", itemSlug);
+    box.setAttribute("data-tab", tab);
+    var canonicalHash = getItemCanonicalHash(f, tab);
+
+    var url = safeUrl(f.url);
+    var hasScreens = Array.isArray(f.screenshots) && f.screenshots.length > 0;
+    var isRomFeat = f.isRom || (f.category && /rom|firmware|latest/i.test(f.category)) || true;
+    var hasDrawer = !!(f.details || f.guide || hasScreens || isRomFeat);
+    if (f.image) {
+      var img = el("img", "banner");
+      img.src = f.image;
+      img.alt = f.alt || f.name || "";
+      img.width = f.width || 1200;
+      img.height = f.height || 675;
+      img.decoding = "async";
+      if (isPriority) img.fetchPriority = "high";
+      else img.loading = "lazy";
+      if (url) {
+        var imgLink = el("a", "banner-link");
+        imgLink.href = url;
+        imgLink.target = "_blank";
+        imgLink.rel = "noopener noreferrer";
+        imgLink.addEventListener("click", function (e) {
+          e.preventDefault();
+          var dlTarget = box.querySelector(".pill.dl") || imgLink;
+          openDownloadPopover(dlTarget, f);
+        });
+        imgLink.appendChild(img);
+        box.appendChild(imgLink);
+      } else {
+        box.appendChild(img);
+      }
+    }
+    var row = el("div", "feat");
+    var left = el("div");
+
+    var titleWrap = el("div", "card-title-wrap");
+    var titleLink = el("a", "name feat-title-link", f.name);
+    titleLink.href = canonicalHash;
+    titleLink.title = "Direct link: " + canonicalHash + " (Right-click to copy link, or click to copy)";
+    titleLink.addEventListener("click", function (e) {
+      e.preventDefault();
+      copyElementDeepLink(f.name, canonicalHash);
+      if (location.hash !== canonicalHash) {
+        history.pushState(null, "", canonicalHash);
+      }
+      highlightElement(box);
+    });
+    titleWrap.appendChild(titleLink);
+
+    var copyBtn = el("button", "copy-link-btn");
+    copyBtn.type = "button";
+    copyBtn.setAttribute("aria-label", "Copy direct link for " + f.name);
+    copyBtn.title = "Copy direct link";
+    copyBtn.innerHTML = '<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>';
+    copyBtn.addEventListener("click", function (e) {
+      e.stopPropagation();
+      copyElementDeepLink(f.name, canonicalHash);
+    });
+    titleWrap.appendChild(copyBtn);
+    left.appendChild(titleWrap);
+
+    var meta = el("div", "meta");
+    if (f.date) meta.appendChild(el("span", "", "Release date: " + f.date));
+    if (f.by) meta.appendChild(el("span", "", "By " + f.by));
+    if (f.group) meta.appendChild(el("span", "", "Group: " + f.group));
+    if (f.note) meta.appendChild(el("span", "", f.note));
+    if (f.size) meta.appendChild(el("span", "", f.size));
+    if (meta.childNodes.length) left.appendChild(meta);
+    row.appendChild(left);
+
+    var actions = el("div", "feat-actions");
+    var infoBtn = null;
+    if (hasDrawer) {
+      infoBtn = el("button", "info-btn", "i");
+      infoBtn.type = "button";
+      infoBtn.setAttribute("aria-expanded", "false");
+      infoBtn.setAttribute("aria-label", "Show ROM info, screenshots, changelogs, fixes and bugs");
+      infoBtn.title = "View screenshots, changelogs, fixes & guide";
+      infoBtn.addEventListener("click", function () {
+        var open = box.classList.toggle("is-open");
+        infoBtn.setAttribute("aria-expanded", open ? "true" : "false");
+      });
+      actions.appendChild(infoBtn);
+    }
+
+    if (url) {
+      var a = el("a", "pill dl", "Download");
+      a.href = url;
+      a.target = "_blank";
+      a.rel = "noopener noreferrer";
+      a.addEventListener("click", function (e) {
+        e.preventDefault();
+        e.stopPropagation();
+        openDownloadPopover(a, f);
+      });
+      actions.appendChild(a);
+    } else {
+      actions.appendChild(el("span", "pill", "Upcoming"));
+    }
+    row.appendChild(actions);
+    box.appendChild(row);
+
+    box.addEventListener("contextmenu", function (e) {
+      if (e.target.closest("a.banner-link") || e.target.closest(".pill.dl") || e.target.closest(".info-btn")) return;
+      copyElementDeepLink(f.name, canonicalHash);
+    });
+
+    if (f.details || hasScreens || isRomFeat) {
+      box.appendChild(romDetailsDrawer(f.details, f.guide, f));
+    } else if (f.guide) {
+      box.appendChild(guideOnlyDrawer(f.guide));
+    }
+    return box;
+  }
+
+  function panelNode(g, tabName) {
+    var items = g.items || [];
+    if (!g.feature && !items.length) {
+      return null;
+    }
+    var isRomPanel = tabName === "roms" || (S.roms || []).some(function (c) {
+      return c === g;
+    });
+    var p = el("section", "panel");
+    var panelSlug = slugify(g.title);
+    p.id = "panel-" + panelSlug;
+    p.setAttribute("data-slug", panelSlug);
+    if (tabName) p.setAttribute("data-tab", tabName);
+
+    p.appendChild(el("h2", "", g.title));
+    if (g.feature) {
+      if (isRomPanel) g.feature.isRom = true;
+      p.appendChild(featureNode(g.feature, true, tabName));
+    }
+    if (items.length) {
+      var hasBanners = items.some(function (it) {
+        return !!it.image;
+      });
+      if (hasBanners) {
+        var list = el("div", "feat-list");
+        items.forEach(function (it) {
+          if (isRomPanel) it.isRom = true;
+          list.appendChild(it.image ? featureNode(it, false, tabName) : cardNode(it, tabName));
+        });
+        p.appendChild(list);
+      } else {
+        var grid = el("div", "grid");
+        items.forEach(function (it) {
+          if (isRomPanel) it.isRom = true;
+          grid.appendChild(cardNode(it, tabName));
+        });
+        p.appendChild(grid);
+      }
+    } else if (!g.feature) {
+      var grid = el("div", "grid");
+      grid.appendChild(el("div", "empty", "Nothing here yet."));
+      p.appendChild(grid);
+    }
+    return p;
+  }
+
+  /* ---------- Updates & Changelogs tab + Host Upload ---------- */
+  function openUploadModal() {
+    var backdrop = el("div", "modal-backdrop");
+    var modal = el("form", "modal");
+    modal.appendChild(el("h3", "", "Publish Update / Changelog"));
+
+    function field(label, inputEl) {
+      var wrap = el("div", "modal-field");
+      wrap.appendChild(el("label", "", label));
+      wrap.appendChild(inputEl);
+      return wrap;
+    }
+
+    var titleIn = el("input");
+    titleIn.type = "text";
+    titleIn.required = true;
+    titleIn.placeholder = "e.g. OxygenOS 16 V1 Released";
+
+    var tagIn = el("input");
+    tagIn.type = "text";
+    tagIn.value = "Update";
+    tagIn.placeholder = "Update, New ROM, Changelog, Fix, News...";
+    tagIn.setAttribute("list", "tag-presets");
+    var dataList = el("datalist");
+    dataList.id = "tag-presets";
+    ["Update", "New ROM", "Changelog", "Feature", "Fix", "News"].forEach(function (t) {
+      var o = el("option");
+      o.value = t;
+      dataList.appendChild(o);
+    });
+    modal.appendChild(dataList);
+
+    var byIn = el("input");
+    byIn.type = "text";
+    byIn.value = S.credit || "Softbrick";
+    byIn.placeholder = "Custom author name (e.g. Softbrick, MBuTT3178, fjrXTR...)";
+
+    var bodyIn = el("textarea");
+    bodyIn.required = true;
+    bodyIn.placeholder = "Write the changelog, news, or paste https://... links or {{https://...|Link Text}}...";
+
+    var urlIn = el("input");
+    urlIn.type = "text";
+    urlIn.placeholder = "Optional button link (e.g. https://drive.google.com/... or #roms)";
+
+    var linkLabelIn = el("input");
+    linkLabelIn.type = "text";
+    linkLabelIn.placeholder = "Optional button label (e.g. Download, Screenshots, Open Link)";
+
+    var imgIn = el("input");
+    imgIn.type = "file";
+    imgIn.accept = "image/*";
+
+    var imgUrlIn = el("input");
+    imgUrlIn.type = "text";
+    imgUrlIn.placeholder = "Or paste an image URL / path (e.g. assets/hios16.webp or https://...)";
+
+    modal.appendChild(field("Title", titleIn));
+    modal.appendChild(field("Author Name (Posted By)", byIn));
+    modal.appendChild(field("Category Tag", tagIn));
+    modal.appendChild(field("Details / Changelog (Links supported)", bodyIn));
+    modal.appendChild(field("Optional Link URL", urlIn));
+    modal.appendChild(field("Optional Link Button Text", linkLabelIn));
+    modal.appendChild(field("Upload Image File", imgIn));
+    modal.appendChild(field("Or Image URL / Path", imgUrlIn));
+
+    var statusMsg = el("div", "modal-status");
+    statusMsg.hidden = true;
+    modal.appendChild(statusMsg);
+
+    var actions = el("div", "modal-actions");
+    var cancelBtn = el("button", "modal-cancel", "Cancel");
+    cancelBtn.type = "button";
+    cancelBtn.addEventListener("click", function () {
+      backdrop.remove();
+    });
+
+    var submitBtn = el("button", "upload-btn", "Publish Live");
+    submitBtn.type = "submit";
+
+    actions.appendChild(cancelBtn);
+    actions.appendChild(submitBtn);
+    modal.appendChild(actions);
+
+    modal.addEventListener("submit", function (e) {
+      e.preventDefault();
+      submitBtn.disabled = true;
+      submitBtn.textContent = "Publishing...";
+      statusMsg.hidden = false;
+      statusMsg.textContent = "Saving to data.js and deploying to Surge...";
+
+      function sendPayload(imgData, imgName) {
+        var payload = {
+          title: titleIn.value.trim(),
+          tag: tagIn.value.trim() || "Update",
+          by: byIn.value.trim() || "Softbrick",
+          body: bodyIn.value.trim(),
+          url: urlIn.value.trim(),
+          linkLabel: linkLabelIn.value.trim(),
+          imageUrl: imgUrlIn.value.trim(),
+          imageBase64: imgData || "",
+          imageName: imgName || ""
+        };
+        fetch(ADMIN_API + "/publish", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload)
+        })
+          .then(function (r) { return r.json(); })
+          .then(function (res) {
+            if (res && res.ok) {
+              S.updates = res.updates || S.updates;
+              backdrop.remove();
+              route(true);
+            } else {
+              statusMsg.textContent = "Error: " + ((res && res.error) || "Failed to publish");
+              submitBtn.disabled = false;
+              submitBtn.textContent = "Publish Live";
+            }
+          })
+          .catch(function () {
+            statusMsg.textContent = "Run 'server upload' in Kitty to use the local host dashboard.";
+            submitBtn.disabled = false;
+            submitBtn.textContent = "Publish Live";
+          });
+      }
+
+      var file = imgIn.files && imgIn.files[0];
+      if (file) {
+        var reader = new FileReader();
+        reader.onload = function () {
+          sendPayload(reader.result, file.name);
+        };
+        reader.readAsDataURL(file);
+      } else {
+        sendPayload("", "");
+      }
+    });
+
+    backdrop.addEventListener("click", function (e) {
+      if (e.target === backdrop) backdrop.remove();
+    });
+    backdrop.appendChild(modal);
+    document.body.appendChild(backdrop);
+    titleIn.focus();
+  }
+
+  function updateCardNode(u) {
+    var card = el("article", "update-card");
+    var top = el("div", "update-top");
+    var meta = el("div", "update-meta");
+    if (u.tag) meta.appendChild(el("span", "update-tag", u.tag));
+    if (u.date) meta.appendChild(el("span", "", u.date));
+    if (u.by) meta.appendChild(el("span", "", "By " + u.by));
+    top.appendChild(meta);
+
+    if (isHost && u.id) {
+      var delBtn = el("button", "del-post-btn", "Delete");
+      delBtn.type = "button";
+      delBtn.addEventListener("click", function () {
+        delBtn.disabled = true;
+        delBtn.textContent = "Deleting...";
+        fetch(ADMIN_API + "/delete", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ id: u.id })
+        })
+          .then(function (r) { return r.json(); })
+          .then(function (res) {
+            if (res && res.ok) {
+              S.updates = res.updates || [];
+              route(true);
+            }
+          })
+          .catch(function () {
+            delBtn.disabled = false;
+            delBtn.textContent = "Delete";
+          });
+      });
+      top.appendChild(delBtn);
+    }
+
+    var updateSlug = u.id || slugify(u.title);
+    card.id = "item-" + updateSlug;
+    card.setAttribute("data-slug", updateSlug);
+    card.setAttribute("data-tab", "updates");
+    var canonicalHash = "#updates/" + updateSlug;
+
+    card.appendChild(top);
+
+    var titleWrap = el("div", "card-title-wrap");
+    var h = el("h3", "update-title");
+    var titleAnchor = el("a", "update-title-link", u.title);
+    titleAnchor.href = canonicalHash;
+    titleAnchor.title = "Direct link: " + canonicalHash + " (Right-click to copy link, or click to copy)";
+    titleAnchor.addEventListener("click", function (e) {
+      e.preventDefault();
+      copyElementDeepLink(u.title, canonicalHash);
+      if (location.hash !== canonicalHash) {
+        history.pushState(null, "", canonicalHash);
+      }
+      highlightElement(card);
+    });
+    h.appendChild(titleAnchor);
+    titleWrap.appendChild(h);
+
+    var copyBtn = el("button", "copy-link-btn");
+    copyBtn.type = "button";
+    copyBtn.setAttribute("aria-label", "Copy direct link for " + u.title);
+    copyBtn.title = "Copy direct link";
+    copyBtn.innerHTML = '<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>';
+    copyBtn.addEventListener("click", function (e) {
+      e.stopPropagation();
+      copyElementDeepLink(u.title, canonicalHash);
+    });
+    titleWrap.appendChild(copyBtn);
+    card.appendChild(titleWrap);
+
+    card.addEventListener("contextmenu", function (e) {
+      if (e.target.closest("a") || e.target.closest("button")) return;
+      copyElementDeepLink(u.title, canonicalHash);
+    });
+
+    if (u.body) card.appendChild(richEl("p", "update-body", u.body));
+    if (u.image) {
+      var img = el("img", "update-img");
+      img.src = u.image;
+      img.alt = u.title || "";
+      img.loading = "lazy";
+      card.appendChild(img);
+    }
+    var url = safeUrl(u.url);
+    if (url) {
+      var foot = el("div", "update-foot");
+      var defaultLabel = url.charAt(0) === "#" ? "Open Section \u2192" : "Open Link \u2192";
+      var btnLabel = u.linkLabel ? u.linkLabel + " \u2192" : defaultLabel;
+      var link = el("a", "pill dl", btnLabel);
+      link.href = url;
+      if (url.charAt(0) !== "#") {
+        link.target = "_blank";
+        link.rel = "noopener noreferrer";
+      }
+      foot.appendChild(link);
+      card.appendChild(foot);
+    }
+    return card;
+  }
+
+  /* ---------- Official App Releases Tab & Card Nodes ---------- */
+  function appReleaseCardNode(rel, isFeatured) {
+    var card = el("article", isFeatured ? "card app-card app-card-featured" : "card app-card");
+
+    var top = el("div", "app-card-top");
+    var left = el("div", "app-card-left");
+
+    var badgeRow = el("div", "app-badge-row");
+    var vPill = el("span", "app-version-pill", rel.version);
+    badgeRow.appendChild(vPill);
+
+    if (rel.isLatest) {
+      var latestPill = el("span", "app-badge-latest", "★ " + (rel.badge || "Latest Release"));
+      badgeRow.appendChild(latestPill);
+    }
+
+    left.appendChild(badgeRow);
+
+    var relSlug = slugify(rel.name || ("app-" + rel.version));
+    card.id = "item-" + relSlug;
+    card.setAttribute("data-slug", relSlug);
+    card.setAttribute("data-tab", "app");
+    var canonicalHash = "#app/" + relSlug;
+
+    var titleWrap = el("div", "card-title-wrap");
+    var h = el(isFeatured ? "h2" : "h3", "app-title");
+    var titleAnchor = el("a", "app-title-link", rel.name);
+    titleAnchor.href = canonicalHash;
+    titleAnchor.title = "Direct link: " + canonicalHash + " (Right-click to copy link, or click to copy)";
+    titleAnchor.addEventListener("click", function (e) {
+      e.preventDefault();
+      copyElementDeepLink(rel.name, canonicalHash);
+      if (location.hash !== canonicalHash) {
+        history.pushState(null, "", canonicalHash);
+      }
+      highlightElement(card);
+    });
+    h.appendChild(titleAnchor);
+    titleWrap.appendChild(h);
+
+    var copyBtn = el("button", "copy-link-btn");
+    copyBtn.type = "button";
+    copyBtn.setAttribute("aria-label", "Copy direct link for " + rel.name);
+    copyBtn.title = "Copy direct link";
+    copyBtn.innerHTML = '<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>';
+    copyBtn.addEventListener("click", function (e) {
+      e.stopPropagation();
+      copyElementDeepLink(rel.name, canonicalHash);
+    });
+    titleWrap.appendChild(copyBtn);
+    left.appendChild(titleWrap);
+
+    var meta = el("div", "meta");
+    if (rel.date) meta.appendChild(el("span", "", rel.date));
+    if (rel.size) meta.appendChild(el("span", "", rel.size));
+    if (rel.by) meta.appendChild(el("span", "", "By " + rel.by));
+    left.appendChild(meta);
+
+    top.appendChild(left);
+
+    // "i" info button on top-right of card header (consistent with ROM cards)
+    var infoBtn = el("button", "info-btn", "i");
+    infoBtn.type = "button";
+    infoBtn.setAttribute("aria-expanded", "false");
+    infoBtn.setAttribute("aria-label", "Show changes and updates for " + rel.version);
+    infoBtn.title = "View changelog and updates";
+
+    infoBtn.addEventListener("click", function (e) {
+      e.stopPropagation();
+      var open = card.classList.toggle("is-open");
+      infoBtn.setAttribute("aria-expanded", open ? "true" : "false");
+    });
+    top.appendChild(infoBtn);
+    card.appendChild(top);
+
+    card.addEventListener("contextmenu", function (e) {
+      if (e.target.closest("a.pill") || e.target.closest(".info-btn")) return;
+      copyElementDeepLink(rel.name, canonicalHash);
+    });
+
+    if (rel.summary) {
+      var summaryP = el("p", "app-summary", rel.summary);
+      card.appendChild(summaryP);
+    }
+
+    // Actions row: Download APK & GitHub
+    var actions = el("div", "app-card-actions");
+
+    if (rel.apkUrl) {
+      var dl = el("a", "pill dl app-dl-pill", "📥 Download APK (" + rel.size + ")");
+      dl.href = safeUrl(rel.apkUrl) || rel.apkUrl;
+      dl.setAttribute("download", "NewbiesTeam-" + rel.version + ".apk");
+      actions.appendChild(dl);
+    }
+
+    if (rel.releaseUrl) {
+      var gh = el("a", "pill app-gh-pill", "🌐 GitHub");
+      gh.href = safeUrl(rel.releaseUrl) || rel.releaseUrl;
+      gh.target = "_blank";
+      gh.rel = "noopener noreferrer";
+      actions.appendChild(gh);
+    }
+
+    card.appendChild(actions);
+
+    // Expandable Drawer for changelog and updates
+    var drawer = el("div", "rom-drawer");
+    var inner = el("div", "rom-drawer-inner");
+    var body = el("div", "rom-drawer-body app-drawer-body");
+
+    var changesHead = el("h4", "app-changes-title", "What's new in " + rel.version + ":");
+    body.appendChild(changesHead);
+
+    if (rel.changelog && rel.changelog.length) {
+      var ul = el("ul", "app-changelog-list");
+      rel.changelog.forEach(function (c) {
+        var li = el("li", "", c);
+        ul.appendChild(li);
+      });
+      body.appendChild(ul);
+    }
+
+    inner.appendChild(body);
+    drawer.appendChild(inner);
+    card.appendChild(drawer);
+
+    return card;
+  }
+
+  function appReleasesNode() {
+    var p = el("section", "panel app-releases-panel");
+    var head = el("div", "app-releases-head");
+    head.appendChild(el("h2", "", "Official App Releases"));
+    p.appendChild(head);
+
+    // Notice explaining Play Protect popup on unverified third-party APKs
+    var notice = el("div", "app-notice");
+    var noticeIcon = el("span", "app-notice-icon", "ℹ️");
+    var noticeBody = el("p", "app-notice-text");
+    noticeBody.innerHTML =
+      '<strong>Play Protect Notice:</strong> If your device shows a security popup, this is only because the app is installed directly outside the Play Store. The app is completely open-source and safe \u2014 you can inspect the full source code anytime on <a href="https://github.com/zcyrl/newbiesteam-app" target="_blank" rel="noopener noreferrer">GitHub</a>.';
+    notice.appendChild(noticeIcon);
+    notice.appendChild(noticeBody);
+    p.appendChild(notice);
+
+    var releases = S.appReleases || [];
+    if (!releases.length) {
+      p.appendChild(el("div", "empty", "No app releases posted yet."));
+      return p;
+    }
+
+    var list = el("div", "app-releases-grid");
+    releases.forEach(function (rel, idx) {
+      list.appendChild(appReleaseCardNode(rel, idx === 0));
+    });
+    p.appendChild(list);
+
+    return p;
+  }
+
+  function updatesNode() {
+    var p = el("section", "panel");
+    var head = el("div", "updates-head");
+    head.appendChild(el("h2", "", "Changelogs & Updates"));
+
+    if (isHost) {
+      var hostBar = el("div", "host-bar");
+      hostBar.appendChild(el("span", "host-badge", "Host Mode"));
+      var upBtn = el("button", "upload-btn", "+ Upload Update");
+      upBtn.type = "button";
+      upBtn.addEventListener("click", openUploadModal);
+      hostBar.appendChild(upBtn);
+      head.appendChild(hostBar);
+    }
+
+    p.appendChild(head);
+
+    var items = S.updates || [];
+    var list = el("div", "updates-list");
+    if (!items.length) {
+      list.appendChild(el("div", "empty", "No updates posted yet."));
+    } else {
+      items.forEach(function (u) {
+        list.appendChild(updateCardNode(u));
+      });
+    }
+    p.appendChild(list);
+    return p;
+  }
+
+  /* ---------- Screenshots Gallery & Fullscreen Lightbox ---------- */
+  var lightboxEl = null;
+  var currentLightboxData = null;
+
+  function openScreenshotLightbox(romName, screenshots, startIdx) {
+    if (!screenshots || !screenshots.length) return;
+    var idx = typeof startIdx === "number" ? startIdx : 0;
+    if (idx < 0) idx = 0;
+    if (idx >= screenshots.length) idx = screenshots.length - 1;
+
+    currentLightboxData = {
+      romName: romName,
+      screenshots: screenshots,
+      index: idx
+    };
+
+    if (!lightboxEl) {
+      lightboxEl = document.createElement("div");
+      lightboxEl.className = "lightbox-backdrop";
+      lightboxEl.setAttribute("role", "dialog");
+      lightboxEl.setAttribute("aria-modal", "true");
+      lightboxEl.setAttribute("aria-label", "Screenshot Fullscreen Preview");
+
+      var content = el("div", "lightbox-content");
+
+      var topBar = el("div", "lightbox-topbar");
+      var titleEl = el("div", "lightbox-title");
+      var closeBtn = el("button", "lightbox-close", "\u2715");
+      closeBtn.type = "button";
+      closeBtn.setAttribute("aria-label", "Close preview");
+      topBar.appendChild(titleEl);
+      topBar.appendChild(closeBtn);
+      content.appendChild(topBar);
+
+      var mainArea = el("div", "lightbox-main");
+      var prevBtn = el("button", "lightbox-nav lightbox-prev", "\u2039");
+      prevBtn.type = "button";
+      prevBtn.setAttribute("aria-label", "Previous screenshot");
+
+      var imgWrap = el("div", "lightbox-img-wrap");
+      var img = el("img", "lightbox-img");
+      img.decoding = "async";
+      imgWrap.appendChild(img);
+
+      var nextBtn = el("button", "lightbox-nav lightbox-next", "\u203A");
+      nextBtn.type = "button";
+      nextBtn.setAttribute("aria-label", "Next screenshot");
+
+      mainArea.appendChild(prevBtn);
+      mainArea.appendChild(imgWrap);
+      mainArea.appendChild(nextBtn);
+      content.appendChild(mainArea);
+
+      var bottomBar = el("div", "lightbox-bottombar");
+      var captionEl = el("div", "lightbox-caption");
+      var counterEl = el("div", "lightbox-counter");
+      bottomBar.appendChild(captionEl);
+      bottomBar.appendChild(counterEl);
+      content.appendChild(bottomBar);
+
+      lightboxEl.appendChild(content);
+      document.body.appendChild(lightboxEl);
+
+      closeBtn.addEventListener("click", closeScreenshotLightbox);
+      lightboxEl.addEventListener("click", function (e) {
+        if (e.target === lightboxEl || e.target === imgWrap) {
+          closeScreenshotLightbox();
+        }
+      });
+
+      prevBtn.addEventListener("click", function (e) {
+        e.stopPropagation();
+        stepLightbox(-1);
+      });
+
+      nextBtn.addEventListener("click", function (e) {
+        e.stopPropagation();
+        stepLightbox(1);
+      });
+
+      document.addEventListener("keydown", function (e) {
+        if (!lightboxEl || !lightboxEl.classList.contains("is-open")) return;
+        if (e.key === "Escape") {
+          closeScreenshotLightbox();
+        } else if (e.key === "ArrowLeft") {
+          stepLightbox(-1);
+        } else if (e.key === "ArrowRight") {
+          stepLightbox(1);
+        }
+      });
+
+      var touchStartX = 0;
+      var touchEndX = 0;
+      imgWrap.addEventListener(
+        "touchstart",
+        function (e) {
+          touchStartX = e.changedTouches[0].screenX;
+        },
+        { passive: true }
+      );
+      imgWrap.addEventListener(
+        "touchend",
+        function (e) {
+          touchEndX = e.changedTouches[0].screenX;
+          var diff = touchEndX - touchStartX;
+          if (Math.abs(diff) > 45) {
+            if (diff > 0) stepLightbox(-1);
+            else stepLightbox(1);
+          }
+        },
+        { passive: true }
+      );
+    }
+
+    updateLightboxView();
+    lightboxEl.classList.add("is-open");
+    document.body.style.overflow = "hidden";
+  }
+
+  function stepLightbox(delta) {
+    if (!currentLightboxData) return;
+    var len = currentLightboxData.screenshots.length;
+    if (len <= 1) return;
+    currentLightboxData.index = (currentLightboxData.index + delta + len) % len;
+    updateLightboxView();
+  }
+
+  function updateLightboxView() {
+    if (!currentLightboxData || !lightboxEl) return;
+    var d = currentLightboxData;
+    var shot = d.screenshots[d.index];
+    var titleEl = lightboxEl.querySelector(".lightbox-title");
+    var img = lightboxEl.querySelector(".lightbox-img");
+    var captionEl = lightboxEl.querySelector(".lightbox-caption");
+    var counterEl = lightboxEl.querySelector(".lightbox-counter");
+    var prevBtn = lightboxEl.querySelector(".lightbox-prev");
+    var nextBtn = lightboxEl.querySelector(".lightbox-next");
+
+    if (titleEl) titleEl.textContent = d.romName;
+    if (img) {
+      img.src = shot.url;
+      img.alt = shot.caption || d.romName + " screenshot " + (d.index + 1);
+    }
+    if (captionEl) captionEl.textContent = shot.caption || "";
+    if (counterEl) counterEl.textContent = d.index + 1 + " / " + d.screenshots.length;
+
+    var multi = d.screenshots.length > 1;
+    if (prevBtn) prevBtn.style.display = multi ? "" : "none";
+    if (nextBtn) nextBtn.style.display = multi ? "" : "none";
+  }
+
+  function closeScreenshotLightbox() {
+    if (lightboxEl) {
+      lightboxEl.classList.remove("is-open");
+      document.body.style.overflow = "";
+    }
+    currentLightboxData = null;
+  }
+
+  function screenshotsNode(activeSlug) {
+    var wrap = el("div", "screenshots-page");
+
+    var header = el("div", "screenshots-hero");
+    var title = el("h1", "screenshots-title", "Screenshots");
+    var sub = el(
+      "p",
+      "screenshots-sub",
+      "Dynamic interface previews and gallery for Infinix GT 20 Pro (X6871) ROMs"
+    );
+    header.appendChild(title);
+    header.appendChild(sub);
+    wrap.appendChild(header);
+
+    // Collect all ROMs
+    var allRoms = [];
+    (S.roms || []).forEach(function (cat) {
+      if (cat.feature) {
+        allRoms.push(
+          Object.assign({}, cat.feature, {
+            category: cat.title,
+            isFeature: true
+          })
+        );
+      }
+      (cat.items || []).forEach(function (it) {
+        allRoms.push(
+          Object.assign({}, it, {
+            category: cat.title
+          })
+        );
       });
     });
-  });
-}
 
-function executeInstantScreenshotDelete(romName, index, cardElement) {
-  const rom = findRomItem(romName);
-  const shots = (rom && Array.isArray(rom.screenshots)) ? rom.screenshots : [];
-  const targetShot = shots[index];
-  if (!targetShot) return;
+    var totalScreens = allRoms.reduce(function (sum, r) {
+      return sum + (Array.isArray(r.screenshots) ? r.screenshots.length : 0);
+    }, 0);
 
-  const shotLabel = targetShot.caption ? `"${targetShot.caption}"` : `screenshot #${index + 1}`;
-  const targetUrl = targetShot.url || "";
+    // Filter Bar
+    var filterBar = el("div", "screenshots-filter-bar");
+    var filterInner = el("div", "screenshots-filter-inner");
 
-  // 1. Instant optimistic DOM removal (<16ms, zero UI freeze)
-  const parentGallery = cardElement ? cardElement.parentElement : null;
-  const nextSibling = cardElement ? cardElement.nextSibling : null;
-  if (cardElement) {
-    cardElement.remove();
-  }
+    var curFilter = activeSlug ? activeSlug : "all";
 
-  // Check if gallery is now empty
-  const galleryList = document.getElementById("ss-gallery-list");
-  if (galleryList && galleryList.querySelectorAll(".ss-thumb-card").length === 0) {
-    galleryList.innerHTML = `<div class="ss-gallery-empty">No screenshots linked to <strong>${escapeHtml(romName)}</strong> yet.<br><small>Pick an image below to upload the first screenshot!</small></div>`;
-  }
-
-  // 2. Optimistically update in-memory data
-  const removedShot = rom.screenshots.splice(index, 1)[0];
-
-  // 3. Update counter badge immediately
-  const remaining = rom.screenshots.length;
-  const galleryCount = document.getElementById("ss-gallery-count");
-  if (galleryCount) {
-    galleryCount.textContent = `${remaining} photo${remaining === 1 ? "" : "s"}`;
-  }
-
-  // 4. Update remaining cards' data-index attributes in DOM without full-tree re-rendering
-  if (galleryList) {
-    galleryList.querySelectorAll(".ss-thumb-card").forEach((c, newIdx) => {
-      const btn = c.querySelector(".ss-thumb-del");
-      if (btn) btn.dataset.index = newIdx;
+    // All ROMs chip
+    var allPill = el(
+      "button",
+      "filter-chip" + (curFilter === "all" ? " is-active" : ""),
+      "All ROMs"
+    );
+    allPill.type = "button";
+    var allBadge = el("span", "chip-badge", String(allRoms.length));
+    allPill.appendChild(allBadge);
+    allPill.addEventListener("click", function () {
+      selectFilter("all");
     });
-  }
+    filterInner.appendChild(allPill);
 
-  showToast(`🗑️ Deleting ${shotLabel}...`);
+    // Pills for each ROM
+    var pillMap = {};
+    allRoms.forEach(function (rom) {
+      var rSlug = slugify(rom.name);
+      var romIdentifier = rom.romId || rSlug;
+      var count = Array.isArray(rom.screenshots) ? rom.screenshots.length : 0;
+      var isActivePill = (curFilter === romIdentifier || curFilter === rSlug || (rom.romId && curFilter === rom.romId));
+      var chip = el("button", "filter-chip" + (isActivePill ? " is-active" : ""));
+      chip.type = "button";
+      chip.appendChild(el("span", "chip-label", rom.name));
+      if (count > 0) {
+        chip.appendChild(el("span", "chip-badge has-count", String(count)));
+      }
+      chip.addEventListener("click", function () {
+        selectFilter(romIdentifier);
+      });
+      pillMap[rSlug] = chip;
+      if (rom.romId) pillMap[rom.romId] = chip;
+      filterInner.appendChild(chip);
+    });
 
-  // 5. Build payload
-  const payload = {
-    action: "delete_screenshot",
-    id: `del-ss-${Date.now()}`,
-    timestamp: new Date().toISOString(),
-    key: currentKey,
-    deviceId: currentUser?.deviceId || "",
-    submitterRole: currentUser?.role || "developer",
-    submitterName: currentUser?.name || "Developer",
-    canAutoPush: true,
-    type: "screenshots",
-    section: "screenshots",
-    targetName: romName,
-    romId: rom.romId || "",
-    title: `Delete ${shotLabel} from ${romName}`,
-    data: {
-      romName: romName,
-      romId: rom.romId || "",
-      index: index,
-      url: targetUrl
-    }
-  };
+    filterBar.appendChild(filterInner);
+    wrap.appendChild(filterBar);
 
-  // 6. Non-blocking background dispatch
-  dispatchSubmission(payload).then(() => {
-    showToast(`✔ ${shotLabel} deleted from live site.`);
-  }).catch((err) => {
-    console.error("Failed to delete screenshot on server:", err);
-    showToast(`❌ Deletion failed: ${err.message}. Restoring...`);
-    // Rollback in memory and re-insert the card element
-    if (rom && removedShot) {
-      rom.screenshots.splice(index, 0, removedShot);
-      if (cardElement && parentGallery) {
-        if (nextSibling && nextSibling.parentNode === parentGallery) {
-          parentGallery.insertBefore(cardElement, nextSibling);
-        } else {
-          parentGallery.appendChild(cardElement);
+    // Gallery Container
+    var gallery = el("div", "screenshots-gallery");
+    var cardElements = [];
+
+    allRoms.forEach(function (rom) {
+      var rSlug = slugify(rom.name);
+      var hasScreens = Array.isArray(rom.screenshots) && rom.screenshots.length > 0;
+
+      var card = el("section", "rom-screen-card" + (hasScreens ? " has-screens" : " no-screens"));
+      card.dataset.slug = rSlug;
+      if (rom.romId) card.dataset.romId = rom.romId;
+
+      var top = el("div", "screen-card-header");
+      var left = el("div", "screen-card-meta");
+      var h2 = el("h2", "screen-card-title", rom.name);
+      left.appendChild(h2);
+
+      var metaRow = el("div", "screen-card-sub");
+      if (rom.category) metaRow.appendChild(el("span", "screen-cat-badge", rom.category));
+      if (rom.by) metaRow.appendChild(el("span", "screen-by", "By " + rom.by));
+      if (hasScreens) {
+        metaRow.appendChild(
+          el(
+            "span",
+            "screen-count-pill",
+            rom.screenshots.length + " screenshot" + (rom.screenshots.length > 1 ? "s" : "")
+          )
+        );
+      }
+      left.appendChild(metaRow);
+      top.appendChild(left);
+
+      var right = el("div", "screen-card-actions");
+      var jumpLink = el("a", "screen-jump-rom-link", "View in ROMs \u2197");
+      jumpLink.href = "#roms";
+      jumpLink.title = "Jump to " + rom.name + " download & info";
+      right.appendChild(jumpLink);
+      top.appendChild(right);
+
+      card.appendChild(top);
+
+      var body = el("div", "screen-card-body");
+      if (hasScreens) {
+        var grid = el("div", "screenshots-grid");
+        rom.screenshots.forEach(function (shot, idx) {
+          var itemEl = el("div", "screenshot-item");
+          var thumbBtn = el("button", "screenshot-thumb-btn");
+          thumbBtn.type = "button";
+          thumbBtn.setAttribute(
+            "aria-label",
+            "View " + (shot.caption || rom.name) + " full size"
+          );
+
+          var img = el("img", "screenshot-img");
+          img.src = shot.url;
+          img.alt = shot.caption || rom.name + " screenshot " + (idx + 1);
+          img.loading = "lazy";
+          img.decoding = "async";
+          thumbBtn.appendChild(img);
+
+          var overlay = el("div", "screenshot-overlay");
+          var zoomIcon = el("span", "zoom-icon", "\u2922");
+          overlay.appendChild(zoomIcon);
+          thumbBtn.appendChild(overlay);
+
+          thumbBtn.addEventListener("click", function () {
+            openScreenshotLightbox(rom.name, rom.screenshots, idx);
+          });
+
+          itemEl.appendChild(thumbBtn);
+
+          if (shot.caption) {
+            var cap = el("div", "screenshot-caption", shot.caption);
+            itemEl.appendChild(cap);
+          }
+
+          grid.appendChild(itemEl);
+        });
+        body.appendChild(grid);
+      } else {
+        var empty = el("div", "empty-screenshots-state");
+        var emptyIcon = el("div", "empty-icon", "\uD83D\uDCF7");
+        var emptyTitle = el("div", "empty-title", "No screenshots available");
+        var emptySub = el(
+          "div",
+          "empty-sub",
+          "Screenshots for this ROM will appear here once uploaded via the server toolkit."
+        );
+        empty.appendChild(emptyIcon);
+        empty.appendChild(emptyTitle);
+        empty.appendChild(emptySub);
+        body.appendChild(empty);
+      }
+
+      card.appendChild(body);
+      gallery.appendChild(card);
+      cardElements.push({ slug: rSlug, romId: rom.romId || "", name: rom.name, el: card });
+    });
+
+    wrap.appendChild(gallery);
+
+    function selectFilter(target) {
+      curFilter = target;
+      if (target === "all") {
+        if (location.hash !== "#screenshots") {
+          history.replaceState(null, "", "#screenshots");
         }
       } else {
-        updateScreenshotGalleryForSelectedRom(romName);
+        history.replaceState(null, "", "#screenshots/" + encodeURIComponent(target));
       }
+
+      var match = allRoms.find(function (r) {
+        return (
+          r.romId === target ||
+          slugify(r.romId) === slugify(target) ||
+          slugify(r.name) === slugify(target)
+        );
+      });
+
+      allPill.classList.toggle("is-active", target === "all");
+      Object.keys(pillMap).forEach(function (k) {
+        var isMatch = (
+          k === target ||
+          slugify(k) === slugify(target) ||
+          (match && (k === match.romId || k === slugify(match.name)))
+        );
+        pillMap[k].classList.toggle("is-active", isMatch);
+        if (isMatch) {
+          pillMap[k].scrollIntoView({ behavior: "smooth", inline: "center", block: "nearest" });
+        }
+      });
+
+      cardElements.forEach(function (item) {
+        var isCardMatch = (
+          target === "all" ||
+          item.romId === target ||
+          item.slug === target ||
+          slugify(item.romId) === slugify(target) ||
+          slugify(item.slug) === slugify(target) ||
+          (match && (item.romId === match.romId || item.slug === slugify(match.name)))
+        );
+        if (isCardMatch) {
+          item.el.style.display = "";
+          if (target !== "all") {
+            item.el.classList.add("card-highlight");
+            item.el.scrollIntoView({ behavior: "smooth", block: "start" });
+            setTimeout(function () {
+              item.el.classList.remove("card-highlight");
+            }, 1800);
+          }
+        } else {
+          item.el.style.display = "none";
+        }
+      });
     }
-  });
-}
 
-function openScreenshotsModalForRom(romName) {
-  openAddModal("screenshots");
-  populateRomSelect(romName);
-  const ssRomSelect = document.getElementById("ss-rom-select");
-  if (ssRomSelect) {
-    ssRomSelect.value = romName;
+    if (curFilter !== "all") {
+      setTimeout(function () {
+        selectFilter(curFilter);
+      }, 50);
+    }
+
+    return wrap;
   }
-  updateScreenshotGalleryForSelectedRom(romName);
-}
 
-function updateCategoryCounts() {
-  const site = window.SITE || {};
+  function guideTileNode(it) {
+    var a = el("a", "tile");
+    a.href = "#guides/" + encodeURIComponent(it.slug);
+    a.appendChild(el("div", "name", it.title));
+    var foot = el("div", "tile-foot");
+    foot.appendChild(el("span", "", (it.by ? "By " + it.by + " \u00b7 " : "") + (it.read || "")));
+    foot.appendChild(el("b", "", "Read"));
+    a.appendChild(foot);
+    return a;
+  }
 
-  const romCount = (site.roms || []).reduce((acc, c) => acc + (c.items ? c.items.length : c.feature ? 1 : 0), 0);
-  const updateCount = (site.updates || []).length;
-  const guideCount = Array.isArray(site.guides) ? site.guides.length : (site.guides?.items?.length || 0);
-  const moduleCount =
-    (site.modules || []).reduce((acc, c) => acc + (c.items ? c.items.length : 0), 0) +
-    (site.recovery || []).reduce((acc, c) => acc + (c.items ? c.items.length : 0), 0) +
-    (site.kernels || []).reduce((acc, c) => acc + (c.items ? c.items.length : 0), 0);
+  function guidesNode(g) {
+    var items = (g && g.items) || [];
+    var cats = (g && g.categories) ? g.categories.slice() : [];
+    items.forEach(function (it) {
+      var c = it.category || "Guides";
+      if (cats.indexOf(c) === -1) cats.push(c);
+    });
+    var frag = document.createDocumentFragment();
+    if (!items.length) {
+      var p = el("section", "panel");
+      p.appendChild(el("h2", "", (g && g.title) || "Guides"));
+      var box = el("div", "tiles");
+      box.appendChild(el("div", "empty", "No guides yet."));
+      p.appendChild(box);
+      frag.appendChild(p);
+      return frag;
+    }
+    cats.forEach(function (cat) {
+      var groupItems = items.filter(function (it) {
+        return (it.category || "Guides") === cat;
+      });
+      if (!groupItems.length) return;
+      var p = el("section", "panel");
+      p.appendChild(el("h2", "", cat));
+      var box = el("div", "tiles");
+      groupItems.forEach(function (it) {
+        box.appendChild(guideTileNode(it));
+      });
+      p.appendChild(box);
+      frag.appendChild(p);
+    });
+    return frag;
+  }
 
-  const cr = document.getElementById("count-roms");
-  const cu = document.getElementById("count-updates");
-  const cg = document.getElementById("count-guides");
-  const cm = document.getElementById("count-modules");
-
-  if (cr) cr.textContent = romCount;
-  if (cu) cu.textContent = updateCount;
-  if (cg) cg.textContent = guideCount;
-  if (cm) cm.textContent = moduleCount;
-}
-
-// ----------------------------------------------------
-// 7. Render Live Items & Manage Content (Edit / Delete)
-// ----------------------------------------------------
-function renderLiveItems(cat) {
-  if (!liveItemsContainer) return;
-  const site = window.SITE || {};
-  let html = "";
-
-  if (cat === "roms") {
-    const list = [];
-    (site.roms || []).forEach((group) => {
-      if (group.feature && group.feature.name) {
-        list.push({ ...group.feature, category: group.title, isFeature: true });
-      }
-      if (group.items && Array.isArray(group.items)) {
-        group.items.forEach((item) => {
-          list.push({ ...item, category: group.title });
-        });
+  /* ---------- guide reading page ---------- */
+  function richEl(tag, cls, text) {
+    var e = el(tag, cls);
+    String(text).split(/(\{\{[^}]+\}\}|https?:\/\/[^\s<)]+)/).forEach(function (part) {
+      var m = /^\{\{([^|}]+)\|([^}]+)\}\}$/.exec(part);
+      if (m) {
+        if (m[1].indexOf("dl:") === 0) {
+          var dlUrl = safeUrl(m[1].slice(3));
+          var pill = el("a", "guide-dl-pill", m[2]);
+          if (dlUrl) {
+            pill.href = dlUrl;
+            pill.target = "_blank";
+            pill.rel = "noopener noreferrer";
+            pill.addEventListener("click", function (ev) {
+              ev.preventDefault();
+              ev.stopPropagation();
+              var cleanName = m[2].replace(/^[\u2b07\s]+/, "").replace(/^Direct Download\s+/i, "") || m[2];
+              openDownloadPopover(pill, { name: cleanName, url: dlUrl });
+            });
+          }
+          e.appendChild(pill);
+          return;
+        }
+        var a = el("a", "inlink", m[2]);
+        if (/^https?:\/\//.test(m[1])) {
+          var ext = safeUrl(m[1]);
+          if (ext) {
+            a.href = ext;
+            a.target = "_blank";
+            a.rel = "noopener noreferrer";
+          }
+        } else {
+          a.href = m[1].charAt(0) === "#" ? m[1] : "#guides/" + encodeURIComponent(m[1]);
+        }
+        e.appendChild(a);
+      } else if (/^https?:\/\/[^\s<)]+$/.test(part)) {
+        var u = safeUrl(part);
+        if (u) {
+          var rawLink = el("a", "inlink", part);
+          rawLink.href = u;
+          rawLink.target = "_blank";
+          rawLink.rel = "noopener noreferrer";
+          e.appendChild(rawLink);
+        } else {
+          e.appendChild(document.createTextNode(part));
+        }
+      } else if (part) {
+        e.appendChild(document.createTextNode(part));
       }
     });
-
-    if (list.length === 0) {
-      html = `<div class="empty-history"><p>No ROMs found on live web.</p></div>`;
-    } else {
-      list.forEach((item, idx) => {
-        const changelogs = item.details?.changelogs || [];
-        const clSnippet = changelogs.slice(0, 2).map((c) => `• ${escapeHtml(c)}`).join("<br>");
-        html += `
-          <div class="live-item-card" data-idx="${idx}">
-            <div class="live-item-top">
-              <div class="live-item-title">${escapeHtml(item.name)}</div>
-              <span class="live-item-tag">${escapeHtml(item.category || "ROM")}</span>
-            </div>
-            <div class="live-item-meta">
-              <span>📅 ${escapeHtml(item.date || "Active")}</span>
-              <span>👤 ${escapeHtml(item.by || "Team")}</span>
-              ${item.url ? `<span>🔗 <a href="${escapeHtml(item.url)}" target="_blank" style="color:var(--accent); text-decoration:none;">Download</a></span>` : `<span>Soon</span>`}
-            </div>
-            ${clSnippet ? `<div class="live-item-body">${clSnippet}</div>` : ""}
-            <div class="live-item-actions">
-              <span style="font-size:11px; color:var(--muted);">${item.screenshots ? item.screenshots.length + " screenshots" : "0 screenshots"}</span>
-              <div class="action-btn-group">
-                <button class="btn-card-action btn-ss-rom" data-name="${escapeHtml(item.name)}" data-cat="${escapeHtml(item.category)}" title="Manage Screenshots">📸 Photos (${item.screenshots ? item.screenshots.length : 0})</button>
-                <button class="btn-card-action btn-edit-rom" data-name="${escapeHtml(item.name)}" data-cat="${escapeHtml(item.category)}">✏️ Edit</button>
-                <button class="btn-card-action btn-delete btn-del-rom" data-name="${escapeHtml(item.name)}" data-cat="${escapeHtml(item.category)}">🗑️ Delete</button>
-              </div>
-            </div>
-          </div>
-        `;
-      });
-    }
-  } else if (cat === "updates") {
-    const list = site.updates || [];
-    if (list.length === 0) {
-      html = `<div class="empty-history"><p>No live updates posted.</p></div>`;
-    } else {
-      list.forEach((item) => {
-        html += `
-          <div class="live-item-card">
-            <div class="live-item-top">
-              <div class="live-item-title">${escapeHtml(item.title)}</div>
-              <span class="live-item-tag">${escapeHtml(item.tag || "News")}</span>
-            </div>
-            <div class="live-item-meta">
-              <span>📅 ${escapeHtml(item.date)}</span>
-              <span>👤 ${escapeHtml(item.by || "Admin")}</span>
-              ${item.url ? `<span>🔗 <a href="${escapeHtml(item.url)}" target="_blank" style="color:var(--accent); text-decoration:none;">Link</a></span>` : ""}
-            </div>
-            <div class="live-item-body">${escapeHtml(item.body || "")}</div>
-            <div class="live-item-actions">
-              <span style="font-size:11px; color:var(--muted);">ID: ${escapeHtml(item.id || "")}</span>
-              <div class="action-btn-group">
-                <button class="btn-card-action btn-edit-update" data-id="${escapeHtml(item.id)}" data-title="${escapeHtml(item.title)}">✏️ Edit</button>
-                <button class="btn-card-action btn-delete btn-del-update" data-id="${escapeHtml(item.id)}" data-title="${escapeHtml(item.title)}">🗑️ Delete</button>
-              </div>
-            </div>
-          </div>
-        `;
-      });
-    }
-  } else if (cat === "guides") {
-    const list = Array.isArray(site.guides) ? site.guides : (site.guides?.items || []);
-    if (list.length === 0) {
-      html = `<div class="empty-history"><p>No guides found on live web.</p></div>`;
-    } else {
-      list.forEach((g) => {
-        html += `
-          <div class="live-item-card">
-            <div class="live-item-top">
-              <div class="live-item-title">${escapeHtml(g.title)}</div>
-              <span class="live-item-tag">${escapeHtml(g.category || "Guide")}</span>
-            </div>
-            <div class="live-item-meta">
-              <span>⏱️ ${escapeHtml(g.read || "3 min read")}</span>
-              <span>Device: ${escapeHtml(g.info?.Device || "GT 20 Pro")}</span>
-            </div>
-            <div class="live-item-actions">
-              <span style="font-size:11px; color:var(--muted);">Slug: ${escapeHtml(g.slug || "")}</span>
-              <div class="action-btn-group">
-                <button class="btn-card-action btn-edit-guide" data-slug="${escapeHtml(g.slug)}" data-title="${escapeHtml(g.title)}">✏️ Edit</button>
-                <button class="btn-card-action btn-delete btn-del-guide" data-slug="${escapeHtml(g.slug)}" data-title="${escapeHtml(g.title)}">🗑️ Delete</button>
-              </div>
-            </div>
-          </div>
-        `;
-      });
-    }
-  } else if (cat === "modules") {
-    const list = [];
-    const collect = (arr, secName) => {
-      (arr || []).forEach((group) => {
-        (group.items || []).forEach((it) => {
-          list.push({ ...it, sectionName: secName, groupTitle: group.title });
-        });
-      });
-    };
-    collect(site.modules, "modules");
-    collect(site.recovery, "recovery");
-    collect(site.kernels, "kernels");
-
-    if (list.length === 0) {
-      html = `<div class="empty-history"><p>No modules or tools found.</p></div>`;
-    } else {
-      list.forEach((m) => {
-        html += `
-          <div class="live-item-card">
-            <div class="live-item-top">
-              <div class="live-item-title">${escapeHtml(m.name)}</div>
-              <span class="live-item-tag">${escapeHtml(m.groupTitle || m.sectionName)}</span>
-            </div>
-            <div class="live-item-meta">
-              <span>Section: ${escapeHtml(m.sectionName)}</span>
-              <span>👤 ${escapeHtml(m.by || "Community")}</span>
-              ${m.url ? `<span>🔗 <a href="${escapeHtml(m.url)}" target="_blank" style="color:var(--accent); text-decoration:none;">Download</a></span>` : ""}
-            </div>
-            <div class="live-item-actions">
-              <span></span>
-              <div class="action-btn-group">
-                <button class="btn-card-action btn-edit-mod" data-name="${escapeHtml(m.name)}" data-section="${escapeHtml(m.sectionName)}" data-cat="${escapeHtml(m.groupTitle)}">✏️ Edit</button>
-                <button class="btn-card-action btn-delete btn-del-mod" data-name="${escapeHtml(m.name)}" data-section="${escapeHtml(m.sectionName)}" data-cat="${escapeHtml(m.groupTitle)}">🗑️ Delete</button>
-              </div>
-            </div>
-          </div>
-        `;
-      });
-    }
-  } else if (cat === "dev-apks") {
-    const devRelease = {
-      version: "v1.2.3",
-      code: 5,
-      date: "October 19, 2026",
-      size: "5.7 MB",
-      channel: "Official Release Channel",
-      apkUrl: "https://newbiesteam.surge.sh/assets/NewbiesDev.apk",
-      fallbackUrl: "https://newbiesbase.surge.sh/assets/NewbiesDev.apk",
-      fileName: "NewbiesDev-v1.2.3.apk",
-      changelogs: [
-        "Permanent V2+V3 release signing with clean upgrade compatibility across all future updates",
-        "Sub-16ms instant optimistic screenshot deletion with automatic server rollback",
-        "Deterministic romId selector for screenshots and targeted DOM updates",
-        "Client-side high-performance WebP compression for batch screenshot uploads",
-        "Eliminated DebugProbesKt.bin and unnecessary permissions for zero Play Protect blocks"
-      ]
-    };
-
-    html = `
-      <div class="dev-release-card">
-        <div class="dev-release-header">
-          <div>
-            <div class="dev-release-title">NewbiesDev App &amp; Internal Portal</div>
-            <div class="dev-release-tagline">Internal Android APK for GT 20 Pro Developer Team</div>
-          </div>
-          <span class="dev-release-badge">${escapeHtml(devRelease.version)}</span>
-        </div>
-
-        <div class="dev-release-meta">
-          <span>📅 ${escapeHtml(devRelease.date)}</span>
-          <span>⚡ Build ${devRelease.code}</span>
-          <span>📦 ${escapeHtml(devRelease.size)}</span>
-          <span>🔒 Private Dev Release</span>
-        </div>
-
-        <div class="dev-notice-banner">
-          🔒 <strong>Private In-App Delivery:</strong> Since the Dev App GitHub repository is private, release APKs are securely delivered directly in-app via encrypted cloud relay and high-speed CDN without requiring personal GitHub tokens on developer devices.
-        </div>
-
-        <div class="dev-release-changelog">
-          <div class="dev-release-changelog-title">What's New in ${escapeHtml(devRelease.version)}:</div>
-          <ul>
-            ${devRelease.changelogs.map((cl) => `<li>${escapeHtml(cl)}</li>`).join("")}
-          </ul>
-        </div>
-
-        <div class="dev-release-actions">
-          <button class="btn-dev-download" id="btn-download-dev-apk" data-url="${escapeHtml(devRelease.apkUrl)}" data-fallback="${escapeHtml(devRelease.fallbackUrl)}" data-name="${escapeHtml(devRelease.fileName)}">
-            ⬇️ Download &amp; Install Dev APK (${escapeHtml(devRelease.version)})
-          </button>
-        </div>
-      </div>
-    `;
+    return e;
   }
 
-  liveItemsContainer.innerHTML = html;
-  attachLiveActionListeners();
-}
+  function listNode(tag, arr) {
+    var l = el(tag);
+    arr.forEach(function (t) {
+      l.appendChild(richEl("li", "", t));
+    });
+    return l;
+  }
 
-function triggerDevApkDownload(url, fileName) {
-  showToast("Starting Dev APK download...");
-  if (window.AndroidBridge && typeof window.AndroidBridge.downloadAndInstallApk === "function") {
+  function copyIconNode(copied) {
+    if (copied) {
+      return makeSvg("0 0 24 24", 13, 13, [
+        {
+          d: "M20 6L9 17l-5-5",
+          fill: "none",
+          stroke: "currentColor",
+          "stroke-width": "2.4",
+          "stroke-linecap": "round",
+          "stroke-linejoin": "round"
+        }
+      ]);
+    }
+    return makeSvg("0 0 24 24", 13, 13, [
+      {
+        d: "M9 9h10v10H9z",
+        fill: "none",
+        stroke: "currentColor",
+        "stroke-width": "2",
+        "stroke-linecap": "round",
+        "stroke-linejoin": "round"
+      },
+      {
+        d: "M5 15H4a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v1",
+        fill: "none",
+        stroke: "currentColor",
+        "stroke-width": "2",
+        "stroke-linecap": "round",
+        "stroke-linejoin": "round"
+      }
+    ]);
+  }
+
+  function copyTextToClipboard(text, onDone) {
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).then(onDone).catch(function () {
+        fallbackCopy(text, onDone);
+      });
+    } else {
+      fallbackCopy(text, onDone);
+    }
+  }
+
+  function fallbackCopy(text, onDone) {
     try {
-      window.AndroidBridge.downloadAndInstallApk(url, fileName);
-      showToast("Downloading via Android Manager...");
+      var ta = el("textarea");
+      ta.value = text;
+      ta.setAttribute("readonly", "");
+      ta.style.position = "fixed";
+      ta.style.opacity = "0";
+      ta.style.pointerEvents = "none";
+      document.body.appendChild(ta);
+      ta.select();
+      document.execCommand("copy");
+      document.body.removeChild(ta);
+      onDone();
+    } catch (e) {}
+  }
+
+  function codeBlockNode(lines) {
+    var wrap = el("div", "code-wrap");
+    var text = lines.join("\n");
+    var pre = el("pre");
+    pre.appendChild(el("code", "", text));
+    wrap.appendChild(pre);
+
+    var btn = el("button", "copy-btn");
+    btn.type = "button";
+    btn.setAttribute("aria-label", "Copy commands");
+    btn.title = "Copy commands to clipboard";
+    var iconWrap = el("span", "copy-btn-icon");
+    iconWrap.appendChild(copyIconNode(false));
+    var lbl = el("span", "copy-btn-label", "Copy");
+    btn.appendChild(iconWrap);
+    btn.appendChild(lbl);
+
+    var copyTimer = null;
+    btn.addEventListener("click", function () {
+      copyTextToClipboard(text, function () {
+        iconWrap.replaceChildren(copyIconNode(true));
+        lbl.textContent = "Copied";
+        btn.dataset.copied = "true";
+        if (copyTimer) clearTimeout(copyTimer);
+        copyTimer = setTimeout(function () {
+          iconWrap.replaceChildren(copyIconNode(false));
+          lbl.textContent = "Copy";
+          delete btn.dataset.copied;
+        }, 1600);
+      });
+    });
+    wrap.appendChild(btn);
+    return wrap;
+  }
+
+  function articleNode(g) {
+    var art = el("article", "article");
+
+    var crumbs = el("div", "crumbs");
+    var back = el("a", "", "Guides");
+    back.href = "#guides";
+    crumbs.appendChild(back);
+    if (g.category) {
+      crumbs.appendChild(document.createTextNode("  /  " + g.category));
+    }
+    crumbs.appendChild(document.createTextNode("  /  " + g.title));
+    art.appendChild(crumbs);
+
+    art.appendChild(el("h1", "", g.title));
+    art.appendChild(el("p", "from", (g.by ? "By " + g.by + " \u00b7 " : "") + "From NewbiesTeam, for the GT 20 Pro"));
+
+    var infoKeys = g.info ? Object.keys(g.info) : [];
+    if (infoKeys.length) {
+      var box = el("aside", "infobox");
+      box.appendChild(el("h3", "", "Guide info"));
+      var dl = el("dl");
+      infoKeys.forEach(function (k) {
+        var row = el("div");
+        row.appendChild(el("dt", "", k));
+        row.appendChild(el("dd", "", g.info[k]));
+        dl.appendChild(row);
+      });
+      box.appendChild(dl);
+      art.appendChild(box);
+    }
+
+    var intro = g.intro ? [].concat(g.intro) : [];
+    intro.forEach(function (t) {
+      art.appendChild(richEl("p", "", t));
+    });
+
+    var warnText = g.warning || S.guideWarning;
+    if (warnText) {
+      var wb = el("div", "warn");
+      wb.appendChild(el("strong", "", "Warning"));
+      wb.appendChild(richEl("p", "", warnText));
+      art.appendChild(wb);
+    }
+
+    var sections = g.sections || [];
+    var heads = [];
+
+    if (sections.length > 1) {
+      var toc = el("nav", "toc");
+      toc.setAttribute("aria-label", "Contents");
+      toc.appendChild(el("h3", "", "Contents"));
+      var ol = el("ol");
+      sections.forEach(function (s, i) {
+        var li = el("li");
+        var b = el("button", "", s.h);
+        b.type = "button";
+        b.addEventListener("click", function () {
+          heads[i].scrollIntoView({ behavior: prefersCalm() ? "auto" : "smooth", block: "start" });
+        });
+        li.appendChild(b);
+        ol.appendChild(li);
+      });
+      toc.appendChild(ol);
+      art.appendChild(toc);
+    }
+
+    sections.forEach(function (s, i) {
+      var h = el("h2", "", (i + 1) + "  " + s.h);
+      heads.push(h);
+      art.appendChild(h);
+      (s.body || []).forEach(function (b) {
+        if (typeof b === "string") art.appendChild(richEl("p", "", b));
+        else if (b.ul) art.appendChild(listNode("ul", b.ul));
+        else if (b.ol) art.appendChild(listNode("ol", b.ol));
+        else if (b.code) art.appendChild(codeBlockNode(b.code));
+        else if (b.note) art.appendChild(richEl("div", "note", b.note));
+      });
+    });
+
+    var bk = el("a", "back", "Back to Guides");
+    bk.href = "#guides";
+    art.appendChild(bk);
+    return art;
+  }
+
+  function missingNode() {
+    var art = el("article", "article");
+    art.appendChild(el("h1", "", "Guide not found"));
+    art.appendChild(el("p", "", "That guide doesn't exist or was moved."));
+    var bk = el("a", "back", "Back to Guides");
+    bk.href = "#guides";
+    art.appendChild(bk);
+    return art;
+  }
+
+  /* ---------- search ---------- */
+  var searchBox = document.getElementById("searchbox");
+  var searchInput = document.getElementById("search");
+  var searchClear = document.getElementById("search-clear");
+  var searchKbd = document.getElementById("search-kbd");
+
+  function syncSearchControls() {
+    var hasText = !!searchInput.value;
+    if (searchClear) searchClear.hidden = !hasText;
+    if (searchKbd) searchKbd.hidden = hasText;
+  }
+
+  function matches(words, text) {
+    text = text.toLowerCase();
+    return words.every(function (w) {
+      return text.indexOf(w) !== -1;
+    });
+  }
+
+  function itemText(it) {
+    var d = it.details || {};
+    var dTxt = [d.base, (d.changelogs || []).join(" "), (d.fixed || []).join(" "), (d.bugs || []).join(" ")].join(" ");
+    return [it.name, it.by, it.date, it.size, it.group, it.note, it.alt, dTxt].join(" ");
+  }
+
+  function resultPanel(tabLabel, title, content) {
+    var p = el("section", "panel");
+    var h = el("h2");
+    h.appendChild(el("span", "crumb", tabLabel));
+    h.appendChild(document.createTextNode(title));
+    p.appendChild(h);
+    p.appendChild(content);
+    return p;
+  }
+
+  function searchNode(q) {
+    var words = q.toLowerCase().split(/\s+/).filter(Boolean);
+    var frag = document.createDocumentFragment();
+    var count = 0;
+
+    TABS.forEach(function (t) {
+      if (t[0] === "guides" || t[0] === "updates") return;
+      (S[t[0]] || []).forEach(function (g) {
+        var catHit = matches(words, g.title || "");
+        if (g.feature) {
+          var f = g.feature;
+          if (catHit || matches(words, [f.name, f.date, f.alt].join(" "))) {
+            frag.appendChild(resultPanel(t[1], g.title, featureNode(f, false, t[0])));
+            count++;
+          }
+        }
+        var all = g.items || [];
+        var hits = catHit
+          ? all
+          : all.filter(function (it) {
+              return matches(words, itemText(it) + " " + g.title);
+            });
+        if (!hits.length) return;
+        var hasBanners = hits.some(function (it) {
+          return !!it.image;
+        });
+        if (hasBanners) {
+          var list = el("div", "feat-list");
+          hits.forEach(function (it) {
+            list.appendChild(it.image ? featureNode(it, false, t[0]) : cardNode(it, t[0]));
+          });
+          frag.appendChild(resultPanel(t[1], g.title, list));
+        } else {
+          var grid = el("div", "grid");
+          hits.forEach(function (it) {
+            grid.appendChild(cardNode(it, t[0]));
+          });
+          frag.appendChild(resultPanel(t[1], g.title, grid));
+        }
+        count += hits.length;
+      });
+    });
+
+    var uHits = (S.updates || []).filter(function (u) {
+      return matches(words, [u.title, u.body, u.tag, u.by, u.date].join(" "));
+    });
+    if (uHits.length) {
+      var uList = el("div", "updates-list");
+      uHits.forEach(function (u) {
+        uList.appendChild(updateCardNode(u));
+      });
+      frag.appendChild(resultPanel("Updates", "Changelogs & Updates", uList));
+      count += uHits.length;
+    }
+
+    var aHits = (S.appReleases || []).filter(function (rel) {
+      return matches(words, [rel.name, rel.version, rel.summary, (rel.changelog || []).join(" "), rel.by].join(" "));
+    });
+    if (aHits.length) {
+      var aList = el("div", "app-releases-grid");
+      aHits.forEach(function (rel) {
+        aList.appendChild(appReleaseCardNode(rel, false));
+      });
+      frag.appendChild(resultPanel("App", "Official App Releases", aList));
+      count += aHits.length;
+    }
+
+    var gl = (S.guides && S.guides.items) || [];
+    var gCats = (S.guides && S.guides.categories) ? S.guides.categories.slice() : [];
+    gl.forEach(function (g) {
+      var c = g.category || "Guides";
+      if (gCats.indexOf(c) === -1) gCats.push(c);
+    });
+    gCats.forEach(function (cat) {
+      var gHits = gl.filter(function (g) {
+        if ((g.category || "Guides") !== cat) return false;
+        var txt = [g.title, g.category, g.by, [].concat(g.intro || []).join(" ")];
+        (g.sections || []).forEach(function (s) {
+          txt.push(s.h);
+        });
+        return matches(words, txt.join(" "));
+      });
+      if (gHits.length) {
+        var box = el("div", "tiles");
+        gHits.forEach(function (it) {
+          box.appendChild(guideTileNode(it));
+        });
+        frag.appendChild(resultPanel("Guides", cat, box));
+        count += gHits.length;
+      }
+    });
+
+    var out = document.createDocumentFragment();
+    if (!count) {
+      var p = el("section", "panel");
+      p.appendChild(el("div", "empty", "No results for \u201c" + q + "\u201d."));
+      out.appendChild(p);
+    } else {
+      out.appendChild(
+        el("p", "results-note", count + (count === 1 ? " result" : " results") + " for \u201c" + q + "\u201d")
+      );
+      out.appendChild(frag);
+    }
+    return out;
+  }
+
+  function runSearch() {
+    syncSearchControls();
+    var q = searchInput.value.trim();
+    if (!q) {
+      route(true);
       return;
-    } catch (e) {
-      console.warn("AndroidBridge download failed, falling back to browser", e);
     }
+    hero.hidden = true;
+    view.replaceChildren(searchNode(q));
+    document.title = "Search \u2014 NewbiesTeam";
+    tabLinks.forEach(function (a) {
+      a.removeAttribute("aria-current");
+    });
+    syncTabGlass(null, false);
   }
 
-  // Fallback: standard link download / external browser
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = fileName;
-  a.target = "_blank";
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-}
-
-function attachLiveActionListeners() {
-  if (!liveItemsContainer) return;
-
-  // Download Dev APK
-  const devDownloadBtn = liveItemsContainer.querySelector("#btn-download-dev-apk");
-  if (devDownloadBtn) {
-    devDownloadBtn.addEventListener("click", () => {
-      const url = devDownloadBtn.dataset.url;
-      const fileName = devDownloadBtn.dataset.name || "NewbiesDev-v1.1.0.apk";
-      triggerDevApkDownload(url, fileName);
+  searchInput.addEventListener("input", runSearch);
+  searchInput.addEventListener("keydown", function (e) {
+    if (e.key === "Escape" && searchInput.value) {
+      searchInput.value = "";
+      runSearch();
+    }
+  });
+  if (searchClear) {
+    searchClear.addEventListener("click", function () {
+      searchInput.value = "";
+      runSearch();
+      searchInput.focus();
     });
   }
 
-  // Manage Screenshots directly from ROM card
-  liveItemsContainer.querySelectorAll(".btn-ss-rom").forEach((btn) => {
-    btn.addEventListener("click", () => {
-      const name = btn.dataset.name;
-      openScreenshotsModalForRom(name);
-    });
-  });
-
-  // Edit ROM
-  liveItemsContainer.querySelectorAll(".btn-edit-rom").forEach((btn) => {
-    btn.addEventListener("click", () => {
-      const name = btn.dataset.name;
-      const cat = btn.dataset.cat;
-      const item = findRomItem(name, cat);
-      if (item) openEditRomModal(item, cat);
-    });
-  });
-
-  // Delete ROM
-  liveItemsContainer.querySelectorAll(".btn-del-rom").forEach((btn) => {
-    btn.addEventListener("click", () => {
-      const name = btn.dataset.name;
-      const cat = btn.dataset.cat;
-      confirmAndDeleteItem("roms", name, cat);
-    });
-  });
-
-  // Edit Update
-  liveItemsContainer.querySelectorAll(".btn-edit-update").forEach((btn) => {
-    btn.addEventListener("click", () => {
-      const id = btn.dataset.id;
-      const item = (window.SITE?.updates || []).find((u) => u.id === id);
-      if (item) openEditUpdateModal(item);
-    });
-  });
-
-  // Delete Update
-  liveItemsContainer.querySelectorAll(".btn-del-update").forEach((btn) => {
-    btn.addEventListener("click", () => {
-      const id = btn.dataset.id;
-      const title = btn.dataset.title;
-      confirmAndDeleteItem("updates", title, "", id);
-    });
-  });
-
-  // Edit Guide
-  liveItemsContainer.querySelectorAll(".btn-edit-guide").forEach((btn) => {
-    btn.addEventListener("click", () => {
-      const slug = btn.dataset.slug;
-      const list = Array.isArray(window.SITE?.guides) ? window.SITE.guides : (window.SITE?.guides?.items || []);
-      const item = list.find((g) => g.slug === slug);
-      if (item) openEditGuideModal(item);
-    });
-  });
-
-  // Delete Guide
-  liveItemsContainer.querySelectorAll(".btn-del-guide").forEach((btn) => {
-    btn.addEventListener("click", () => {
-      const slug = btn.dataset.slug;
-      const title = btn.dataset.title;
-      confirmAndDeleteItem("guides", title, "", slug);
-    });
-  });
-
-  // Edit Module
-  liveItemsContainer.querySelectorAll(".btn-edit-mod").forEach((btn) => {
-    btn.addEventListener("click", () => {
-      const name = btn.dataset.name;
-      const sec = btn.dataset.section;
-      const cat = btn.dataset.cat;
-      const item = findModuleItem(name, sec, cat);
-      if (item) openEditModuleModal(item, sec, cat);
-    });
-  });
-
-  // Delete Module
-  liveItemsContainer.querySelectorAll(".btn-del-mod").forEach((btn) => {
-    btn.addEventListener("click", () => {
-      const name = btn.dataset.name;
-      const sec = btn.dataset.section;
-      const cat = btn.dataset.cat;
-      confirmAndDeleteItem(sec, name, cat);
-    });
-  });
-}
-
-function findRomItem(name, cat) {
-  for (const group of window.SITE?.roms || []) {
-    if ((!cat || group.title === cat) && group.feature && (group.feature.name === name || group.feature.romId === name)) {
-      return group.feature;
-    }
-    if ((!cat || group.title === cat) && Array.isArray(group.items)) {
-      const f = group.items.find((x) => x.name === name || x.romId === name);
-      if (f) return f;
-    }
-  }
-  return null;
-}
-
-function findModuleItem(name, sec, cat) {
-  const arr = window.SITE?.[sec] || [];
-  for (const group of arr) {
-    if ((!cat || group.title === cat) && Array.isArray(group.items)) {
-      const f = group.items.find((x) => x.name === name);
-      if (f) return f;
-    }
-  }
-  return null;
-}
-
-// ----------------------------------------------------
-// 8. Edit Pre-Fill Modal Functions
-// ----------------------------------------------------
-function openEditRomModal(item, cat) {
-  if (formActionInput) formActionInput.value = "edit";
-  if (editSectionInput) editSectionInput.value = "roms";
-  if (editTargetNameInput) editTargetNameInput.value = item.name;
-  if (editTargetCategoryInput) editTargetCategoryInput.value = cat || "Port ROMs";
-  if (editTargetIdInput) editTargetIdInput.value = "";
-
-  // Hide category switcher tabs during editing
-  const catTabsWrap = document.getElementById("modal-category-tabs");
-  if (catTabsWrap) catTabsWrap.style.display = "none";
-
-  openModal("rom");
-
-  if (modalTitle) modalTitle.textContent = `Edit ROM: ${item.name}`;
-  if (modalSubtitle) modalSubtitle.textContent = `Modify live entry in ${cat || "ROMs"}`;
-  if (submitBtnText) submitBtnText.textContent = "💾 Save Changes";
-
-  const nameEl = document.getElementById("rom-name");
-  if (nameEl) nameEl.value = item.name || "";
-
-  const romCatSelect = document.getElementById("rom-category");
-  if (romCatSelect) {
-    let found = false;
-    for (let opt of romCatSelect.options) {
-      if (opt.value === cat) {
-        found = true;
-        break;
+  document.addEventListener("keydown", function (e) {
+    if (e.key === "/" && !searchBox.hidden && document.activeElement !== searchInput) {
+      var tag = document.activeElement && document.activeElement.tagName;
+      if (tag !== "INPUT" && tag !== "TEXTAREA") {
+        e.preventDefault();
+        searchInput.focus();
+        searchInput.select();
       }
     }
-    if (!found && cat) {
-      const opt = document.createElement("option");
-      opt.value = cat;
-      opt.textContent = cat;
-      romCatSelect.appendChild(opt);
+  });
+
+  tabsBox.addEventListener("click", function (e) {
+    var a = e.target.closest("a.tab");
+    if (!a) return;
+    if (searchInput.value && a.getAttribute("href") === (location.hash || "#roms")) {
+      e.preventDefault();
+      searchInput.value = "";
+      syncSearchControls();
+      route();
     }
-    romCatSelect.value = cat || "Port ROMs";
+  });
+  if (logo) {
+    var logoAnimTimer = null;
+    var triggerLogoAnimation = function () {
+      logo.classList.add("animating");
+      clearTimeout(logoAnimTimer);
+      logoAnimTimer = setTimeout(function () {
+        logo.classList.remove("animating");
+      }, 3400);
+    };
+
+    logo.addEventListener("pointerdown", triggerLogoAnimation, { passive: true });
+    logo.addEventListener("click", function (e) {
+      triggerLogoAnimation();
+      if (searchInput.value && (location.hash === "#roms" || !location.hash)) {
+        e.preventDefault();
+        searchInput.value = "";
+        syncSearchControls();
+        route();
+      }
+    });
   }
 
-  const androidEl = document.getElementById("rom-android");
-  if (androidEl) androidEl.value = item.details?.base || item.date || "";
+  /* ---------- routing ---------- */
+  function route(keepScroll) {
+    closeDownloadPopover();
+    closeTabOverview();
+    if (keepScroll !== true && searchInput.value) {
+      searchInput.value = "";
+      syncSearchControls();
+    }
 
-  const byEl = document.getElementById("rom-by");
-  if (byEl) byEl.value = item.by || "";
+    var resolved = resolveRouteHash(location.hash);
+    var tab = resolved.tab || "roms";
+    var slug = resolved.slug || "";
 
-  const baseEl = document.getElementById("rom-base");
-  if (baseEl) baseEl.value = item.details?.base || item.alt || "";
+    if (tab === "guides" && slug === "flash-custom-recovery") {
+      slug = "ofox-flash";
+    }
 
-  const urlEl = document.getElementById("rom-url");
-  if (urlEl) urlEl.value = item.url || "";
+    var known = TABS.filter(function (t) {
+      return t[0] === tab;
+    })[0];
+    if (!known) {
+      tab = "roms";
+      known = TABS[0];
+      slug = "";
+    }
 
-  const mirrorEl = document.getElementById("rom-mirror");
-  if (mirrorEl) mirrorEl.value = item.mirrorUrl || item.mirror || "";
+    var isArticle = tab === "guides" && !!slug;
+    hero.hidden = isArticle;
+    searchBox.hidden = isArticle;
 
-  const clEl = document.getElementById("rom-changelog");
-  if (clEl) clEl.value = (item.details?.changelogs || []).join("\n");
-
-  const bugsEl = document.getElementById("rom-bugs");
-  if (bugsEl) bugsEl.value = (item.details?.bugs || []).join("\n");
-}
-
-function openEditUpdateModal(item) {
-  if (formActionInput) formActionInput.value = "edit";
-  if (editSectionInput) editSectionInput.value = "updates";
-  if (editTargetNameInput) editTargetNameInput.value = item.title;
-  if (editTargetCategoryInput) editTargetCategoryInput.value = item.tag || "";
-  if (editTargetIdInput) editTargetIdInput.value = item.id;
-
-  const catTabsWrap = document.getElementById("modal-category-tabs");
-  if (catTabsWrap) catTabsWrap.style.display = "none";
-
-  openModal("news");
-
-  if (modalTitle) modalTitle.textContent = `Edit Update: ${item.title}`;
-  if (modalSubtitle) modalSubtitle.textContent = `Update live news broadcast`;
-  if (submitBtnText) submitBtnText.textContent = "💾 Save Changes";
-
-  const titleEl = document.getElementById("news-title");
-  if (titleEl) titleEl.value = item.title || "";
-
-  const tagEl = document.getElementById("news-tag");
-  if (tagEl) tagEl.value = item.tag || "New ROM";
-
-  const byEl = document.getElementById("news-by");
-  if (byEl) byEl.value = item.by || "";
-
-  const bodyEl = document.getElementById("news-body");
-  if (bodyEl) bodyEl.value = item.body || "";
-
-  const urlEl = document.getElementById("news-url");
-  if (urlEl) urlEl.value = item.url || (item.link?.href || "");
-
-  const labelEl = document.getElementById("news-link-label");
-  if (labelEl) labelEl.value = item.linkLabel || (item.link?.label || "");
-}
-
-function openEditGuideModal(item) {
-  if (formActionInput) formActionInput.value = "edit";
-  if (editSectionInput) editSectionInput.value = "guides";
-  if (editTargetNameInput) editTargetNameInput.value = item.title;
-  if (editTargetCategoryInput) editTargetCategoryInput.value = item.category || "Flashing Guides";
-  if (editTargetIdInput) editTargetIdInput.value = item.slug;
-
-  const catTabsWrap = document.getElementById("modal-category-tabs");
-  if (catTabsWrap) catTabsWrap.style.display = "none";
-
-  openModal("guide");
-
-  if (modalTitle) modalTitle.textContent = `Edit Guide: ${item.title}`;
-  if (modalSubtitle) modalSubtitle.textContent = `Modify guide instructions`;
-  if (submitBtnText) submitBtnText.textContent = "💾 Save Changes";
-
-  const titleEl = document.getElementById("guide-title");
-  if (titleEl) titleEl.value = item.title || "";
-
-  const catEl = document.getElementById("guide-category");
-  if (catEl) catEl.value = item.category || "Flashing Guides";
-
-  const byEl = document.getElementById("guide-by");
-  if (byEl) byEl.value = item.by || item.info?.Requires || "";
-
-  const stepsEl = document.getElementById("guide-steps");
-  let stepsText = "";
-  if (Array.isArray(item.sections)) {
-    const lines = [];
-    item.sections.forEach((s) => {
-      if (Array.isArray(s.body)) {
-        s.body.forEach((b) => {
-          if (typeof b === "string") lines.push(b);
-          else if (b.ol && Array.isArray(b.ol)) lines.push(...b.ol);
-          else if (b.ul && Array.isArray(b.ul)) lines.push(...b.ul);
+    var node, title;
+    if (isArticle) {
+      var found = ((S.guides && S.guides.items) || []).filter(function (g) {
+        return g.slug === slug;
+      })[0];
+      node = found ? articleNode(found) : missingNode();
+      title = (found ? found.title : "Guide not found") + " \u2014 NewbiesTeam";
+    } else {
+      node = document.createDocumentFragment();
+      if (tab !== "guides" && tab !== "updates" && tab !== "screenshots" && tab !== "app" && S.disclaimer) {
+        var dw = el("div", "warn");
+        dw.appendChild(el("strong", "", "Use at your own risk"));
+        dw.appendChild(el("p", "", S.disclaimer));
+        node.appendChild(dw);
+      }
+      if (tab === "guides") {
+        node.appendChild(guidesNode(S.guides || { title: "Guides", items: [] }));
+      } else if (tab === "updates") {
+        node.appendChild(updatesNode());
+      } else if (tab === "app") {
+        node.appendChild(appReleasesNode());
+      } else if (tab === "screenshots") {
+        node.appendChild(screenshotsNode(slug));
+      } else {
+        (S[tab] || []).forEach(function (g) {
+          var p = panelNode(g, tab);
+          if (p) node.appendChild(p);
         });
       }
+      title = (tab === "app" ? "App Releases" : known[1]) + " \u2014 NewbiesTeam";
+    }
+
+    view.replaceChildren(node);
+    document.title = title;
+
+    var activeTabEl = null;
+    tabLinks.forEach(function (a) {
+      if (a.dataset.tab === tab) {
+        a.setAttribute("aria-current", "page");
+        activeTabEl = a;
+        if (tabsBox.scrollWidth > tabsBox.clientWidth) {
+          var targetLeft = a.offsetLeft - (tabsBox.clientWidth - a.offsetWidth) / 2;
+          tabsBox.scrollTo({ left: Math.max(0, targetLeft), behavior: prefersCalm() ? "auto" : "smooth" });
+        }
+      } else {
+        a.removeAttribute("aria-current");
+      }
     });
-    stepsText = lines.join("\n");
-  }
-  if (!stepsText && item.intro) {
-    stepsText = Array.isArray(item.intro) ? item.intro.join("\n") : item.intro;
-  }
-  if (stepsEl) stepsEl.value = stepsText;
+    syncTabGlass(activeTabEl, true);
 
-  const cautionsEl = document.getElementById("guide-cautions");
-  if (cautionsEl) cautionsEl.value = item.warning || "";
-}
-
-function openEditModuleModal(item, sec, cat) {
-  if (formActionInput) formActionInput.value = "edit";
-  if (editSectionInput) editSectionInput.value = sec;
-  if (editTargetNameInput) editTargetNameInput.value = item.name;
-  if (editTargetCategoryInput) editTargetCategoryInput.value = cat || "";
-  if (editTargetIdInput) editTargetIdInput.value = "";
-
-  const catTabsWrap = document.getElementById("modal-category-tabs");
-  if (catTabsWrap) catTabsWrap.style.display = "none";
-
-  openModal("module");
-
-  if (modalTitle) modalTitle.textContent = `Edit Tool: ${item.name}`;
-  if (modalSubtitle) modalSubtitle.textContent = `Modify live module / tool`;
-  if (submitBtnText) submitBtnText.textContent = "💾 Save Changes";
-
-  const nameEl = document.getElementById("mod-name");
-  if (nameEl) nameEl.value = item.name || "";
-
-  const secEl = document.getElementById("mod-section");
-  if (secEl) secEl.value = sec || "modules";
-
-  updateModCategoryDropdown(sec || "modules", cat || item.group || "");
-
-  const byEl = document.getElementById("mod-by");
-  if (byEl) byEl.value = item.by || "";
-
-  const urlEl = document.getElementById("mod-url");
-  if (urlEl) urlEl.value = item.url || "";
-
-  const mirrorEl = document.getElementById("mod-mirror");
-  if (mirrorEl) mirrorEl.value = item.mirrorUrl || "";
-
-  const detailsEl = document.getElementById("mod-details");
-  if (detailsEl) detailsEl.value = item.note || item.details || "";
-}
-
-// ----------------------------------------------------
-// 9. Item Deletion Dispatch & M3 Confirmation Modal
-// ----------------------------------------------------
-function showConfirmDialog(title, message, okText = "Delete") {
-  return new Promise((resolve) => {
-    const confirmModal = document.getElementById("confirm-modal");
-    const titleEl = document.getElementById("confirm-title");
-    const msgEl = document.getElementById("confirm-message");
-    const okBtn = document.getElementById("confirm-ok-btn");
-    const cancelBtn = document.getElementById("confirm-cancel-btn");
-
-    if (!confirmModal || !okBtn || !cancelBtn) {
-      const fallback = window.confirm(`${title}\n\n${message}`);
-      resolve(fallback);
-      return;
+    // Deep navigation element targeting
+    var targetEl = null;
+    if (!isArticle && slug && tab !== "guides") {
+      targetEl = findTargetElement(slug);
     }
 
-    if (titleEl) titleEl.textContent = title;
-    if (msgEl) msgEl.textContent = message;
-    if (okBtn) okBtn.textContent = okText;
-
-    confirmModal.classList.add("active");
-    confirmModal.classList.add("open");
-
-    const cleanup = () => {
-      confirmModal.classList.remove("active");
-      confirmModal.classList.remove("open");
-      okBtn.removeEventListener("click", onOk);
-      cancelBtn.removeEventListener("click", onCancel);
-    };
-
-    const onOk = () => {
-      cleanup();
-      resolve(true);
-    };
-
-    const onCancel = () => {
-      cleanup();
-      resolve(false);
-    };
-
-    okBtn.addEventListener("click", onOk);
-    cancelBtn.addEventListener("click", onCancel);
-  });
-}
-
-async function confirmAndDeleteItem(section, name, category, id) {
-  const targetLabel = name || id;
-  const ok = await showConfirmDialog(
-    `Delete ${targetLabel}?`,
-    `Are you sure you want to permanently delete "${targetLabel}" from the live NewbiesTeam site?`,
-    "Delete"
-  );
-  if (!ok) return;
-
-  if (!currentKey || !currentUser) {
-    showToast("Session not initialized. Please re-open the app.");
-    return;
+    if (targetEl) {
+      if (targetEl.classList.contains("has-drawer") || targetEl.querySelector(".rom-drawer")) {
+        targetEl.classList.add("is-open");
+        var infoBtn = targetEl.querySelector(".info-btn");
+        if (infoBtn) infoBtn.setAttribute("aria-expanded", "true");
+      }
+      requestAnimationFrame(function () {
+        targetEl.scrollIntoView({ behavior: prefersCalm() ? "auto" : "smooth", block: "center" });
+        highlightElement(targetEl);
+      });
+    } else if (keepScroll !== true) {
+      window.scrollTo(0, 0);
+    }
   }
 
-  showToast("Processing deletion...");
-
-  const payload = {
-    action: "delete",
-    id: "del-" + Date.now(),
-    timestamp: new Date().toISOString(),
-    key: currentKey,
-    deviceId: currentUser.deviceId,
-    submitterRole: currentUser.role,
-    submitterName: currentUser.name,
-    canAutoPush: currentUser.canAutoPush,
-    type: section,
-    section: section,
-    targetName: name,
-    targetCategory: category,
-    targetId: id || name,
-    title: `Delete: ${targetLabel}`,
-    data: {
-      name,
-      category,
-      id
-    }
-  };
-
+  /* Host Mode: active automatically on localhost:4720, or toggled by the host with Ctrl+Shift+U */
   try {
-    await dispatchSubmission(payload);
+    if (location.hostname === "127.0.0.1" || location.hostname === "localhost" || localStorage.getItem("nb-host") === "1") {
+      isHost = true;
+    }
+  } catch (e) {}
 
-    // Only auto-update runtime DOM immediately if user has auto-push OR if this is an update/news item
-    const isNewsOrUpdate = (section === "updates" || section === "news");
-    if (currentUser.canAutoPush || isNewsOrUpdate) {
-      if (section === "updates") {
-        window.SITE.updates = (window.SITE.updates || []).filter((u) => u.id !== id && u.title !== name);
-      } else if (section === "guides") {
-        const gList = Array.isArray(window.SITE.guides) ? window.SITE.guides : (window.SITE?.guides?.items || []);
-        window.SITE.guides = gList.filter((g) => g.slug !== id && g.title !== name);
-      } else if (Array.isArray(window.SITE?.[section])) {
-        window.SITE[section].forEach((grp) => {
-          if (grp.feature && grp.feature.name === name) delete grp.feature;
-          if (Array.isArray(grp.items)) {
-            grp.items = grp.items.filter((it) => it.name !== name);
+  document.addEventListener("keydown", function (e) {
+    if (e.ctrlKey && e.shiftKey && (e.key === "U" || e.key === "u")) {
+      e.preventDefault();
+      isHost = !isHost;
+      try {
+        if (isHost) localStorage.setItem("nb-host", "1");
+        else localStorage.removeItem("nb-host");
+      } catch (err) {}
+      route(true);
+    }
+  });
+
+  function b64ToBytes(b64) {
+    var bin = atob(b64);
+    var arr = new Uint8Array(bin.length);
+    for (var i = 0; i < bin.length; i++) arr[i] = bin.charCodeAt(i);
+    return arr;
+  }
+
+  function fetchRemoteUpdates() {
+    var deletedMap = {};
+    (S.deletedIds || []).forEach(function (id) {
+      deletedMap[id] = true;
+    });
+
+    // 1. Fetch live updates.json with cache-busting
+    var jsonUrls = [
+      "updates.json?t=" + Date.now(),
+      "https://newbiesteam.surge.sh/updates.json?t=" + Date.now(),
+      "https://newbiesbase.surge.sh/updates.json?t=" + Date.now()
+    ];
+
+    function tryFetchJson(idx) {
+      if (idx >= jsonUrls.length) return Promise.resolve(null);
+      return fetch(jsonUrls[idx], { cache: "no-store", headers: { "Cache-Control": "no-cache" } })
+        .then(function (r) {
+          if (!r.ok) throw new Error("HTTP " + r.status);
+          return r.json();
+        })
+        .catch(function () {
+          return tryFetchJson(idx + 1);
+        });
+    }
+
+    tryFetchJson(0).then(function (posts) {
+      if (Array.isArray(posts) && posts.length > 0) {
+        var clean = posts.filter(function (u) {
+          return u && u.id && !deletedMap[u.id];
+        });
+        if (clean.length > 0) {
+          var seen = {};
+          var merged = [];
+          clean.forEach(function (u) {
+            var key = u.id || (u.title + "|" + u.date);
+            if (!seen[key]) {
+              seen[key] = true;
+              merged.push(u);
+            }
+          });
+          S.updates = merged;
+          if (location.hash.indexOf("#updates") === 0 || (searchInput && searchInput.value)) {
+            route(true);
+          }
+        }
+      }
+    }).catch(function () {});
+
+    var channel = S.feedChannel;
+    var pubB64 = S.devPubKey;
+    if (!channel || !pubB64 || !window.crypto || !window.crypto.subtle || !window.TextEncoder) return;
+
+    var endpoint = "https://ntfy.sh/" + encodeURIComponent(channel) + "/json?poll=1&since=all";
+    Promise.all([
+      window.crypto.subtle.importKey(
+        "spki",
+        b64ToBytes(pubB64),
+        { name: "RSASSA-PKCS1-v1_5", hash: "SHA-256" },
+        false,
+        ["verify"]
+      ),
+      fetch(endpoint, { method: "GET" }).then(function (r) { return r.text(); })
+    ])
+      .then(function (pair) {
+        var pubKey = pair[0];
+        var rawText = pair[1] || "";
+        var lines = rawText.split("\n").filter(Boolean);
+        var checks = lines.map(function (line) {
+          var ev, post;
+          try {
+            ev = JSON.parse(line);
+            if (!ev || ev.event !== "message" || !ev.message) return Promise.resolve(null);
+            post = JSON.parse(ev.message);
+          } catch (e) {
+            return Promise.resolve(null);
+          }
+          if (!post || !post.id || !post.sig || deletedMap[post.id]) return Promise.resolve(null);
+          var canonical = [
+            post.id || "",
+            post.date || "",
+            post.tag || "",
+            post.by || "",
+            post.title || "",
+            post.body || "",
+            post.url || "",
+            post.linkLabel || "",
+            post.image || ""
+          ].join("\n");
+          var dataBytes = new TextEncoder().encode(canonical);
+          var sigBytes;
+          try {
+            sigBytes = b64ToBytes(post.sig);
+          } catch (e) {
+            return Promise.resolve(null);
+          }
+          return window.crypto.subtle
+            .verify("RSASSA-PKCS1-v1_5", pubKey, sigBytes, dataBytes)
+            .then(function (ok) {
+              if (!ok) return null;
+              var item = {
+                id: String(post.id),
+                date: String(post.date || ""),
+                tag: String(post.tag || "Update"),
+                by: String(post.by || "Dev"),
+                title: String(post.title || ""),
+                body: String(post.body || "")
+              };
+              if (post.url) item.url = String(post.url);
+              if (post.linkLabel) item.linkLabel = String(post.linkLabel);
+              if (post.image) item.image = String(post.image);
+              return item;
+            })
+            .catch(function () { return null; });
+        });
+        return Promise.all(checks);
+      })
+      .then(function (verifiedList) {
+        if (!verifiedList) return;
+        var valid = verifiedList.filter(Boolean).reverse();
+        if (!valid.length) return;
+        var existing = (S.updates || []).filter(function (u) {
+          return u && !deletedMap[u.id];
+        });
+        var seen = {};
+        var merged = [];
+        valid.concat(existing).forEach(function (u) {
+          if (!u) return;
+          var key = u.id || (u.title + "|" + u.date);
+          if (seen[key]) return;
+          seen[key] = true;
+          merged.push(u);
+        });
+        if (merged.length !== existing.length) {
+          S.updates = merged;
+          if (location.hash.indexOf("#updates") === 0 || searchInput.value) {
+            route(true);
+          }
+        }
+      })
+      .catch(function () {});
+  }
+
+  /* ==========================================================================
+     Tab Readmes / Overview System (Simple & grounded)
+     ========================================================================== */
+  var TAB_READMES = {
+    roms: {
+      icon: "💿",
+      badge: "ROMs",
+      title: "Custom ROMs & Ported OS",
+      description: "Port ROMs (HiOS, HyperOS, OxygenOS), AOSP builds (PixelOS, Axion, InfinityX), and official stock XOS fastboot firmware for the Infinix GT 20 Pro (X6871 / X6853).",
+      highlights: [
+        { icon: "📱", label: "Port ROMs", desc: "HiOS 16.3, HyperOS 3 V2, and OxygenOS 16" },
+        { icon: "⚡", label: "AOSP ROMs", desc: "PixelOS Android 16, Axion V2.4, and InfinityX V3.7" },
+        { icon: "📦", label: "Stock XOS", desc: "Official fastboot firmware for Android 14 and 15" },
+        { icon: "🛡️", label: "Boot Images", desc: "Stock boot.img files ready for root patching" }
+      ],
+      getStats: function () {
+        var count = 0;
+        var ports = 0;
+        (S.roms || []).forEach(function (g) {
+          if (g.feature) count++;
+          if (Array.isArray(g.items)) {
+            count += g.items.length;
+            if (/port/i.test(g.title || "")) ports += g.items.length;
           }
         });
-      }
-
-      updateCategoryCounts();
-      renderLiveItems(activeLiveCat);
-
-      if (currentUser.canAutoPush) {
-        showToast(`🚀 "${targetLabel}" deleted live from NewbiesTeam!`);
-      } else {
-        showToast(`📢 "${targetLabel}" deleted live from Updates feed!`);
-      }
-    } else {
-      showToast(`⏳ Deletion request queued for Softbrick's verification in server toolkit!`);
-    }
-  } catch (err) {
-    showToast(`❌ Deletion failed: ${err.message}`);
-  }
-}
-
-// ----------------------------------------------------
-let isSubmittingSubmission = false;
-
-async function handleFormSubmit(e) {
-  if (e && typeof e.preventDefault === "function") e.preventDefault();
-  if (isSubmittingSubmission) return;
-
-  if (!currentKey || !currentUser) {
-    showToast("Session not initialized. Please re-open the app.");
-    return;
-  }
-
-  isSubmittingSubmission = true;
-  setSubmitting(true);
-
-  try {
-    const isEdit = formActionInput?.value === "edit";
-    const payloadData = buildPayloadForCategory(activeCategory);
-
-    // Validation checks
-    if (activeCategory === "rom") {
-      if (!payloadData.name) throw new Error("ROM Name is required");
-      if (!payloadData.url) throw new Error("Primary Download Link is required");
-    } else if (activeCategory === "screenshots") {
-      if (!payloadData.romName) throw new Error("Target ROM is required");
-      if (!payloadData.screenshots || payloadData.screenshots.length === 0) {
-        throw new Error("Please select at least 1 screenshot (up to 10 allowed)");
-      }
-    } else if (activeCategory === "guide") {
-      if (!payloadData.title) throw new Error("Guide Title is required");
-      if (!payloadData.steps || payloadData.steps.length === 0) throw new Error("Guide Steps are required");
-    } else if (activeCategory === "news") {
-      if (!payloadData.title) throw new Error("Post Title is required");
-      if (!payloadData.body) throw new Error("News Details / Changelog is required");
-    } else if (activeCategory === "module") {
-      if (!payloadData.name) throw new Error("Tool / Module Name is required");
-      if (!payloadData.url) throw new Error("Primary Download Link is required");
-    }
-
-    const submissionId = (isEdit ? "edit-" : "sub-") + Date.now();
-    let sectionTarget = editSectionInput?.value;
-    if (!sectionTarget) {
-      if (activeCategory === "rom") sectionTarget = "roms";
-      else if (activeCategory === "module") sectionTarget = payloadData.section || "modules";
-      else if (activeCategory === "guide") sectionTarget = "guides";
-      else if (activeCategory === "news") sectionTarget = "updates";
-      else sectionTarget = activeCategory;
-    }
-    const isNewsOrUpdate = (activeCategory === "news" || activeCategory === "updates" || sectionTarget === "updates");
-
-    const isScreenshots = activeCategory === "screenshots";
-    const shotCount = payloadData.screenshots ? payloadData.screenshots.length : 1;
-    const itemTitle = isScreenshots
-      ? `${shotCount} Screenshot(s) for ${payloadData.romName}`
-      : (payloadData.title || payloadData.name || "Submission");
-
-    const submission = {
-      action: isEdit ? "edit" : "add",
-      id: submissionId,
-      timestamp: new Date().toISOString(),
-      key: currentKey,
-      deviceId: currentUser.deviceId,
-      submitterRole: currentUser.role,
-      submitterName: currentUser.name,
-      submitterPhoto: currentUser.photo || "",
-      canAutoPush: currentUser.canAutoPush,
-      type: activeCategory,
-      section: sectionTarget,
-      targetName: editTargetNameInput?.value || payloadData.romName || payloadData.name || payloadData.title,
-      targetCategory: editTargetCategoryInput?.value || payloadData.category || "",
-      targetId: editTargetIdInput?.value || "",
-      title: (isEdit ? "[Edit] " : "") + itemTitle,
-      data: payloadData
-    };
-
-    // Fast dispatch directly to local daemon or 24/7 cloud relay
-    await dispatchSubmission(submission);
-
-    // Save to local device history
-    saveSubmissionToHistory({
-      id: submissionId,
-      type: (isEdit ? "✏️ " : "🚀 ") + activeCategory,
-      title: submission.title,
-      date: new Date().toLocaleDateString(),
-      status: currentUser.canAutoPush || isNewsOrUpdate ? "live" : "pending"
-    });
-
-    closeModal();
-    resetForm();
-
-    if (currentUser.canAutoPush) {
-      showToast(`🚀 Changes auto-pushed live to NewbiesTeam Hub!`);
-      setTimeout(() => fetchLiveSiteData(), 1200);
-    } else if (isNewsOrUpdate) {
-      showToast("📢 News / Update broadcast posted live immediately!");
-      setTimeout(() => fetchLiveSiteData(), 1200);
-    } else {
-      showToast("⏳ Request queued for Softbrick's verification in server toolkit!");
-    }
-  } catch (err) {
-    showToast("❌ Upload failed: " + (err.message || "Network error"));
-  } finally {
-    isSubmittingSubmission = false;
-    setSubmitting(false);
-  }
-}
-
-function buildPayloadForCategory(cat) {
-  switch (cat) {
-    case "rom": {
-      const name = (document.getElementById("rom-name")?.value || "").trim();
-      const category = document.getElementById("rom-category")?.value || "Port ROMs";
-      const android = (document.getElementById("rom-android")?.value || "").trim();
-      const by = (document.getElementById("rom-by")?.value || "").trim() || currentUser.name;
-      const base = (document.getElementById("rom-base")?.value || "").trim();
-      const url = (document.getElementById("rom-url")?.value || "").trim();
-      const mirror = (document.getElementById("rom-mirror")?.value || "").trim();
-      const changelogRaw = (document.getElementById("rom-changelog")?.value || "").trim();
-      const bugsRaw = (document.getElementById("rom-bugs")?.value || "").trim();
-
-      const changelog = changelogRaw ? changelogRaw.split("\n").map((s) => s.trim()).filter(Boolean) : [];
-      const bugs = bugsRaw ? bugsRaw.split("\n").map((s) => s.trim()).filter(Boolean) : [];
-
-      return {
-        name,
-        category,
-        android,
-        by,
-        base,
-        url,
-        mirror,
-        details: changelog,
-        bugs,
-        imageBase64: compressedImages.rom || ""
-      };
-    }
-    case "screenshots": {
-      const romSelect = document.getElementById("ss-rom-select");
-      const romName = (romSelect?.value || "").trim();
-      const selectedOption = romSelect?.selectedOptions?.[0];
-      const romId = selectedOption?.dataset?.romId || (findRomItem(romName)?.romId) || "";
-
-      const shots = selectedScreenshots.map((item, idx) => {
-        const inputEl = document.querySelector(`.ss-item-caption-input[data-id="${item.id}"]`);
-        const cap = inputEl ? inputEl.value.trim() : item.caption;
-        return {
-          caption: cap || `Screenshot ${idx + 1}`,
-          imageBase64: item.base64,
-          width: item.width,
-          height: item.height
-        };
-      });
-
-      return {
-        romName,
-        romId,
-        screenshots: shots,
-        caption: shots.length > 0 ? shots[0].caption : "",
-        imageBase64: shots.length > 0 ? shots[0].imageBase64 : ""
-      };
-    }
-    case "guide": {
-      const title = (document.getElementById("guide-title")?.value || "").trim();
-      const category = document.getElementById("guide-category")?.value || "Flashing Guides";
-      const by = (document.getElementById("guide-by")?.value || "").trim() || currentUser.name;
-      const stepsRaw = (document.getElementById("guide-steps")?.value || "").trim();
-      const cautionsRaw = (document.getElementById("guide-cautions")?.value || "").trim();
-
-      const steps = stepsRaw ? stepsRaw.split("\n").map((s) => s.trim()).filter(Boolean) : [];
-      const cautions = cautionsRaw ? cautionsRaw.split("\n").map((s) => s.trim()).filter(Boolean) : [];
-
-      return {
-        title,
-        category,
-        by,
-        steps,
-        cautions
-      };
-    }
-    case "news": {
-      const title = (document.getElementById("news-title")?.value || "").trim();
-      const tag = document.getElementById("news-tag")?.value || "New ROM";
-      const by = (document.getElementById("news-by")?.value || "").trim() || currentUser.name;
-      const body = (document.getElementById("news-body")?.value || "").trim();
-      const url = (document.getElementById("news-url")?.value || "").trim();
-      const linkLabel = (document.getElementById("news-link-label")?.value || "").trim();
-
-      return {
-        title,
-        tag,
-        by,
-        body,
-        url,
-        linkLabel,
-        imageBase64: compressedImages.news || ""
-      };
-    }
-    case "module": {
-      const name = (document.getElementById("mod-name")?.value || "").trim();
-      const section = document.getElementById("mod-section")?.value || "modules";
-      const catSelect = document.getElementById("mod-category-select");
-      const catInput = document.getElementById("mod-category");
-      let category = "";
-      if (catSelect && catSelect.value === "__custom__") {
-        category = (catInput?.value || "").trim();
-      } else if (catSelect) {
-        category = catSelect.value || (catInput?.value || "").trim();
-      } else {
-        category = (catInput?.value || "").trim();
-      }
-
-      const by = (document.getElementById("mod-by")?.value || "").trim() || currentUser.name;
-      const url = (document.getElementById("mod-url")?.value || "").trim();
-      const mirror = (document.getElementById("mod-mirror")?.value || "").trim();
-      const details = (document.getElementById("mod-details")?.value || "").trim();
-
-      return {
-        name,
-        section,
-        category,
-        by,
-        url,
-        mirror,
-        details
-      };
-    }
-    default:
-      return {};
-  }
-}
-
-// Dispatches payload over local daemon or 24/7 cloud relay with 8s timeout failover
-async function dispatchSubmission(submission) {
-  const jsonString = JSON.stringify(submission);
-
-  // 1. Only attempt direct local daemon if running in a desktop browser on localhost
-  const isDesktopLocalhost = (
-    typeof window !== "undefined" &&
-    window.location &&
-    (window.location.hostname === "127.0.0.1" || window.location.hostname === "localhost") &&
-    window.location.protocol.startsWith("http")
-  );
-
-  if (isDesktopLocalhost) {
-    try {
-      const res = await fetch("http://127.0.0.1:4720/dev-submit", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: jsonString,
-        signal: AbortSignal.timeout(1000)
-      });
-      if (res.ok) {
-        const resData = await res.json().catch(() => ({ ok: true }));
-        if (resData.ok) {
-          return { ok: true, direct: true };
-        }
-      }
-    } catch (_) {}
-  }
-
-  // 2. High-availability Cloud Relays with fast 8-second failover
-  const relayUrls = [
-    CONFIG.relayUrl,
-    CONFIG.relayUrl + "_b",
-    CONFIG.relayFallbackUrl,
-    CONFIG.relayFallbackUrl + "_b"
-  ].filter(Boolean);
-
-  let lastError = null;
-  for (let i = 0; i < relayUrls.length; i++) {
-    const url = relayUrls[i];
-    for (let attempt = 0; attempt < 2; attempt++) {
-      try {
-        const res = await fetch(url, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "Title": `NBT Submission: ${submission.title} (${submission.type})`,
-            "Priority": "high",
-            "Tags": "inbox_tray,zap"
-          },
-          body: jsonString,
-          signal: AbortSignal.timeout(8000)
-        });
-
-        if (res.status === 429) {
-          showToast(`Relay busy, retrying in 1.5s...`);
-          await new Promise((r) => setTimeout(r, 1500));
-          continue;
-        }
-
-        if (!res.ok) {
-          throw new Error(`Relay returned status ${res.status}`);
-        }
-
-        return { ok: true };
-      } catch (err) {
-        lastError = err;
-        await new Promise((r) => setTimeout(r, 600));
-      }
-    }
-  }
-
-  throw lastError || new Error("Failed to dispatch submission over all relay channels");
-}
-
-// Dispatches device claim message over relay
-async function dispatchDeviceClaim(session) {
-  const payload = {
-    type: "device_claim",
-    id: "claim-" + Date.now(),
-    key: session.key,
-    deviceId: session.deviceId,
-    name: session.name,
-    photo: session.photo ? "attached" : "",
-    timestamp: session.activatedAt
-  };
-
-  await fetch(CONFIG.relayUrl, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "Title": `NBT Device Claim: ${session.name}`,
-      "Priority": "default"
+        return [
+          count + " ROMs & Images",
+          (ports ? ports + " Port ROMs" : null),
+          "Stock XOS 14 & 15"
+        ].filter(Boolean);
+      },
+      warning: "⚠️ Bootloader unlocking (UBL) is required. Always back up your stock boot and NVRAM partitions in OrangeFox before flashing any ROM."
     },
-    body: JSON.stringify(payload)
-  }).catch(() => {});
-}
-
-// ----------------------------------------------------
-// 11. Modal Opening / Closing & Tabs
-// ----------------------------------------------------
-function openAddModal(cat) {
-  if (formActionInput) formActionInput.value = "add";
-  if (editSectionInput) editSectionInput.value = "";
-  if (editTargetNameInput) editTargetNameInput.value = "";
-  if (editTargetCategoryInput) editTargetCategoryInput.value = "";
-  if (editTargetIdInput) editTargetIdInput.value = "";
-  if (submitBtnText) submitBtnText.textContent = "🚀 Upload & Publish";
-
-  const catTabsWrap = document.getElementById("modal-category-tabs");
-  if (catTabsWrap) catTabsWrap.style.display = "";
-
-  resetForm();
-  openModal(cat);
-}
-
-function openModal(category) {
-  switchCategory(category);
-  if (uploadModal) {
-    uploadModal.classList.add("open");
-  }
-}
-
-function closeModal() {
-  if (uploadModal) {
-    uploadModal.classList.remove("open");
-  }
-  const catTabsWrap = document.getElementById("modal-category-tabs");
-  if (catTabsWrap) catTabsWrap.style.display = "";
-  if (formActionInput) formActionInput.value = "add";
-}
-
-function switchCategory(cat) {
-  const targetSec = document.getElementById(`fields-${cat}`);
-  if (activeCategory === cat && targetSec && !targetSec.classList.contains("hidden")) {
-    return;
-  }
-  activeCategory = cat;
-
-  if (catTabs) {
-    catTabs.forEach((tab) => {
-      tab.classList.toggle("active", tab.dataset.type === cat);
-    });
-  }
-
-  const allSections = document.querySelectorAll(".form-section");
-  allSections.forEach((sec) => sec.classList.add("hidden"));
-
-  if (targetSec) targetSec.classList.remove("hidden");
-
-  const titles = {
-    rom: { title: "Upload Port ROM / Firmware", sub: "NewbiesTeam Port & GSI Hub" },
-    screenshots: { title: "Upload Screenshots to ROM", sub: "Add up to 10 photos with individual descriptions" },
-    guide: { title: "Author Interactive Guide", sub: "Publish flashing, rooting or unbrick guide" },
-    news: { title: "Broadcast Live News Update", sub: "Posts immediately to Updates Feed" },
-    module: { title: "Add Tool, Kernel or Module", sub: "Magisk, KSU, Recovery & Boot" }
+    app: {
+      icon: "📱",
+      badge: "App",
+      title: "Official NewbiesTeam Android App",
+      description: "Official Android companion app for Infinix GT 20 Pro with automatic update alerts, offline guide caching, and fast performance.",
+      highlights: [
+        { icon: "⚡", label: "Update Alerts", desc: "Background notifications when new ROMs, kernels, or modules drop" },
+        { icon: "📖", label: "Offline Guides", desc: "Access installation and recovery guides even without internet" },
+        { icon: "🚀", label: "Fast & Smooth", desc: "Lightweight client optimized for 120Hz display responsiveness" },
+        { icon: "📦", label: "All Releases", desc: "Full history of releases with direct APK downloads and changelogs" }
+      ],
+      getStats: function () {
+        var count = (S.appReleases || []).length;
+        return [
+          count + " Official Releases",
+          "v1.2.1 Latest",
+          "6.0 MB APK"
+        ];
+      },
+      warning: "💡 If you see an install prompt, note that the app is distributed directly outside Google Play Store. It is 100% open-source on GitHub."
+    },
+    modules: {
+      icon: "🧩",
+      badge: "Modules",
+      title: "Magisk & KernelSU Modules",
+      description: "Tested systemless modules for Magisk, KernelSU, and APatch. Includes ViPER4Android audio, system adblocking, and status bar styling.",
+      highlights: [
+        { icon: "🔊", label: "ViPER4Android", desc: "Sound processing, bass boost, and equalizer" },
+        { icon: "🛡️", label: "Re-Malwack", desc: "System hosts adblock and malware protection" },
+        { icon: "🎨", label: "iOS Statusbar", desc: "iOS-style status bar layout for HiOS / XOS 16" },
+        { icon: "🧩", label: "Universal", desc: "Compatible with Magisk, KernelSU, and APatch" }
+      ],
+      getStats: function () {
+        var count = 0;
+        (S.modules || []).forEach(function (g) {
+          if (Array.isArray(g.items)) count += g.items.length;
+        });
+        return [
+          count + " Tested Modules",
+          "Magisk / KernelSU",
+          "Safe on GT 20 Pro"
+        ];
+      },
+      warning: "💡 Flash modules one by one. If your phone gets stuck in a bootloop, boot into OrangeFox Recovery and delete the module from /data/adb/modules."
+    },
+    kernels: {
+      icon: "⚡",
+      badge: "Kernels",
+      title: "Kernels & Root Boot Images",
+      description: "Kernels, patched boot images, and root manager APKs for the GT 20 Pro. Used for rooting with KernelSU and flashing custom GKI builds.",
+      highlights: [
+        { icon: "🛡️", label: "KernelSU APKs", desc: "KSU Ultra V1 and KernelSU Next managers" },
+        { icon: "⚡", label: "Patched Boot", desc: "Pre-patched stock boot (15.1.2.180) for instant root" },
+        { icon: "🔧", label: "GKI Kernels", desc: "Custom GKI kernel builds (Vortex, Zixine)" },
+        { icon: "📦", label: "Clean Root", desc: "Kernel-level root without modifying system files" }
+      ],
+      getStats: function () {
+        var count = 0;
+        (S.kernels || []).forEach(function (g) {
+          if (Array.isArray(g.items)) count += g.items.length;
+        });
+        return [
+          count + " Kernel & Root Files",
+          "KernelSU Supported",
+          "GKI & Stock Patched"
+        ];
+      },
+      warning: "⚠️ Make sure the kernel or patched boot matches your exact XOS build number. Flashing the wrong version will cause a bootloop."
+    },
+    recovery: {
+      icon: "🛠️",
+      badge: "Recovery",
+      title: "Recovery & Flashing Tools",
+      description: "OrangeFox recovery, Fenrir images, Penumbra flashing tool, and essential root utility apps to flash files, take backups, and unbrick.",
+      highlights: [
+        { icon: "🦊", label: "OrangeFox", desc: "OFOX R12.0 recovery with touchscreen support" },
+        { icon: "🐺", label: "Fenrir", desc: "Custom boot and recovery images for Android 14 & 15" },
+        { icon: "🛠️", label: "Penumbra", desc: "CLI and GUI flash tools for Windows and Linux" },
+        { icon: "📱", label: "Root Apps", desc: "Swift Backup, Scene, and MT Manager Pro" }
+      ],
+      getStats: function () {
+        var count = 0;
+        (S.recovery || []).forEach(function (g) {
+          if (Array.isArray(g.items)) count += g.items.length;
+        });
+        return [
+          count + " Recovery & Tools",
+          "OrangeFox & Fenrir",
+          "PC Flashing Tools"
+        ];
+      },
+      warning: "⭐ Crucial: Never re-lock your bootloader while on custom recovery or modified boot, or the device will hard brick."
+    },
+    screenshots: {
+      icon: "📸",
+      badge: "Screenshots",
+      title: "ROM Screenshots Gallery",
+      description: "Real screenshots from custom ROMs running on the Infinix GT 20 Pro. Preview launcher style, status bar, and settings before flashing.",
+      highlights: [
+        { icon: "📸", label: "HiOS 16.3", desc: "Settings, launcher, and system screenshots" },
+        { icon: "📸", label: "HyperOS 3", desc: "Control center, lock screen, and UI previews" },
+        { icon: "🔍", label: "Lightbox", desc: "Tap any thumbnail to view and swipe fullscreen" },
+        { icon: "🔗", label: "ROM Linked", desc: "Open screenshots directly from any ROM's info drawer" }
+      ],
+      getStats: function () {
+        var totalScreens = 0;
+        var romsWithScreens = 0;
+        (S.roms || []).forEach(function (g) {
+          if (g.feature && Array.isArray(g.feature.screenshots) && g.feature.screenshots.length) {
+            totalScreens += g.feature.screenshots.length;
+            romsWithScreens++;
+          }
+          if (Array.isArray(g.items)) {
+            g.items.forEach(function (it) {
+              if (Array.isArray(it.screenshots) && it.screenshots.length) {
+                totalScreens += it.screenshots.length;
+                romsWithScreens++;
+              }
+            });
+          }
+        });
+        return [
+          totalScreens + " Real Screenshots",
+          romsWithScreens + " ROMs Covered",
+          "Fullscreen Lightbox"
+        ];
+      },
+      warning: "💡 Tap any screenshot to expand fullscreen. Use arrow keys or swipe left/right to browse."
+    },
+    updates: {
+      icon: "📢",
+      badge: "Updates",
+      title: "News & Community Releases",
+      description: "Release notes, new ROM/kernel drops, bug fixes, and safety warnings from the Newbies Team.",
+      highlights: [
+        { icon: "📢", label: "Release Notes", desc: "Changelogs for new ROMs and recovery builds" },
+        { icon: "🔧", label: "Bug Fixes", desc: "Known bugs, fixes, and community workarounds" },
+        { icon: "🚨", label: "Safety Alerts", desc: "Warnings about dangerous official OTA updates" },
+        { icon: "💬", label: "Telegram", desc: "Direct links to Newbies Team community discussions" }
+      ],
+      getStats: function () {
+        var count = (S.updates || []).length;
+        return [
+          count + " Updates Posted",
+          "Live Cloud Feed",
+          "Verified Posts"
+        ];
+      },
+      warning: "🔔 Check here before accepting official Infinix OTA updates if you have root or custom recovery installed."
+    },
+    guides: {
+      icon: "📖",
+      badge: "Guides",
+      title: "Step-by-Step Guides",
+      description: "Beginner-friendly guides for bootloader unlock, flashing OrangeFox, installing port ROMs, downgrading XOS, and backups.",
+      highlights: [
+        { icon: "🔓", label: "Bootloader", desc: "How to unlock and re-lock your bootloader safely" },
+        { icon: "🦊", label: "OrangeFox", desc: "How to flash custom recovery using fastboot" },
+        { icon: "💿", label: "Port & AOSP", desc: "Step-by-step flashing instructions for ROMs" },
+        { icon: "💾", label: "Backups", desc: "How to back up and restore apps with Swift Backup" }
+      ],
+      getStats: function () {
+        var count = (S.guides && Array.isArray(S.guides.items)) ? S.guides.items.length : 0;
+        return [
+          count + " Step-by-Step Guides",
+          "Terminal Commands",
+          "X6871 Tested"
+        ];
+      },
+      warning: "📌 Read every step before typing terminal commands. Keep your phone charged above 50% before flashing."
+    }
   };
 
-  if (cat === "screenshots") {
-    populateRomSelect();
-  }
+  var activeHoldIndicator = null;
+  var activeOverviewPopover = null;
+  var activeOverviewBackdrop = null;
+  var activeHoldTabKey = null;
+  var popoverOpenedAt = 0;
+  var holdFired = false;
+  var currentHoldTab = null;
+  var holdRaf = null;
+  var holdStartTs = null;
+  var HOLD_DURATION_MS = 2000;
 
-  if (formActionInput?.value !== "edit") {
-    const meta = titles[cat] || { title: "Developer Upload", sub: "NewbiesTeam Hub" };
-    if (modalTitle) modalTitle.textContent = meta.title;
-    if (modalSubtitle) modalSubtitle.textContent = meta.sub;
-    if (submitBtnText) submitBtnText.textContent = (cat === "screenshots") ? "📸 Upload Screenshots" : "🚀 Upload & Publish";
-  }
-}
-
-// ----------------------------------------------------
-// 12. Roster Modal Rendering
-// ----------------------------------------------------
-function openRosterModal() {
-  renderTeamRoster();
-  if (rosterModal) {
-    rosterModal.classList.add("active");
-    rosterModal.classList.add("open");
-  }
-}
-
-function closeRosterModal() {
-  if (rosterModal) {
-    rosterModal.classList.remove("active");
-    rosterModal.classList.remove("open");
-  }
-}
-
-async function renderTeamRoster() {
-  if (!rosterListContainer) return;
-  rosterListContainer.innerHTML = "";
-
-  const manifest = await fetchOnlineAuthManifest();
-  const keysObj = (manifest && manifest.keys) ? manifest.keys : {};
-  const allEntries = Object.entries(keysObj);
-
-  allEntries.forEach(([slotId, dev]) => {
-    const isMe = (currentUser && (currentUser.slot === slotId || currentUser.keyString === currentKey));
-    const isRevoked = dev.revoked || dev.status === "revoked";
-    const displayName = (isMe && currentUser?.name) ? currentUser.name : (dev.bound_user_name || dev.name);
-    const photoSrc = (isMe && currentUser?.photo) ? currentUser.photo : "icons/icon-192.png";
-
-    const item = document.createElement("div");
-    item.className = `roster-dev-item ${isMe ? "is-me" : ""}`;
-
-    let statusText = "🟢 Ready";
-    let statusClass = "color: #10b981;";
-    if (isRevoked) {
-      statusText = "🔴 Revoked";
-      statusClass = "color: #ef4444;";
-    } else if (dev.bound_device_id) {
-      statusText = isMe ? "🔒 Your Phone (Active)" : "🔒 Bound to Device";
-      statusClass = "color: #60a5fa;";
+  function hideHoldIndicator() {
+    if (holdRaf) {
+      cancelAnimationFrame(holdRaf);
+      holdRaf = null;
     }
-
-    const canAuto = Boolean(dev.can_auto_push || dev.role === "admin");
-    item.innerHTML = `
-      <div class="dev-item-avatar">
-        <img src="${escapeHtml(photoSrc)}" alt="${escapeHtml(displayName)}">
-      </div>
-      <div class="dev-item-info">
-        <div class="dev-item-name">${escapeHtml(displayName)} ${isMe ? '<span style="color:var(--accent); font-size:11px;">(You)</span>' : ''}</div>
-        <div class="dev-item-status" style="${statusClass}">${statusText} · ${(dev.role || 'team').toUpperCase()}</div>
-      </div>
-      <div class="badge-pill ${dev.role === 'admin' ? 'badge-admin' : 'badge-team'}">
-        ${canAuto ? 'AUTO-PUSH' : 'MODERATED'}
-      </div>
-    `;
-    rosterListContainer.appendChild(item);
-  });
-}
-
-// ----------------------------------------------------
-// 13. Image Pickers & Client-Side Compression
-// ----------------------------------------------------
-function setupImagePickers() {
-  setupPicker("rom-image-file", "rom-image-btn", "rom-image-preview", "rom", 1280, 720);
-  setupMultiScreenshotPicker();
-  setupPicker("news-image-file", "news-image-btn", "news-image-preview", "news", 1280, 720);
-}
-
-function setupMultiScreenshotPicker() {
-  const fileInput = document.getElementById("ss-multi-file-input");
-  const chooseBtn = document.getElementById("btn-choose-screenshots");
-  const clearBtn = document.getElementById("btn-clear-all-screenshots");
-
-  if (chooseBtn && fileInput) {
-    chooseBtn.addEventListener("click", () => {
-      if (selectedScreenshots.length >= 10) {
-        showToast("Maximum of 10 screenshots already selected.");
-        return;
-      }
-      fileInput.click();
-    });
+    holdStartTs = null;
+    if (activeHoldIndicator) {
+      activeHoldIndicator.remove();
+      activeHoldIndicator = null;
+    }
   }
 
-  if (clearBtn) {
-    clearBtn.addEventListener("click", () => {
-      selectedScreenshots = [];
-      if (fileInput) fileInput.value = "";
-      renderSelectedScreenshots();
-      showToast("Cleared selected screenshots");
-    });
-  }
+  function showHoldIndicator(tabEl, onComplete) {
+    hideHoldIndicator();
+    if (!tabEl) return;
+    var rect = tabEl.getBoundingClientRect();
+    var ind = el("div", "tab-hold-indicator");
+    ind.innerHTML =
+      '<svg class="tab-hold-svg" viewBox="0 0 24 24" aria-hidden="true">' +
+        '<circle class="tab-hold-track" cx="12" cy="12" r="9.5"></circle>' +
+        '<circle class="tab-hold-fill" cx="12" cy="12" r="9.5"></circle>' +
+      '</svg>' +
+      '<span class="tab-hold-text">Hold for README</span>';
+    document.body.appendChild(ind);
 
-  if (fileInput) {
-    fileInput.addEventListener("change", async (e) => {
-      const files = Array.from(e.target.files || []);
-      if (files.length === 0) return;
+    var isMobile = window.innerWidth <= 640;
+    var isBelow = isMobile || rect.top < 38;
+    ind.classList.toggle("is-below", isBelow);
 
-      const remaining = 10 - selectedScreenshots.length;
-      if (remaining <= 0) {
-        showToast("Maximum 10 screenshots reached per push.");
-        fileInput.value = "";
-        return;
+    var left = rect.left + rect.width / 2;
+    var top = isBelow ? rect.bottom + 8 : rect.top - 8;
+    ind.style.left = Math.round(left) + "px";
+    ind.style.top = Math.round(top) + "px";
+
+    ind.classList.add("is-visible");
+    var fill = ind.querySelector(".tab-hold-fill");
+
+    holdStartTs = null;
+    function animTick(now) {
+      if (!holdStartTs) holdStartTs = now;
+      var elapsed = now - holdStartTs;
+      var progress = Math.min(1, elapsed / HOLD_DURATION_MS);
+      if (fill) {
+        fill.style.strokeDashoffset = (59.7 * (1 - progress)).toFixed(2);
       }
-
-      const toAdd = files.slice(0, remaining);
-      if (files.length > remaining) {
-        showToast(`Selected first ${remaining} screenshot(s) to stay within 10 limit.`);
-      }
-
-      showToast(`Compressing ${toAdd.length} screenshot(s)...`);
-      for (let i = 0; i < toAdd.length; i++) {
-        const f = toAdd[i];
-        try {
-          const res = await compressScreenshotFile(f, 1080, 2400, 0.78);
-          selectedScreenshots.push({
-            id: "ss-" + Date.now() + "-" + Math.random().toString(36).slice(2, 7),
-            base64: res.base64,
-            width: res.width,
-            height: res.height,
-            sizeStr: (res.bytes / 1024).toFixed(0) + " KB",
-            caption: ""
-          });
-        } catch (err) {
-          showToast(`Error processing ${f.name}: ${err.message}`);
+      if (progress < 1) {
+        holdRaf = requestAnimationFrame(animTick);
+      } else {
+        hideHoldIndicator();
+        if (typeof onComplete === "function") {
+          onComplete();
         }
       }
-
-      fileInput.value = "";
-      renderSelectedScreenshots();
-      showToast(`✔ ${selectedScreenshots.length} / 10 screenshot(s) ready`);
-    });
-  }
-}
-
-function renderSelectedScreenshots() {
-  const container = document.getElementById("ss-selected-list");
-  const counter = document.getElementById("ss-batch-counter");
-  const clearBtn = document.getElementById("btn-clear-all-screenshots");
-  if (!container) return;
-
-  if (counter) counter.textContent = `${selectedScreenshots.length} / 10 selected`;
-  if (clearBtn) clearBtn.classList.toggle("hidden", selectedScreenshots.length === 0);
-
-  if (selectedScreenshots.length === 0) {
-    container.innerHTML = `
-      <div class="ss-empty-hint" id="ss-empty-placeholder">
-        <svg viewBox="0 0 24 24" width="30" height="30" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg>
-        <span>No screenshots selected yet. Tap the button above to pick up to 10 photos from your phone gallery.</span>
-      </div>`;
-    return;
+    }
+    holdRaf = requestAnimationFrame(animTick);
+    activeHoldIndicator = ind;
   }
 
-  let html = "";
-  selectedScreenshots.forEach((item, index) => {
-    html += `
-      <div class="ss-item-card" data-id="${item.id}">
-        <div class="ss-item-thumb-wrap">
-          <img src="${item.base64}" class="ss-item-thumb" alt="Screenshot #${index + 1}" loading="lazy" decoding="async">
-          <span class="ss-item-index">#${index + 1}</span>
-        </div>
-        <div class="ss-item-body">
-          <div class="ss-item-meta">${item.width}×${item.height} • ${item.sizeStr}</div>
-          <input type="text" class="ss-item-caption-input" data-id="${item.id}"
-                 value="${escapeHtml(item.caption || '')}"
-                 placeholder="Description (e.g. Homescreen, Lockscreen, Antutu)...">
-        </div>
-        <button type="button" class="ss-item-del-btn" data-id="${item.id}" title="Remove screenshot">✕</button>
-      </div>
-    `;
-  });
+  function positionTabOverview(pop, arrow, tabEl) {
+    if (!pop || !tabEl) return;
+    if (window.innerWidth <= 640) {
+      pop.style.left = "";
+      pop.style.top = "";
+      return;
+    }
 
-  container.innerHTML = html;
+    var tabRect = tabEl.getBoundingClientRect();
+    var popW = pop.offsetWidth || 430;
+    var popH = pop.offsetHeight || 380;
+    var vw = window.innerWidth;
+    var vh = window.innerHeight;
 
-  // Listeners for individual caption inputs
-  container.querySelectorAll(".ss-item-caption-input").forEach((inp) => {
-    inp.addEventListener("input", (e) => {
-      const id = inp.dataset.id;
-      const target = selectedScreenshots.find((x) => x.id === id);
-      if (target) target.caption = e.target.value;
+    var tabCenterX = tabRect.left + tabRect.width / 2;
+    var left = tabCenterX - popW / 2;
+    if (left < 14) left = 14;
+    if (left + popW > vw - 14) left = vw - popW - 14;
+
+    var top = tabRect.bottom + 10;
+    var placeAbove = false;
+    if (top + popH > vh - 14 && tabRect.top - popH - 10 >= 14) {
+      top = tabRect.top - popH - 10;
+      placeAbove = true;
+    }
+
+    pop.style.left = Math.round(left) + "px";
+    pop.style.top = Math.round(top) + "px";
+    pop.classList.toggle("is-above", placeAbove);
+
+    if (arrow) {
+      var arrowX = tabCenterX - left - 6;
+      if (arrowX < 18) arrowX = 18;
+      if (arrowX > popW - 24) arrowX = popW - 24;
+      arrow.style.left = Math.round(arrowX) + "px";
+    }
+  }
+
+  function closeTabOverview() {
+    popoverOpenedAt = 0;
+    holdFired = false;
+    currentHoldTab = null;
+    activeHoldTabKey = null;
+    if (activeOverviewPopover) {
+      activeOverviewPopover.remove();
+      activeOverviewPopover = null;
+    }
+    if (activeOverviewBackdrop) {
+      activeOverviewBackdrop.remove();
+      activeOverviewBackdrop = null;
+    }
+    tabLinks.forEach(function (a) {
+      a.removeAttribute("aria-expanded");
     });
-  });
+  }
 
-  // Listeners for delete buttons: instant optimistic removal (<16ms, zero DOM re-render)
-  container.querySelectorAll(".ss-item-del-btn").forEach((btn) => {
-    btn.addEventListener("click", () => {
-      const id = btn.dataset.id;
-      const card = btn.closest(".ss-item-card");
+  function openTabOverview(tabKey, tabEl) {
+    closeTabOverview();
+    var readme = TAB_READMES[tabKey];
+    if (!readme) return;
 
-      requestAnimationFrame(() => {
-        if (card) card.remove();
-        selectedScreenshots = selectedScreenshots.filter((x) => x.id !== id);
+    popoverOpenedAt = Date.now();
+    activeHoldTabKey = tabKey;
+    currentHoldTab = tabEl;
 
-        const counter = document.getElementById("ss-batch-counter");
-        const clearBtn = document.getElementById("btn-clear-all-screenshots");
-        if (counter) counter.textContent = `${selectedScreenshots.length} / 10 selected`;
-        if (clearBtn) clearBtn.classList.toggle("hidden", selectedScreenshots.length === 0);
+    var pop = el("div", "tab-overview-popover");
+    pop.setAttribute("role", "dialog");
+    pop.setAttribute("aria-modal", "true");
+    pop.setAttribute("aria-label", readme.title + " Overview");
 
-        if (selectedScreenshots.length === 0) {
-          container.innerHTML = `
-            <div class="ss-empty-hint" id="ss-empty-placeholder">
-              <svg viewBox="0 0 24 24" width="30" height="30" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg>
-              <span>No screenshots selected yet. Tap the button above to pick up to 10 photos from your phone gallery.</span>
-            </div>`;
-        } else {
-          // Re-index remaining cards in place without wiping innerHTML
-          container.querySelectorAll(".ss-item-card").forEach((c, idx) => {
-            const badge = c.querySelector(".ss-item-index");
-            if (badge) badge.textContent = `#${idx + 1}`;
+    var arrow = el("div", "tab-overview-arrow");
+    arrow.setAttribute("aria-hidden", "true");
+    pop.appendChild(arrow);
+
+    var head = el("div", "tab-overview-head");
+    var iconBox = el("div", "tab-overview-icon-box", readme.icon);
+    head.appendChild(iconBox);
+
+    var titles = el("div", "tab-overview-titles");
+    var tagRow = el("div", "tab-overview-tag-row");
+    tagRow.appendChild(el("span", "tab-overview-badge", readme.badge));
+    tagRow.appendChild(el("span", "tab-overview-hint", "README & Overview"));
+    titles.appendChild(tagRow);
+    titles.appendChild(el("h3", "tab-overview-title", readme.title));
+    head.appendChild(titles);
+
+    var closeBtn = el("button", "tab-overview-close", "\u00d7");
+    closeBtn.type = "button";
+    closeBtn.setAttribute("aria-label", "Close overview");
+    closeBtn.addEventListener("click", function (e) {
+      e.stopPropagation();
+      closeTabOverview();
+    });
+    head.appendChild(closeBtn);
+    pop.appendChild(head);
+
+    var stats = typeof readme.getStats === "function" ? readme.getStats() : [];
+    if (stats && stats.length) {
+      var statsBox = el("div", "tab-overview-stats");
+      stats.forEach(function (st) {
+        statsBox.appendChild(el("span", "tab-overview-stat-pill", st));
+      });
+      pop.appendChild(statsBox);
+    }
+
+    pop.appendChild(el("p", "tab-overview-desc", readme.description));
+
+    if (readme.highlights && readme.highlights.length) {
+      var hlWrap = el("div", "tab-overview-highlights");
+      hlWrap.appendChild(el("div", "tab-overview-sec-title", "What\u2019s in this section"));
+      var grid = el("div", "tab-overview-grid");
+      readme.highlights.forEach(function (h) {
+        var feat = el("div", "tab-overview-feat");
+        feat.appendChild(el("span", "tab-overview-feat-ico", h.icon));
+        var featBody = el("div", "tab-overview-feat-body");
+        featBody.appendChild(el("strong", "", h.label));
+        featBody.appendChild(el("span", "", h.desc));
+        feat.appendChild(featBody);
+        grid.appendChild(feat);
+      });
+      hlWrap.appendChild(grid);
+      pop.appendChild(hlWrap);
+    }
+
+    if (readme.warning) {
+      var alert = el("div", "tab-overview-alert");
+      alert.appendChild(el("span", "tab-overview-alert-ico", "💡"));
+      alert.appendChild(el("div", "tab-overview-alert-txt", readme.warning));
+      pop.appendChild(alert);
+    }
+
+    var actions = el("div", "tab-overview-actions");
+    var openBtn = el("button", "tab-overview-btn tab-overview-btn-primary");
+    openBtn.type = "button";
+    var knownTab = TABS.filter(function (t) { return t[0] === tabKey; })[0];
+    var tabLabel = knownTab ? knownTab[1] : "Tab";
+    openBtn.innerHTML = '<span>Explore ' + tabLabel + '</span>' +
+      '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>';
+    openBtn.addEventListener("click", function () {
+      closeTabOverview();
+      if (location.hash !== "#" + tabKey) {
+        location.hash = "#" + tabKey;
+      }
+    });
+
+    var ghostBtn = el("button", "tab-overview-btn tab-overview-btn-ghost", "Close");
+    ghostBtn.type = "button";
+    ghostBtn.addEventListener("click", function () {
+      closeTabOverview();
+    });
+
+    actions.appendChild(ghostBtn);
+    actions.appendChild(openBtn);
+    pop.appendChild(actions);
+
+    var backdrop = el("div", "tab-overview-backdrop");
+    backdrop.addEventListener("click", function (e) {
+      if (Date.now() - popoverOpenedAt < 400) return;
+      closeTabOverview();
+    });
+    document.body.appendChild(backdrop);
+    document.body.appendChild(pop);
+
+    activeOverviewPopover = pop;
+    activeOverviewBackdrop = backdrop;
+    tabEl.setAttribute("aria-expanded", "true");
+
+    positionTabOverview(pop, arrow, tabEl);
+  }
+
+  function initTabReadmeHoldListeners() {
+    var indicatorTimeout = null;
+    var touchStartX = 0;
+    var touchStartY = 0;
+
+    function cancelHold() {
+      if (indicatorTimeout) {
+        clearTimeout(indicatorTimeout);
+        indicatorTimeout = null;
+      }
+      hideHoldIndicator();
+    }
+
+    tabLinks.forEach(function (tabEl) {
+      var tabKey = tabEl.dataset.tab;
+      if (!tabKey) return;
+
+      tabEl.setAttribute("draggable", "false");
+
+      // Desktop hover
+      tabEl.addEventListener("mouseenter", function () {
+        if (activeOverviewPopover && activeHoldTabKey === tabKey) {
+          return;
+        }
+        cancelHold();
+        if (activeOverviewPopover) {
+          closeTabOverview();
+        }
+
+        currentHoldTab = tabEl;
+        activeHoldTabKey = tabKey;
+        holdFired = false;
+
+        indicatorTimeout = setTimeout(function () {
+          showHoldIndicator(tabEl, function () {
+            holdFired = true;
+            if (navigator.vibrate) {
+              try { navigator.vibrate(25); } catch (e) {}
+            }
+            openTabOverview(tabKey, tabEl);
           });
+        }, 120);
+      });
+
+      tabEl.addEventListener("mouseleave", function () {
+        cancelHold();
+      });
+
+      // Mobile touch
+      tabEl.addEventListener("touchstart", function (e) {
+        if (!e.touches || !e.touches[0]) return;
+        touchStartX = e.touches[0].clientX;
+        touchStartY = e.touches[0].clientY;
+
+        cancelHold();
+        if (activeOverviewPopover) {
+          closeTabOverview();
+        }
+
+        currentHoldTab = tabEl;
+        activeHoldTabKey = tabKey;
+        holdFired = false;
+
+        indicatorTimeout = setTimeout(function () {
+          showHoldIndicator(tabEl, function () {
+            holdFired = true;
+            if (navigator.vibrate) {
+              try { navigator.vibrate(30); } catch (e) {}
+            }
+            openTabOverview(tabKey, tabEl);
+          });
+        }, 80);
+      }, { passive: true });
+
+      tabEl.addEventListener("touchmove", function (e) {
+        if (!e.touches || !e.touches[0]) return;
+        var dx = Math.abs(e.touches[0].clientX - touchStartX);
+        var dy = Math.abs(e.touches[0].clientY - touchStartY);
+        if (dx > 22 || dy > 22) {
+          cancelHold();
+        }
+      }, { passive: true });
+
+      tabEl.addEventListener("touchend", function (e) {
+        if (holdFired || (Date.now() - popoverOpenedAt < 600)) {
+          if (e.cancelable) e.preventDefault();
+        }
+        cancelHold();
+      });
+
+      tabEl.addEventListener("touchcancel", function () {
+        cancelHold();
+      });
+
+      tabEl.addEventListener("contextmenu", function (e) {
+        e.preventDefault();
+      });
+
+      tabEl.addEventListener("click", function (e) {
+        if (holdFired || (Date.now() - popoverOpenedAt < 600)) {
+          e.preventDefault();
+          e.stopPropagation();
+          return;
+        }
+        cancelHold();
+        if (activeOverviewPopover) {
+          closeTabOverview();
         }
       });
     });
-  });
-}
 
-function compressScreenshotFile(file, maxWidth = 1080, maxHeight = 2400, quality = 0.78) {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onerror = reject;
-    reader.onload = (e) => {
-      const img = new Image();
-      img.onerror = reject;
-      img.onload = () => {
-        let width = img.width;
-        let height = img.height;
-
-        if (width > maxWidth || height > maxHeight) {
-          const ratio = Math.min(maxWidth / width, maxHeight / height);
-          width = Math.round(width * ratio);
-          height = Math.round(height * ratio);
-        }
-
-        const canvas = document.createElement("canvas");
-        canvas.width = width;
-        canvas.height = height;
-        const ctx = canvas.getContext("2d");
-        ctx.imageSmoothingEnabled = true;
-        ctx.imageSmoothingQuality = "high";
-        ctx.drawImage(img, 0, 0, width, height);
-
-        const dataUrl = canvas.toDataURL("image/webp", quality);
-        const approxBytes = Math.round((dataUrl.length - 22) * 3 / 4);
-        resolve({ base64: dataUrl, width, height, bytes: approxBytes });
-      };
-      img.src = e.target.result;
-    };
-    reader.readAsDataURL(file);
-  });
-}
-
-const SECTION_CATEGORIES = {
-  recovery: ["Ofox Recovery", "Fenrir", "Penumbra & Debugging", "Rooted Apps toolkit"],
-  modules: ["Universal modules", "XOS/HiOS modules", "BBK modules"],
-  kernels: ["GKI kernels", "Fenrir", "Patched boot.img", "KSU Ultra .apk"]
-};
-
-function updateModCategoryDropdown(sectionVal, preselectVal = "") {
-  const selectEl = document.getElementById("mod-category-select");
-  const inputEl = document.getElementById("mod-category");
-  if (!selectEl || !inputEl) return;
-
-  const cats = SECTION_CATEGORIES[sectionVal] || SECTION_CATEGORIES.modules;
-  selectEl.innerHTML = "";
-
-  cats.forEach((cat) => {
-    const opt = document.createElement("option");
-    opt.value = cat;
-    opt.textContent = cat;
-    selectEl.appendChild(opt);
-  });
-
-  const customOpt = document.createElement("option");
-  customOpt.value = "__custom__";
-  customOpt.textContent = "+ Custom Category...";
-  selectEl.appendChild(customOpt);
-
-  if (preselectVal && cats.includes(preselectVal)) {
-    selectEl.value = preselectVal;
-    inputEl.classList.add("hidden");
-    inputEl.value = preselectVal;
-  } else if (preselectVal) {
-    selectEl.value = "__custom__";
-    inputEl.classList.remove("hidden");
-    inputEl.value = preselectVal;
-  } else {
-    selectEl.value = cats[0];
-    inputEl.classList.add("hidden");
-    inputEl.value = cats[0];
-  }
-}
-
-function setupPicker(inputId, btnId, previewId, categoryKey, maxW, maxH) {
-  const fileInput = document.getElementById(inputId);
-  const btn = document.getElementById(btnId);
-  const preview = document.getElementById(previewId);
-  const box = fileInput ? fileInput.closest(".file-picker-box") : null;
-
-  if (box && fileInput) {
-    box.addEventListener("click", (e) => {
-      if (e.target !== fileInput) fileInput.click();
-    });
-  } else {
-    if (btn && fileInput) btn.addEventListener("click", () => fileInput.click());
-    if (preview && fileInput) preview.addEventListener("click", () => fileInput.click());
-  }
-
-  if (fileInput) {
-    fileInput.addEventListener("change", async (e) => {
-      const file = e.target.files && e.target.files[0];
-      if (!file) return;
-
-      try {
-        showToast("Processing image...");
-        const compressed = await compressImageFile(file, maxW, maxH, 0.88);
-        compressedImages[categoryKey] = compressed;
-
-        if (preview) {
-          preview.innerHTML = `<img src="${compressed}" style="width:100%; height:100%; object-fit:cover; border-radius:12px;" alt="Preview">`;
-        }
-        showToast("✔ Photo ready");
-      } catch (err) {
-        showToast("Error processing photo: " + err.message);
+    document.addEventListener("keydown", function (e) {
+      if (e.key === "Escape" || e.keyCode === 27) {
+        cancelHold();
+        closeTabOverview();
       }
     });
+
+    document.addEventListener("pointerdown", function (e) {
+      if (!activeOverviewPopover) return;
+      if (Date.now() - popoverOpenedAt < 450) return;
+      if (activeOverviewPopover.contains(e.target)) return;
+      if (currentHoldTab && currentHoldTab.contains(e.target)) return;
+      closeTabOverview();
+    });
+
+    window.addEventListener("resize", function () {
+      if (activeOverviewPopover && currentHoldTab) {
+        var arrow = activeOverviewPopover.querySelector(".tab-overview-arrow");
+        positionTabOverview(activeOverviewPopover, arrow, currentHoldTab);
+      }
+    }, { passive: true });
   }
-}
 
-function compressAvatar(file) {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onerror = reject;
-    reader.onload = (e) => {
-      const img = new Image();
-      img.onerror = reject;
-      img.onload = () => {
-        const size = Math.min(img.width, img.height);
-        const startX = (img.width - size) / 2;
-        const startY = (img.height - size) / 2;
-
-        const canvas = document.createElement("canvas");
-        canvas.width = 160;
-        canvas.height = 160;
-        const ctx = canvas.getContext("2d");
-        ctx.imageSmoothingEnabled = true;
-        ctx.imageSmoothingQuality = "high";
-        ctx.drawImage(img, startX, startY, size, size, 0, 0, 160, 160);
-
-        const dataUrl = canvas.toDataURL("image/webp", 0.90);
-        resolve(dataUrl);
-      };
-      img.src = e.target.result;
-    };
-    reader.readAsDataURL(file);
+  window.addEventListener("hashchange", function () {
+    route();
   });
-}
-
-function compressImageFile(file, maxWidth = 1280, maxHeight = 1280, quality = 0.88) {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onerror = reject;
-    reader.onload = (e) => {
-      const img = new Image();
-      img.onerror = reject;
-      img.onload = () => {
-        let width = img.width;
-        let height = img.height;
-
-        if (width > maxWidth || height > maxHeight) {
-          const ratio = Math.min(maxWidth / width, maxHeight / height);
-          width = Math.round(width * ratio);
-          height = Math.round(height * ratio);
-        }
-
-        const canvas = document.createElement("canvas");
-        canvas.width = width;
-        canvas.height = height;
-        const ctx = canvas.getContext("2d");
-        ctx.imageSmoothingEnabled = true;
-        ctx.imageSmoothingQuality = "high";
-        ctx.drawImage(img, 0, 0, width, height);
-
-        const dataUrl = canvas.toDataURL("image/webp", quality);
-        resolve(dataUrl);
-      };
-      img.src = e.target.result;
-    };
-    reader.readAsDataURL(file);
-  });
-}
-
-function setSubmitting(isSubmitting) {
-  if (submitBtn) submitBtn.disabled = isSubmitting;
-  if (submitSpinner) submitSpinner.classList.toggle("hidden", !isSubmitting);
-  if (submitBtnText) submitBtnText.style.display = isSubmitting ? "none" : "inline";
-}
-
-function resetForm() {
-  if (submissionForm) submissionForm.reset();
-  compressedImages = { rom: null, screenshots: null, news: null };
-  selectedScreenshots = [];
-  renderSelectedScreenshots();
-  const romP = document.getElementById("rom-image-preview");
-  if (romP) {
-    romP.innerHTML = `
-      <div class="preview-placeholder">
-        <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg>
-        <span>Choose photo from phone</span>
-      </div>`;
-  }
-  const newsP = document.getElementById("news-image-preview");
-  if (newsP) {
-    newsP.innerHTML = `
-      <div class="preview-placeholder">
-        <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg>
-        <span>Select photo from phone</span>
-      </div>`;
-  }
-  const modSec = document.getElementById("mod-section");
-  if (modSec) {
-    updateModCategoryDropdown(modSec.value || "recovery");
-  }
-}
-
-function saveSubmissionToHistory(item) {
-  try {
-    const list = JSON.parse(localStorage.getItem("nbt_dev_history") || "[]");
-    list.unshift(item);
-    localStorage.setItem("nbt_dev_history", JSON.stringify(list.slice(0, 30)));
-    renderHistory();
-  } catch (_) {}
-}
-
-function renderHistory() {
-  if (!historyContainer) return;
-  try {
-    const list = JSON.parse(localStorage.getItem("nbt_dev_history") || "[]");
-    if (!list || list.length === 0) return;
-
-    historyContainer.innerHTML = list
-      .map(
-        (item) => `
-        <div class="history-item">
-          <div class="history-item-left">
-            <span class="history-badge">${escapeHtml(item.type)}</span>
-            <div>
-              <div class="history-title">${escapeHtml(item.title)}</div>
-              <div class="history-meta">${escapeHtml(item.date)} • ${
-                item.status === "live" ? "🚀 Live" : "⏳ Pending Approval"
-              }</div>
-            </div>
-          </div>
-          <span class="history-status ${item.status}">${item.status === "live" ? "LIVE" : "PENDING"}</span>
-        </div>
-      `
-      )
-      .join("");
-  } catch (_) {}
-}
-
-function showToast(message) {
-  if (window.AndroidBridge && typeof window.AndroidBridge.showToast === "function") {
-    try {
-      window.AndroidBridge.showToast(message);
-    } catch (_) {}
-  }
-  if (!toast) return;
-  toast.textContent = message;
-  toast.classList.add("show");
-  setTimeout(() => {
-    toast.classList.remove("show");
-  }, 2600);
-}
-
-function escapeHtml(str) {
-  if (!str) return "";
-  return String(str)
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#039;");
-}
-
-// Global modal closer for Android system back button / gesture
-window.closeAnyOpenModal = function () {
-  const confirmModal = document.getElementById("confirm-modal");
-  if (confirmModal && (confirmModal.classList.contains("active") || confirmModal.classList.contains("open"))) {
-    confirmModal.classList.remove("active");
-    confirmModal.classList.remove("open");
-    return true;
-  }
-  if (uploadModal && (uploadModal.classList.contains("active") || uploadModal.classList.contains("open"))) {
-    closeModal();
-    return true;
-  }
-  if (rosterModal && (rosterModal.classList.contains("active") || rosterModal.classList.contains("open"))) {
-    closeRosterModal();
-    return true;
-  }
-  if (alertModal && (alertModal.classList.contains("active") || alertModal.classList.contains("open"))) {
-    hideAlertModal();
-    return true;
-  }
-  return false;
-};
-
+  route();
+  tryAndroidAppHandoff();
+  initTabReadmeHoldListeners();
+  fetchRemoteUpdates();
+})();
