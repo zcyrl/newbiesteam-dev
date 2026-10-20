@@ -412,10 +412,6 @@ window.SITE = {
         },
       ],
     },
-    {
-      title: "AOSP & Custom ROMs",
-      items: [],
-    },
   ],
   modules: [
     {
