@@ -29,6 +29,7 @@ window.SITE = {
           by: "TransShit",
           image: "assets/screenshots/rom-1792416360-1792416360555.webp",
           alt: "XOS 16.3 Official for X6871 by TransShit",
+          guide: "xos16-local-update",
           url: "https://android.googleapis.com/packages/ota-api/package/744f47c66b26e36501d6106360708d3e4dbd6ac1.zip",
           details: {
             base: "Gt 20 pro",
@@ -353,7 +354,7 @@ window.SITE = {
         {
           name: "XOS 16.3.0 (Android 16)",
           note: "Official Stock OTA • 8.8 GB • Security Patch: 2026-09-05",
-          guide: "flash-port-rom",
+          guide: "xos16-local-update",
           url: "https://android.googleapis.com/packages/ota-api/package/744f47c66b26e36501d6106360708d3e4dbd6ac1.zip",
           romId: "rom_xos_16_3_0_android_20ae",
         },
@@ -697,12 +698,21 @@ window.SITE = {
   ],
   updates: [
     {
+      id: "sub-1792448180805",
+      date: "2026-10-20",
+      tag: "Notice",
+      by: "Mehraann",
+      title: "3 Ticks XOS × Fenrir",
+      body: "Gay",
+      image: "assets/updates/upd-1792448624-1792448624341.webp",
+    },
+    {
       id: "upd-xos16-official",
       date: "2026-10-19",
       tag: "Official Firmware",
       by: "Infinix / NewbiesTeam",
       title: "Official XOS 16.3 (Android 16) Released for Infinix GT 20 Pro",
-      body: "Infinix has officially released the major Android 16 and XOS 16.3.0 update (Build: X6871-16.3.0.155SP20) for the GT 20 Pro (Global - OP Market). This massive 8.8 GB release introduces the GlowSpace Superfluid UI design with translucent glass styling, enhanced MindHub AI search and real-time NMT subtitles, live wallpapers, superfluid Control Center and status bar transitions, unified privacy password, enhanced call recording, and the 2026-09-05 security patch.",
+      body: "Infinix has officially released the major Android 16 and XOS 16.3.0 update (Build: X6871-16.3.0.155SP20) for the GT 20 Pro (Global - OP Market). This massive 8.8 GB release introduces the GlowSpace Superfluid UI design with translucent glass styling, enhanced MindHub AI search and real-time NMT subtitles, live wallpapers, superfluid Control Center and status bar transitions, unified privacy password, enhanced call recording, and the 2026-09-05 security patch. Follow our step-by-step {{xos16-local-update|Local Update Guide}} to install it safely.",
       image: "assets/updates/upd-xos16.webp",
       url: "https://android.googleapis.com/packages/ota-api/package/744f47c66b26e36501d6106360708d3e4dbd6ac1.zip",
       linkLabel: "Download Stock OTA (8.8 GB)",
@@ -760,6 +770,77 @@ window.SITE = {
     title: "Guides",
     categories: ["Flashing Guides", "Bootloader Guides", "Rooting Guides"],
     items: [
+      {
+        slug: "xos16-local-update",
+        category: "Flashing Guides",
+        warning:
+          "Do local update just like this. If you do something else and it fails, it's your own problem. Do NOT try flashing this official stock OTA zip through custom recovery (OFOX/TWRP) or fastboot — it is built strictly for the stock Infinix system local updater on an unmodified stock device.",
+        title: "Update to XOS 16.3 (Local Update)",
+        read: "3 min read",
+        info: {
+          Device: "Infinix GT 20 Pro (X6871)",
+          Target: "XOS 16.3.0 (Android 16)",
+          Build: "X6871-16.3.0.155SP20",
+          Method: "Local Update (No PC needed)",
+          Requires: "Stock Recovery, Battery > 50%",
+          Updated: "Oct 20",
+        },
+        intro: [
+          "How to update to official XOS 16.3 (Android 16)? Do local update just like this. You do something else and it fails, it's your own problem.",
+          "This is the official full stock OTA package for the Infinix GT 20 Pro (X6871). Download the package directly: {{dl:https://android.googleapis.com/packages/ota-api/package/744f47c66b26e36501d6106360708d3e4dbd6ac1.zip|⬇ Download Stock XOS 16.3 OTA (8.8 GB)}}",
+        ],
+        sections: [
+          {
+            h: "Requirements & rules",
+            body: [
+              {
+                ul: [
+                  "Device: Infinix GT 20 Pro (X6871).",
+                  "Stock recovery & unmodified system: If you are rooted with Magisk, KernelSU, or APatch, or have OrangeFox / custom recovery installed, the official OTA will fail signature verification or bootloop. Restore stock boot, init_boot, and stock recovery first.",
+                  "Battery charge: At least 50% battery (or keep the phone plugged into the charger during update).",
+                  "Free storage: At least 15 GB to 20 GB of free internal storage to unpack and apply the 8.8 GB update payload.",
+                  "Backup: Back up all your important data before updating.",
+                ],
+              },
+            ],
+          },
+          {
+            h: "How to update (Local Update)",
+            body: [
+              {
+                ol: [
+                  "Download the official XOS 16.3 OTA zip file: {{dl:https://android.googleapis.com/packages/ota-api/package/744f47c66b26e36501d6106360708d3e4dbd6ac1.zip|Download Official Stock OTA (8.8 GB)}}. You can also find it under the {{#roms|ROMs}} tab.",
+                  "Using a file manager, move the downloaded .zip file directly to the root of your Internal Storage (e.g. /storage/emulated/0/). Do not place it inside subfolders, and do not extract the zip.",
+                  "Optional: If your system updater file picker fails to detect it, rename the file to ota.zip or update.zip in the root of internal storage.",
+                  "Open phone Settings -> System -> System Update.",
+                  "Tap the three vertical dots (⋮) in the top-right corner of the System Update screen.",
+                  "Select Local Update (or Manual Update) from the menu.",
+                  "If Local Update is hidden: Go to Settings -> About Phone -> Version Info and tap Build Number 7 times to enable Developer options. Alternatively, open your phone dialer and enter *#*#873283#*#* to trigger the local package selector.",
+                  "Select the downloaded XOS 16.3 OTA zip file and tap Install / Update Now.",
+                  "Wait patiently while the system verifies cryptographic signatures and applies the update partitions. Do NOT interrupt, reboot, or turn off the device.",
+                  "When the update finishes, tap Restart Now to boot into XOS 16.3 (Android 16).",
+                ],
+              },
+            ],
+          },
+          {
+            h: "If it fails (Troubleshooting)",
+            body: [
+              {
+                ul: [
+                  "Installation aborted or verification failed: Your device has modified partitions, root (Magisk/KernelSU), or a custom kernel. OTA updates verify SHA-256 blocks against stock partitions. Flash stock boot/init_boot/vendor_boot to revert modifications.",
+                  "OTA package not appearing in Local Update: Ensure the zip is in the root directory of Internal Storage (/sdcard/ or /storage/emulated/0/), not in Download or Telegram folders. Try renaming it to ota.zip.",
+                  "Not enough space error: Free up at least 15 GB of space on internal storage before beginning.",
+                  "Bootloop after reboot: If your bootloader is unlocked and you had customized vendor files, enter recovery (hold Power + Volume Up) and format data / wipe cache.",
+                ],
+              },
+              {
+                note: "Stick strictly to this local update procedure. You do something else and it fails, it's your own problem.",
+              },
+            ],
+          },
+        ],
+      },
       {
         slug: "ofox-flash",
         category: "Flashing Guides",
