@@ -14,6 +14,8 @@ window.SITE = {
     "Unofficial community project, not affiliated with Infinix or Transsion. You flash everything at your own risk. We are not responsible for bricked devices, lost data or any other damage.",
   guideWarning:
     "Following this guide is at your own risk. A wrong step or the wrong file can leave your phone unable to boot (bricked) and can erase your data. NewbiesTeam and the uploaders are not responsible for any damage. Back up your data and read every step before you start.",
+  guidesNotice:
+    "Please dont ask for a video if someone did a guide and recorded his steps it will be provided immediatly other than that shut up.",
   credit: "softbrick",
   feedChannel: "nbt_feed_381d170137023a0496afcd6f",
   devPubKey:
@@ -770,6 +772,8 @@ window.SITE = {
   ],
   guides: {
     title: "Guides",
+    notice:
+      "Please dont ask for a video if someone did a guide and recorded his steps it will be provided immediatly other than that shut up.",
     categories: ["Flashing Guides", "Bootloader Guides", "Rooting Guides"],
     items: [
       {
