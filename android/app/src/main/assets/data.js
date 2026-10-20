@@ -27,6 +27,7 @@ window.SITE = {
           name: "XOS 16.3 Official",
           date: "2026-10-19",
           by: "TransShit",
+          note: "Downgrading to XOS 15.0.3 first then doing OTA update is recommended",
           image: "assets/screenshots/rom-1792416360-1792416360555.webp",
           alt: "XOS 16.3 Official for X6871 by TransShit",
           guide: "xos16-local-update",
@@ -34,6 +35,7 @@ window.SITE = {
           details: {
             base: "Gt 20 pro",
             changelogs: [
+              "Note: Downgrading to XOS 15.0.3 first then doing OTA update is recommended.",
               "Update Version:",
               "X6871-16.3.0.155SP20(OP008PF001AZ)",
               "Android Version:",
@@ -353,7 +355,7 @@ window.SITE = {
       items: [
         {
           name: "XOS 16.3.0 (Android 16)",
-          note: "Official Stock OTA • 8.8 GB • Security Patch: 2026-09-05",
+          note: "Official Stock OTA • 8.8 GB • Downgrading to XOS 15.0.3 first then doing OTA update is recommended",
           guide: "xos16-local-update",
           url: "https://android.googleapis.com/packages/ota-api/package/744f47c66b26e36501d6106360708d3e4dbd6ac1.zip",
           romId: "rom_xos_16_3_0_android_20ae",
@@ -712,7 +714,7 @@ window.SITE = {
       tag: "Official Firmware",
       by: "Infinix / NewbiesTeam",
       title: "Official XOS 16.3 (Android 16) Released for Infinix GT 20 Pro",
-      body: "Infinix has officially released the major Android 16 and XOS 16.3.0 update (Build: X6871-16.3.0.155SP20) for the GT 20 Pro (Global - OP Market). This massive 8.8 GB release introduces the GlowSpace Superfluid UI design with translucent glass styling, enhanced MindHub AI search and real-time NMT subtitles, live wallpapers, superfluid Control Center and status bar transitions, unified privacy password, enhanced call recording, and the 2026-09-05 security patch. Follow our step-by-step {{xos16-local-update|Local Update Guide}} to install it safely.",
+      body: "Infinix has officially released the major Android 16 and XOS 16.3.0 update (Build: X6871-16.3.0.155SP20) for the GT 20 Pro (Global - OP Market). This massive 8.8 GB release introduces the GlowSpace Superfluid UI design with translucent glass styling, enhanced MindHub AI search and real-time NMT subtitles, live wallpapers, superfluid Control Center and status bar transitions, unified privacy password, enhanced call recording, and the 2026-09-05 security patch. Downgrading to XOS 15.0.3 first then doing OTA update is recommended. Follow our step-by-step {{xos16-local-update|Local Update Guide}} to install it safely.",
       image: "assets/updates/upd-xos16.webp",
       url: "https://android.googleapis.com/packages/ota-api/package/744f47c66b26e36501d6106360708d3e4dbd6ac1.zip",
       linkLabel: "Download Stock OTA (8.8 GB)",
@@ -774,7 +776,7 @@ window.SITE = {
         slug: "xos16-local-update",
         category: "Flashing Guides",
         warning:
-          "Do local update just like this. If you do something else and it fails, it's your own problem. Do NOT try flashing this official stock OTA zip through custom recovery (OFOX/TWRP) or fastboot — it is built strictly for the stock Infinix system local updater on an unmodified stock device.",
+          "Do local update just like this. Downgrading to XOS 15.0.3 first then doing OTA update is recommended. If you do something else and it fails, it's your own problem. Do NOT try flashing this official stock OTA zip through custom recovery (OFOX/TWRP) or fastboot — it is built strictly for the stock Infinix system local updater on an unmodified stock device.",
         title: "Update to XOS 16.3 (Local Update)",
         read: "3 min read",
         info: {
@@ -783,10 +785,11 @@ window.SITE = {
           Build: "X6871-16.3.0.155SP20",
           Method: "Local Update (No PC needed)",
           Requires: "Stock Recovery, Battery > 50%",
+          Recommendation: "Downgrade to XOS 15.0.3 first",
           Updated: "Oct 20",
         },
         intro: [
-          "How to update to official XOS 16.3 (Android 16)? Do local update just like this. You do something else and it fails, it's your own problem.",
+          "How to update to official XOS 16.3 (Android 16)? Do local update just like this. Downgrading to XOS 15.0.3 first then doing OTA update is recommended. You do something else and it fails, it's your own problem.",
           "This is the official full stock OTA package for the Infinix GT 20 Pro (X6871). Download the package directly: {{dl:https://android.googleapis.com/packages/ota-api/package/744f47c66b26e36501d6106360708d3e4dbd6ac1.zip|⬇ Download Stock XOS 16.3 OTA (8.8 GB)}}",
         ],
         sections: [
@@ -796,11 +799,15 @@ window.SITE = {
               {
                 ul: [
                   "Device: Infinix GT 20 Pro (X6871).",
+                  "Recommended base: Downgrading to XOS 15.0.3 first then doing OTA update is recommended. This provides a clean stock foundation and prevents signature verification errors (see {{downgrade-xos|Downgrade XOS}}).",
                   "Stock recovery & unmodified system: If you are rooted with Magisk, KernelSU, or APatch, or have OrangeFox / custom recovery installed, the official OTA will fail signature verification or bootloop. Restore stock boot, init_boot, and stock recovery first.",
                   "Battery charge: At least 50% battery (or keep the phone plugged into the charger during update).",
                   "Free storage: At least 15 GB to 20 GB of free internal storage to unpack and apply the 8.8 GB update payload.",
                   "Backup: Back up all your important data before updating.",
                 ],
+              },
+              {
+                note: "Downgrading to XOS 15.0.3 first then doing OTA update is recommended.",
               },
             ],
           },
@@ -809,6 +816,7 @@ window.SITE = {
             body: [
               {
                 ol: [
+                  "Downgrading to XOS 15.0.3 first then doing OTA update is recommended. If your phone is running a custom ROM, GKI kernel, or modified system, follow {{downgrade-xos|Downgrade XOS}} first.",
                   "Download the official XOS 16.3 OTA zip file: {{dl:https://android.googleapis.com/packages/ota-api/package/744f47c66b26e36501d6106360708d3e4dbd6ac1.zip|Download Official Stock OTA (8.8 GB)}}. You can also find it under the {{#roms|ROMs}} tab.",
                   "Using a file manager, move the downloaded .zip file directly to the root of your Internal Storage (e.g. /storage/emulated/0/). Do not place it inside subfolders, and do not extract the zip.",
                   "Optional: If your system updater file picker fails to detect it, rename the file to ota.zip or update.zip in the root of internal storage.",
@@ -828,7 +836,7 @@ window.SITE = {
             body: [
               {
                 ul: [
-                  "Installation aborted or verification failed: Your device has modified partitions, root (Magisk/KernelSU), or a custom kernel. OTA updates verify SHA-256 blocks against stock partitions. Flash stock boot/init_boot/vendor_boot to revert modifications.",
+                  "Installation aborted or verification failed: Downgrading to XOS 15.0.3 first then doing OTA update is recommended. Flash XOS 15.0.3 base in OrangeFox recovery (see {{downgrade-xos|Downgrade XOS}}), boot into stock system, and then apply the OTA update.",
                   "OTA package not appearing in Local Update: Ensure the zip is in the root directory of Internal Storage (/sdcard/ or /storage/emulated/0/), not in Download or Telegram folders. Try renaming it to ota.zip.",
                   "Not enough space error: Free up at least 15 GB of space on internal storage before beginning.",
                   "Bootloop after reboot: If your bootloader is unlocked and you had customized vendor files, enter recovery (hold Power + Volume Up) and format data / wipe cache.",
@@ -1068,11 +1076,11 @@ window.SITE = {
                   "Download XOS 15.0.3 from the {{#roms|ROMs}} tab (Flashable firmware). The original post is {{https://t.me/Infinix_GT_20_Pro_Updates/121|here}}.",
                   "Flash it in OrangeFox recovery. If you don't have it installed yet, see {{ofox-flash|OFOX flash}}.",
                   "For the flashing steps, see {{flash-port-rom|Flash a port ROM}}, which flashes the base firmware the same way. The original post is {{https://t.me/gt20pro/118667?single|here}}.",
-                  "After flashing and updating to the latest version, you can {{lock-bootloader|lock the bootloader}} again if you want.",
+                  "After flashing XOS 15.0.3, boot into system and update to XOS 16.3 using the {{xos16-local-update|Local Update Guide}}. You can {{lock-bootloader|lock the bootloader}} again if you want.",
                 ],
               },
               {
-                note: "Back up your files first. Flashing firmware in recovery usually needs a data format.",
+                note: "Downgrading to XOS 15.0.3 first then doing OTA update is recommended. Back up your files first, as flashing firmware in recovery usually needs a data format.",
               },
             ],
           },
