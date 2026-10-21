@@ -250,26 +250,6 @@ window.SITE = {
               url: "assets/screenshots/ss-1792411593-5-1792411596619.webp",
               caption: "Homescreen",
             },
-            {
-              url: "assets/screenshots/ss-1792412127-1-1792412127382.webp",
-              caption: "Banner",
-            },
-            {
-              url: "assets/screenshots/ss-1792412127-2-1792412128124.webp",
-              caption: "Lockscreen",
-            },
-            {
-              url: "assets/screenshots/ss-1792412127-3-1792412129021.webp",
-              caption: "Statusbar",
-            },
-            {
-              url: "assets/screenshots/ss-1792412127-4-1792412129974.webp",
-              caption: "DTS sound",
-            },
-            {
-              url: "assets/screenshots/ss-1792412127-5-1792412130753.webp",
-              caption: "Homescreen",
-            },
           ],
           romId: "rom_xos_16_v2_8610",
         },
@@ -429,10 +409,11 @@ window.SITE = {
       items: [
         {
           name: "Re-Malwack V8.2",
-          by: "megamej0",
+          by: "Softbrick",
           group: "Utitity",
           note: "System-wide debloater, telemetry disabler, and security hardening module for Infinix GT 20 Pro.",
           url: "https://github.com/ZG089/Re-Malwack/releases/download/v8.2/Re-Malwack_v8.2.zip",
+          date: "2026-04-18",
         },
         {
           name: "Viper4android V2.1.1",
@@ -575,11 +556,32 @@ window.SITE = {
   ],
   appReleases: [
     {
+      version: "v2.1.0",
+      name: "NewbiesTeam Android App v2.1.0",
+      date: "2026-10-21",
+      by: "Softbrick & NewbiesTeam",
+      isLatest: true,
+      apkUrl:
+        "https://github.com/zcyrl/newbiesteam-app/releases/download/v2.1.0/NewbiesTeam-v2.1.0.apk",
+      fallbackApkUrl: "https://newbiesteam.surge.sh/assets/NewbiesTeam.apk",
+      releaseUrl:
+        "https://github.com/zcyrl/newbiesteam-app/releases/tag/v2.1.0",
+      size: "5.0 MB",
+      badge: "Sync & Edit Fix",
+      summary:
+        "Fixed item edit and synchronization reversion bug in developer app, enabled real-time optimistic mutation overlay across Surge CDN propagation delays, and improved screenshot deletion resilience.",
+      changelog: [
+        "Dev App Edit & Sync Fix: Fixed category resolution so item edits capture and dispatch full data payloads to the server without reverting.",
+        "Persistent Optimistic Mutation Overlay: Added intelligent mutation overlay in dev app to prevent Surge CDN caching lag from reverting newly edited or added content.",
+        "Resilient Screenshot Deletion: Prioritized screenshot deletion by URL to eliminate index shift issues during multiple removals.",
+      ],
+    },
+    {
       version: "v2.0.5",
       name: "NewbiesTeam Android App v2.0.5",
       date: "2026-10-21",
       by: "Softbrick & NewbiesTeam",
-      isLatest: true,
+      isLatest: false,
       apkUrl:
         "https://github.com/zcyrl/newbiesteam-app/releases/download/v2.0.5/NewbiesTeam-v2.0.5.apk",
       fallbackApkUrl: "https://newbiesteam.surge.sh/assets/NewbiesTeam.apk",
