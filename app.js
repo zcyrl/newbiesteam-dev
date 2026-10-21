@@ -374,8 +374,8 @@
 
     var installedVer = getInstalledAppVersion();
     var buildCode = getInstalledAppBuildCode();
-    var latestRelease = (S.appReleases && S.appReleases[0]) || { version: "v1.2.3" };
-    var cleanLatest = (latestRelease.version || "1.2.3").replace(/^v/i, "");
+    var latestRelease = (S.appReleases && S.appReleases[0]) || { version: "v2.0.0" };
+    var cleanLatest = (latestRelease.version || "2.0.0").replace(/^v/i, "");
     var dispVer = installedVer ? ("v" + installedVer + (buildCode ? " (" + buildCode + ")" : "")) : ("v" + cleanLatest);
 
     var modal = el("div", "ksu-modal-backdrop");
@@ -564,19 +564,6 @@
   window.addEventListener("nbt:app-ready", function () {
     syncFooterAppVersion();
   });
-
-  function tryAndroidAppHandoff() {
-    if (!/Android/i.test(navigator.userAgent)) return;
-    if (/NewbiesTeamAndroid/i.test(navigator.userAgent)) return;
-    try {
-      if (sessionStorage.getItem("nb_app_handoff_tried") === "1") return;
-      sessionStorage.setItem("nb_app_handoff_tried", "1");
-    } catch (e) {}
-
-    var targetHash = location.hash || "";
-    var intentUrl = "intent://newbiesteam.surge.sh/" + targetHash + "#Intent;scheme=https;package=team.newbies.app;S.browser_fallback_url=" + encodeURIComponent(location.href) + ";end";
-    window.location.href = intentUrl;
-  }
 
   /* ---------- nav, liquid glass cover, telegram, credit, theme ---------- */
   var tabLinks = [];
@@ -4353,7 +4340,7 @@
       key: currentKey,
       deviceId: getDeviceId(),
       name: currentUser.name,
-      appVersion: "NewbiesDev v1.2.3",
+      appVersion: "NewbiesDev v2.0.0",
       timestamp: Date.now()
     };
     try {
@@ -5284,7 +5271,6 @@
     route();
   });
   route();
-  tryAndroidAppHandoff();
   initTabReadmeHoldListeners();
   initGatekeeper();
   initDevPopover();

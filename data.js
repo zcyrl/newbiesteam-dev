@@ -439,6 +439,12 @@ window.SITE = {
       title: "XOS/HiOS modules",
       items: [
         {
+          name: "Icon packs support",
+          by: "Softbrick",
+          group: "Themeing",
+          url: "https://drive.google.com/file/d/149t_GlVnWGiB4pIWiRsegLvrKRWEv39c/view?usp=drive_link",
+        },
+        {
           name: "HiOS/XOS 16 IOS statusbar",
           by: "Softbrick",
           group: "Themeing",
@@ -559,18 +565,41 @@ window.SITE = {
   ],
   appReleases: [
     {
+      version: "v2.0.0",
+      name: "NewbiesTeam Android App v2.0.0",
+      date: "2026-10-21",
+      by: "Softbrick & NewbiesTeam",
+      isLatest: true,
+      apkUrl:
+        "https://github.com/zcyrl/newbiesteam-app/releases/download/v2.0.0/NewbiesTeam-v2.0.0.apk",
+      fallbackApkUrl: "https://newbiesteam.surge.sh/assets/NewbiesTeam.apk",
+      releaseUrl:
+        "https://github.com/zcyrl/newbiesteam-app/releases/tag/v2.0.0",
+      size: "5.0 MB",
+      badge: "Major 2.0 Release",
+      summary:
+        "Major 2.0 release unifying Developer Control Center, in-app content management, sub-16ms optimistic UI updates, and resolving Android WebView intent scheme navigation.",
+      changelog: [
+        "Fixed net::ERR_UNKNOWN_URL_SCHEME by eliminating automated intent scheme hijacking.",
+        "Completely rebuilt Developer Control Center (NewbiesDev) with unified Liquid Glass layout.",
+        "Interactive in-app content publisher with auto-announcements and inline card controls.",
+        "Sub-16ms optimistic UI updates with 75-second CDN deployment overlay protection.",
+        "Permanent V2+V3 release signing and clean Play Protect verification.",
+      ],
+    },
+    {
       version: "v1.2.3",
       name: "NewbiesTeam Android App v1.2.3",
       date: "2026-10-19",
       by: "Softbrick & NewbiesTeam",
-      isLatest: true,
+      isLatest: false,
       apkUrl:
         "https://github.com/zcyrl/newbiesteam-app/releases/download/v1.2.3/NewbiesTeam-v1.2.3.apk",
       fallbackApkUrl: "https://newbiesteam.surge.sh/assets/NewbiesTeam.apk",
       releaseUrl:
         "https://github.com/zcyrl/newbiesteam-app/releases/tag/v1.2.3",
       size: "5.0 MB",
-      badge: "Latest Release",
+      badge: "Release",
       summary:
         "Official release with persistent release signing, KSU-styled About dialog, and ROM screenshots deep linking.",
       changelog: [
