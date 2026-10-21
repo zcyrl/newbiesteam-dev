@@ -4123,6 +4123,7 @@
     var urls = [
       CONFIG.authManifestUrl + "?t=" + Date.now(),
       CONFIG.authManifestFallbackUrl + "?t=" + Date.now(),
+      "http://127.0.0.1:4720/auth-manifest.json?t=" + Date.now(),
       "auth-manifest.json?t=" + Date.now()
     ];
     for (var i = 0; i < urls.length; i++) {
