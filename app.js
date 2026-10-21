@@ -39,6 +39,52 @@
     }
   }
 
+  function resolveAssetUrl(u) {
+    if (!u) return "";
+    if (typeof u !== "string") return u;
+    if (
+      u.startsWith("http://") ||
+      u.startsWith("https://") ||
+      u.startsWith("data:") ||
+      u.startsWith("blob:")
+    ) {
+      return u;
+    }
+    var clean = u.replace(/^(\.\/|\/)+/, "");
+    // In Android APK WebView (file:///android_asset/...)
+    if (window.location.protocol === "file:" || window.location.protocol === "content:") {
+      // Local icons, fonts, and bundled SVG vector assets exist in APK assets
+      if (
+        clean.startsWith("icons/") ||
+        clean.startsWith("assets/fonts/") ||
+        (clean.startsWith("assets/") && clean.endsWith(".svg"))
+      ) {
+        return clean;
+      }
+      return "https://newbiesteam.surge.sh/" + clean;
+    }
+    return u;
+  }
+
+  function attachImgFallback(img, originalUrl) {
+    if (!img) return;
+    img.addEventListener("error", function () {
+      if (this.dataset.fallbackApplied) return;
+      this.dataset.fallbackApplied = "1";
+      if (originalUrl) {
+        var clean = String(originalUrl).replace(/^(\.\/|\/)+/, "");
+        var surgeUrl = "https://newbiesteam.surge.sh/" + clean;
+        if (this.src !== surgeUrl) {
+          this.src = surgeUrl;
+          return;
+        }
+      }
+      this.src = "icons/icon-192.png";
+      this.style.objectFit = "contain";
+      this.style.opacity = "0.7";
+    });
+  }
+
   function prefersCalm() {
     return !!(window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches);
   }
@@ -411,7 +457,8 @@
 
     var logoWrap = el("div", "ksu-logo-wrap");
     var logoImg = el("img", "ksu-about-logo");
-    logoImg.src = "assets/newbies-app-logo.svg";
+    logoImg.src = resolveAssetUrl("assets/newbies-app-logo.svg");
+    attachImgFallback(logoImg, "assets/newbies-app-logo.svg");
     logoImg.alt = "NewbiesTeam Logo";
     logoImg.width = 96;
     logoImg.height = 96;
@@ -1261,7 +1308,8 @@
           thumb.href = "#screenshots/" + encodeURIComponent(romIdentifier);
           thumb.title = shot.caption || (item.name + " screenshot " + (pIdx + 1));
           var img = el("img", "rom-drawer-ss-img");
-          img.src = shot.url;
+          img.src = resolveAssetUrl(shot.url);
+          attachImgFallback(img, shot.url);
           img.alt = shot.caption || "Preview " + (pIdx + 1);
           img.loading = "lazy";
           img.decoding = "async";
@@ -1529,7 +1577,8 @@
     var hasDrawer = !!(f.details || f.guide || hasScreens || isRomFeat);
     if (f.image) {
       var img = el("img", "banner");
-      img.src = f.image;
+      img.src = resolveAssetUrl(f.image);
+      attachImgFallback(img, f.image);
       img.alt = f.alt || f.name || "";
       img.width = f.width || 1200;
       img.height = f.height || 675;
@@ -1919,7 +1968,8 @@
     if (u.body) card.appendChild(richEl("p", "update-body", u.body));
     if (u.image) {
       var img = el("img", "update-img");
-      img.src = u.image;
+      img.src = resolveAssetUrl(u.image);
+      attachImgFallback(img, u.image);
       img.alt = u.title || "";
       img.loading = "lazy";
       card.appendChild(img);
@@ -2303,7 +2353,8 @@
 
     if (titleEl) titleEl.textContent = d.romName;
     if (img) {
-      img.src = shot.url;
+      img.src = resolveAssetUrl(shot.url);
+      attachImgFallback(img, shot.url);
       img.alt = shot.caption || d.romName + " screenshot " + (d.index + 1);
     }
     if (captionEl) captionEl.textContent = shot.caption || "";
@@ -2458,7 +2509,8 @@
           );
 
           var img = el("img", "screenshot-img");
-          img.src = shot.url;
+          img.src = resolveAssetUrl(shot.url);
+          attachImgFallback(img, shot.url);
           img.alt = shot.caption || rom.name + " screenshot " + (idx + 1);
           img.loading = "lazy";
           img.decoding = "async";
@@ -4539,7 +4591,9 @@
       var k = manifest.keys[slotId];
       var item = el("div", "roster-item");
       var img = el("img", "roster-avatar");
-      img.src = k.photo || "icons/icon-192.png";
+      var photoSrc = k.photo || "icons/icon-192.png";
+      img.src = resolveAssetUrl(photoSrc);
+      attachImgFallback(img, photoSrc);
       img.alt = k.name || slotId;
       item.appendChild(img);
 
@@ -4690,8 +4744,14 @@
       var pfpRole = document.getElementById("dev-pfp-role");
 
       var photoUrl = session.photo || "icons/icon-192.png";
-      if (pfpImg) pfpImg.src = photoUrl;
-      if (popAvatarImg) popAvatarImg.src = photoUrl;
+      if (pfpImg) {
+        pfpImg.src = resolveAssetUrl(photoUrl);
+        attachImgFallback(pfpImg, photoUrl);
+      }
+      if (popAvatarImg) {
+        popAvatarImg.src = resolveAssetUrl(photoUrl);
+        attachImgFallback(popAvatarImg, photoUrl);
+      }
       if (pfpHandle) pfpHandle.textContent = session.name || "Developer";
       if (pfpRole) pfpRole.textContent = (session.role || "TEAM").toUpperCase();
 
