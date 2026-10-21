@@ -277,6 +277,7 @@ class MainActivity : AppCompatActivity() {
                     .setPositiveButton(android.R.string.ok) { _, _ -> result?.confirm() }
                     .setNegativeButton(android.R.string.cancel) { _, _ -> result?.cancel() }
                     .setOnCancelListener { result?.cancel() }
+                    .show()
                 return true
             }
 
