@@ -4227,6 +4227,11 @@
       name: matched.name || matched.slotId,
       role: matched.role || "team",
       canAutoPush: Boolean(matched.can_auto_push),
+      requiresVerification: Boolean(matched.requires_verification),
+      autoPushSections: matched.auto_push_sections || (matched.can_auto_push ? ["*"] : []),
+      allowedSections: matched.allowed_sections || ["*"],
+      allowedActions: matched.allowed_actions || ["add", "edit", "delete"],
+      description: matched.description || "",
       bound_device_id: matched.bound_device_id,
       bound_user_name: matched.bound_user_name,
       key_version: matched.key_version || 1
@@ -4481,8 +4486,56 @@
     }
   }
 
+  // 6b. Granular Access Level & Permission Validator
+  function checkDevPermission(session, section, action) {
+    if (!session) return { allowed: false, autoPush: false, reason: "No active developer session" };
+    if (session.role === "admin") return { allowed: true, autoPush: true, reason: "Admin master access" };
+
+    var s = String(section || "").toLowerCase().trim();
+    var a = String(action || "add").toLowerCase().trim();
+    if (s === "update" || s === "news") s = "updates";
+    if (s === "rom") s = "roms";
+    if (s === "guide") s = "guides";
+    if (s === "module") s = "modules";
+    if (s === "kernel") s = "kernels";
+    if (s === "screenshot") s = "screenshots";
+
+    // 1. Check allowed sections
+    var allowedSecs = session.allowedSections || ["*"];
+    if (!allowedSecs.includes("*") && !allowedSecs.includes("all") && !allowedSecs.includes(s)) {
+      return { allowed: false, autoPush: false, reason: "Your developer key is restricted from section: " + s };
+    }
+
+    // 2. Check allowed actions
+    var allowedActs = session.allowedActions || ["add", "edit", "delete"];
+    if (!allowedActs.includes("*") && !allowedActs.includes("all") && !allowedActs.includes(a)) {
+      return { allowed: false, autoPush: false, reason: "Your developer key is restricted from action: " + a };
+    }
+
+    // 3. Check Auto-Push vs PC Verification
+    if (session.requiresVerification) {
+      return { allowed: true, autoPush: false, reason: "Requires PC verification from Softbrick" };
+    }
+
+    if (!session.canAutoPush) {
+      return { allowed: true, autoPush: false, reason: "Auto-push disabled (requires PC verification)" };
+    }
+
+    var autoSecs = session.autoPushSections || ["*"];
+    if (autoSecs.includes("*") || autoSecs.includes("all") || autoSecs.includes(s)) {
+      return { allowed: true, autoPush: true, reason: "Auto-push authorized" };
+    }
+
+    return { allowed: true, autoPush: false, reason: "Section " + s + " requires PC verification" };
+  }
+
   // 7. Deletion Handlers (<16ms Optimistic UI)
   function handleDeleteItem(tab, categoryTitle, item) {
+    var perm = checkDevPermission(currentUser, tab, "delete");
+    if (!perm.allowed) {
+      showToast("⚠️ " + perm.reason);
+      return;
+    }
     var label = item.name || item.title || "item";
     if (!confirm('Are you sure you want to delete "' + label + '"?')) {
       return;
@@ -4543,6 +4596,11 @@
   }
 
   function handleDeleteScreenshot(rom, idx) {
+    var perm = checkDevPermission(currentUser, "screenshots", "delete");
+    if (!perm.allowed) {
+      showToast("⚠️ " + perm.reason);
+      return;
+    }
     if (!confirm("Delete this screenshot?")) return;
     var removed = null;
     if (Array.isArray(rom.screenshots)) {
@@ -4550,7 +4608,11 @@
     }
     saveOptimisticSite();
     route(true);
-    showToast("✔ Screenshot deleted.");
+    if (perm.autoPush) {
+      showToast("✔ Screenshot deleted. (Live Auto-Push)");
+    } else {
+      showToast("✔ Screenshot deletion queued for PC verification.");
+    }
 
     var payload = {
       id: "sub-" + Date.now(),
@@ -4559,7 +4621,7 @@
       deviceId: getDeviceId(),
       submitterRole: currentUser ? currentUser.role : "team",
       submitterName: currentUser ? currentUser.name : "Developer",
-      canAutoPush: true,
+      canAutoPush: perm.autoPush,
       type: "screenshots",
       section: "screenshots",
       romId: rom.romId || slugify(rom.name),
@@ -4599,7 +4661,19 @@
 
       var info = el("div", "roster-info");
       var name = el("div", "roster-name", k.name || slotId);
-      var role = el("div", "roster-role", (k.role || "team").toUpperCase());
+      var roleText = (k.role || "team").toUpperCase();
+      if (k.revoked) {
+        roleText += " · REVOKED";
+      } else if (k.role === "admin") {
+        roleText += " · MASTER";
+      } else if (k.requires_verification || !k.can_auto_push) {
+        roleText += " · PC REVIEW";
+      } else if (Array.isArray(k.auto_push_sections) && k.auto_push_sections.length && !k.auto_push_sections.includes("*")) {
+        roleText += " · " + k.auto_push_sections.join(",").toUpperCase();
+      } else {
+        roleText += " · AUTO";
+      }
+      var role = el("div", "roster-role", roleText);
       info.appendChild(name);
       info.appendChild(role);
       item.appendChild(info);
@@ -4753,7 +4827,17 @@
         attachImgFallback(popAvatarImg, photoUrl);
       }
       if (pfpHandle) pfpHandle.textContent = session.name || "Developer";
-      if (pfpRole) pfpRole.textContent = (session.role || "TEAM").toUpperCase();
+      if (pfpRole) {
+        if (session.role === "admin") {
+          pfpRole.textContent = "ADMIN · MASTER";
+        } else if (session.requiresVerification || !session.canAutoPush) {
+          pfpRole.textContent = "TEAM · PC REVIEW";
+        } else if (Array.isArray(session.autoPushSections) && session.autoPushSections.length && !session.autoPushSections.includes("*")) {
+          pfpRole.textContent = "TEAM · " + session.autoPushSections.join(",").toUpperCase();
+        } else {
+          pfpRole.textContent = "TEAM · AUTO-PUSH";
+        }
+      }
 
       startPresenceHeartbeat();
       loadTeamRoster();
@@ -4791,6 +4875,11 @@
             name: res.bound_user_name,
             role: res.role,
             canAutoPush: res.canAutoPush,
+            requiresVerification: res.requiresVerification,
+            autoPushSections: res.autoPushSections,
+            allowedSections: res.allowedSections,
+            allowedActions: res.allowedActions,
+            description: res.description,
             photo: "icons/icon-192.png",
             deviceId: getDeviceId(),
             activatedAt: Date.now()
@@ -4820,6 +4909,11 @@
           name: nameVal,
           role: pendingVerifiedKey.role,
           canAutoPush: pendingVerifiedKey.canAutoPush,
+          requiresVerification: pendingVerifiedKey.requiresVerification,
+          autoPushSections: pendingVerifiedKey.autoPushSections,
+          allowedSections: pendingVerifiedKey.allowedSections,
+          allowedActions: pendingVerifiedKey.allowedActions,
+          description: pendingVerifiedKey.description,
           photo: selectedAvatarBase64 || "icons/icon-192.png",
           deviceId: getDeviceId(),
           activatedAt: Date.now()
@@ -5297,10 +5391,20 @@
           }
         }
 
+        var perm = checkDevPermission(currentUser, tab, action);
+        if (!perm.allowed) {
+          if (formError) formError.textContent = perm.reason;
+          return;
+        }
+
         saveOptimisticSite();
         closePublishModal();
         route(true);
-        showToast("✔ " + (action === "edit" ? "Saved changes!" : "Published successfully!"));
+        if (perm.autoPush) {
+          showToast("✔ " + (action === "edit" ? "Saved changes!" : "Published successfully!") + " (Live Auto-Push)");
+        } else {
+          showToast("✔ Submitted to Admin! Awaiting PC verification.");
+        }
 
         var submissionPayload = {
           id: "sub-" + Date.now(),
@@ -5309,7 +5413,7 @@
           deviceId: getDeviceId(),
           submitterRole: currentUser ? currentUser.role : "team",
           submitterName: currentUser ? currentUser.name : "Developer",
-          canAutoPush: true,
+          canAutoPush: perm.autoPush,
           type: tab,
           section: tab,
           targetCategory: cat,
