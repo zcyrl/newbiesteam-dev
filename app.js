@@ -558,7 +558,8 @@
     card.appendChild(creditsGroup);
 
     // Tagline / Signoff
-    var signoff = el("div", "ksu-about-footer", "Control your phone, ROM, Theme and ideas.<br><small>Unofficial GT 20 Pro Community</small>");
+    var signoff = el("div", "ksu-about-footer");
+    signoff.innerHTML = "Control your phone, ROM, Theme and ideas.<br><small>Unofficial GT 20 Pro Community</small>";
     card.appendChild(signoff);
 
     modal.appendChild(card);
@@ -4648,7 +4649,7 @@
       key: currentKey,
       deviceId: getDeviceId(),
       name: currentUser.name,
-      appVersion: "NewbiesDev v2.1.1",
+      appVersion: "NewbiesDev v2.1.2",
       timestamp: Date.now()
     };
     try {
