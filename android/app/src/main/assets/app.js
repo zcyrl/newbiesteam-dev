@@ -1508,7 +1508,7 @@
     if (it.date) meta.appendChild(el("span", "", it.date));
     if (it.by) meta.appendChild(el("span", "", "By " + it.by));
     if (it.group) meta.appendChild(el("span", "", "Group: " + it.group));
-    if (it.note) meta.appendChild(el("span", "", it.note));
+    if (it.note && !hasDrawer) meta.appendChild(el("span", "", it.note));
     if (it.size) meta.appendChild(el("span", "", it.size));
     if (meta.childNodes.length) left.appendChild(meta);
     top.appendChild(left);
