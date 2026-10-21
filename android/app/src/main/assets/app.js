@@ -2996,9 +2996,29 @@
     if (searchKbd) searchKbd.hidden = hasText;
   }
 
-  function matches(words, text) {
-    text = text.toLowerCase();
-    return words.every(function (w) {
+  var DEVICE_TOKENS = ["gt", "20", "pro", "gt20", "gt20pro", "x6871", "infinix"];
+
+  function parseSearchQuery(q) {
+    var rawWords = (q || "").toLowerCase().split(/\s+/).filter(Boolean);
+    var specificWords = rawWords.filter(function (w) {
+      return DEVICE_TOKENS.indexOf(w) === -1;
+    });
+    // If the search query consists purely of device tokens (e.g. "gt 20 pro", "gt 20", "x6871", "infinix"),
+    // show all resources across tabs.
+    var isBroadDeviceSearch = rawWords.length > 0 && specificWords.length === 0;
+    var effectiveWords = isBroadDeviceSearch ? [] : (specificWords.length > 0 ? specificWords : rawWords);
+    return {
+      rawWords: rawWords,
+      words: effectiveWords,
+      isBroadDeviceSearch: isBroadDeviceSearch
+    };
+  }
+
+  function matches(parsed, text) {
+    if (parsed.isBroadDeviceSearch) return true;
+    if (!parsed.words || !parsed.words.length) return false;
+    text = (text || "").toLowerCase();
+    return parsed.words.every(function (w) {
       return text.indexOf(w) !== -1;
     });
   }
@@ -3020,17 +3040,18 @@
   }
 
   function searchNode(q) {
-    var words = q.toLowerCase().split(/\s+/).filter(Boolean);
+    var parsed = parseSearchQuery(q);
+    var words = parsed.words;
     var frag = document.createDocumentFragment();
     var count = 0;
 
     TABS.forEach(function (t) {
       if (t[0] === "guides" || t[0] === "updates") return;
       (S[t[0]] || []).forEach(function (g) {
-        var catHit = matches(words, g.title || "");
+        var catHit = matches(parsed, g.title || "");
         if (g.feature) {
           var f = g.feature;
-          if (catHit || matches(words, [f.name, f.date, f.alt].join(" "))) {
+          if (catHit || matches(parsed, [f.name, f.date, f.alt].join(" "))) {
             frag.appendChild(resultPanel(t[1], g.title, featureNode(f, false, t[0])));
             count++;
           }
@@ -3039,7 +3060,7 @@
         var hits = catHit
           ? all
           : all.filter(function (it) {
-              return matches(words, itemText(it) + " " + g.title);
+              return matches(parsed, itemText(it) + " " + g.title);
             });
         if (!hits.length) return;
         var hasBanners = hits.some(function (it) {
@@ -3063,7 +3084,7 @@
     });
 
     var uHits = (S.updates || []).filter(function (u) {
-      return matches(words, [u.title, u.body, u.tag, u.by, u.date].join(" "));
+      return matches(parsed, [u.title, u.body, u.tag, u.by, u.date].join(" "));
     });
     if (uHits.length) {
       var uList = el("div", "updates-list");
@@ -3075,7 +3096,7 @@
     }
 
     var aHits = (S.appReleases || []).filter(function (rel) {
-      return matches(words, [rel.name, rel.version, rel.summary, (rel.changelog || []).join(" "), rel.by].join(" "));
+      return matches(parsed, [rel.name, rel.version, rel.summary, (rel.changelog || []).join(" "), rel.by].join(" "));
     });
     if (aHits.length) {
       var aList = el("div", "app-releases-grid");
@@ -3099,7 +3120,7 @@
         (g.sections || []).forEach(function (s) {
           txt.push(s.h);
         });
-        return matches(words, txt.join(" "));
+        return matches(parsed, txt.join(" "));
       });
       if (gHits.length) {
         var box = el("div", "tiles");
@@ -3117,8 +3138,11 @@
       p.appendChild(el("div", "empty", "No results for \u201c" + q + "\u201d."));
       out.appendChild(p);
     } else {
+      var noteText = parsed.isBroadDeviceSearch
+        ? count + " resources found for \u201c" + q + "\u201d (Infinix GT 20 Pro · X6871)"
+        : count + (count === 1 ? " result" : " results") + " for \u201c" + q + "\u201d";
       out.appendChild(
-        el("p", "results-note", count + (count === 1 ? " result" : " results") + " for \u201c" + q + "\u201d")
+        el("p", "results-note", noteText)
       );
       out.appendChild(frag);
     }
@@ -5435,7 +5459,27 @@
   window.addEventListener("hashchange", function () {
     route();
   });
-  route();
+
+  function initInitialView() {
+    var initialQ = "";
+    try {
+      var urlParams = new URLSearchParams(window.location.search);
+      initialQ = urlParams.get("q") || urlParams.get("search") || "";
+      if (!initialQ && window.location.hash.indexOf("#search") === 0) {
+        var parts = window.location.hash.split("=");
+        if (parts.length > 1) initialQ = decodeURIComponent(parts.slice(1).join("="));
+      }
+    } catch (_) {}
+
+    if (initialQ && searchInput) {
+      searchInput.value = initialQ;
+      runSearch();
+    } else {
+      route();
+    }
+  }
+
+  initInitialView();
   initTabReadmeHoldListeners();
   initGatekeeper();
   initDevPopover();

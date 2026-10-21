@@ -565,11 +565,33 @@ window.SITE = {
   ],
   appReleases: [
     {
+      version: "v2.0.3",
+      name: "NewbiesTeam Android App v2.0.3",
+      date: "2026-10-21",
+      by: "Softbrick & NewbiesTeam",
+      isLatest: true,
+      apkUrl:
+        "https://github.com/zcyrl/newbiesteam-app/releases/download/v2.0.3/NewbiesTeam-v2.0.3.apk",
+      fallbackApkUrl: "https://newbiesteam.surge.sh/assets/NewbiesTeam.apk",
+      releaseUrl:
+        "https://github.com/zcyrl/newbiesteam-app/releases/tag/v2.0.3",
+      size: "5.0 MB",
+      badge: "SEO & Search",
+      summary:
+        "Comprehensive SEO optimization for Google & Bing discovery, XML sitemap, crawler-friendly indexable content, Schema.org structured data, and intelligent 'gt 20 pro' multi-tab search.",
+      changelog: [
+        "Search Engine Optimization: Meta tags, canonical links, OpenGraph, Twitter cards, and Schema.org WebSite/Organization JSON-LD structured data.",
+        "Crawler Indexing: Added comprehensive noscript semantic index of all Infinix GT 20 Pro ROMs, kernels, recovery images, and guides.",
+        "Robots & Sitemaps: Integrated automated robots.txt and sitemap.xml with full tab and guide routing.",
+        "Intelligent In-App Search: Searching 'gt 20 pro', 'x6871', or device tokens now presents complete GT 20 Pro resources across all tabs.",
+      ],
+    },
+    {
       version: "v2.0.2",
       name: "NewbiesTeam Android App v2.0.2",
       date: "2026-10-21",
       by: "Softbrick & NewbiesTeam",
-      isLatest: true,
+      isLatest: false,
       apkUrl:
         "https://github.com/zcyrl/newbiesteam-app/releases/download/v2.0.2/NewbiesTeam-v2.0.2.apk",
       fallbackApkUrl: "https://newbiesteam.surge.sh/assets/NewbiesTeam.apk",
