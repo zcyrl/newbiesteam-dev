@@ -531,6 +531,11 @@ window.SITE = {
           name: "OFOX R 12.0 (XOS 15.1.2)",
           guide: "ofox-flash",
           url: "https://drive.google.com/file/d/1Hms8P8ziqLhy4UZ9setpoIddp0vIPwml/view?usp=drive_link",
+          by: "Rama982",
+          date: "2026-10-21",
+          note: "DO NOT FLASH ON XOS 16",
+          description: "DO NOT FLASH ON XOS 16",
+          size: null,
         },
       ],
     },
@@ -589,11 +594,30 @@ window.SITE = {
   ],
   appReleases: [
     {
+      version: "v2.1.2",
+      name: "NewbiesTeam Android App v2.1.2",
+      date: "2026-10-21",
+      by: "Softbrick & NewbiesTeam",
+      isLatest: true,
+      apkUrl:
+        "https://github.com/zcyrl/newbiesteam-app/releases/download/v2.1.2/NewbiesTeam-v2.1.2.apk",
+      fallbackApkUrl: "https://newbiesteam.surge.sh/assets/NewbiesTeam.apk",
+      releaseUrl:
+        "https://github.com/zcyrl/newbiesteam-app/releases/tag/v2.1.2",
+      size: "5.0 MB",
+      badge: "UI HTML Fix",
+      summary:
+        "Fixed HTML rendering in the About Modal signoff footer to cleanly render linebreaks and small subtext without unescaped tags.",
+      changelog: [
+        "About Modal Fix: Corrected tagline signoff markup rendering in both public and developer apps so <small> and <br> tags render visually instead of as escaped plain text."
+      ]
+    },
+    {
       version: "v2.1.1",
       name: "NewbiesTeam Android App v2.1.1",
       date: "2026-10-21",
       by: "Softbrick & NewbiesTeam",
-      isLatest: true,
+      isLatest: false,
       apkUrl:
         "https://github.com/zcyrl/newbiesteam-app/releases/download/v2.1.1/NewbiesTeam-v2.1.1.apk",
       fallbackApkUrl: "https://newbiesteam.surge.sh/assets/NewbiesTeam.apk",
@@ -607,8 +631,8 @@ window.SITE = {
         "Live Web/App Sync Engine: Public app and web now dynamically re-fetch and hot-reload data.js on startup, tab focus, and background interval.",
         "Zero-Cache HTML Headers: Configured no-cache headers so web browsers and WebViews never serve stale HTML.",
         "Forced Network Pull-to-Refresh: Swipe down to refresh in the Android app now bypasses cache completely to pull live server updates.",
-        "Unified Module Info: Aligned module notes and expandable drawers identically across dev app and public web hub."
-      ]
+        "Unified Module Info: Aligned module notes and expandable drawers identically across dev app and public web hub.",
+      ],
     },
     {
       version: "v2.1.0",
