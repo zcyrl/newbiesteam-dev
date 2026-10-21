@@ -1320,16 +1320,66 @@
       body.appendChild(guideRedirectNode(guideSlug));
     }
 
+    // Developer Inline Action Bar
+    if (item) {
+      var devBar = el("div", "dev-inline-bar");
+      var addPhotosBtn = el("button", "dev-action-btn", "📸 + Photos");
+      addPhotosBtn.type = "button";
+      addPhotosBtn.addEventListener("click", function (e) {
+        e.stopPropagation();
+        openPublishModal("screenshots", "Screenshots", { romId: item.romId || slugify(item.name), romName: item.name });
+      });
+      devBar.appendChild(addPhotosBtn);
+
+      var editBtn = el("button", "dev-action-btn", "✎ Edit");
+      editBtn.type = "button";
+      editBtn.addEventListener("click", function (e) {
+        e.stopPropagation();
+        openPublishModal("roms", item.category || "Latest", item, true);
+      });
+      devBar.appendChild(editBtn);
+
+      var delBtn = el("button", "dev-action-btn btn-danger", "🗑 Delete");
+      delBtn.type = "button";
+      delBtn.addEventListener("click", function (e) {
+        e.stopPropagation();
+        handleDeleteItem("roms", item.category || "Latest", item);
+      });
+      devBar.appendChild(delBtn);
+      body.appendChild(devBar);
+    }
+
     inner.appendChild(body);
     drawer.appendChild(inner);
     return drawer;
   }
 
-  function guideOnlyDrawer(guideSlug) {
+  function guideOnlyDrawer(guideSlug, item, tabName) {
     var drawer = el("div", "rom-drawer card-guide-drawer");
     var inner = el("div", "rom-drawer-inner");
     var body = el("div", "rom-drawer-body card-guide-body");
     body.appendChild(guideRedirectNode(guideSlug));
+
+    if (item) {
+      var devBar = el("div", "dev-inline-bar");
+      var editBtn = el("button", "dev-action-btn", "✎ Edit");
+      editBtn.type = "button";
+      editBtn.addEventListener("click", function (e) {
+        e.stopPropagation();
+        openPublishModal(tabName || "roms", item.category || "Firmware", item, true);
+      });
+      devBar.appendChild(editBtn);
+
+      var delBtn = el("button", "dev-action-btn btn-danger", "🗑 Delete");
+      delBtn.type = "button";
+      delBtn.addEventListener("click", function (e) {
+        e.stopPropagation();
+        handleDeleteItem(tabName || "roms", item.category || "Firmware", item);
+      });
+      devBar.appendChild(delBtn);
+      body.appendChild(devBar);
+    }
+
     inner.appendChild(body);
     drawer.appendChild(inner);
     return drawer;
@@ -1430,7 +1480,49 @@
     if (it.details || hasScreens || isRomItem) {
       c.appendChild(romDetailsDrawer(it.details, it.guide, it));
     } else if (it.guide) {
-      c.appendChild(guideOnlyDrawer(it.guide));
+      c.appendChild(guideOnlyDrawer(it.guide, it, tabName));
+    } else {
+      // In dev app, give all items an expandable info drawer with Edit/Delete controls
+      c.classList.add("has-drawer");
+      var defaultDrawer = el("div", "rom-drawer");
+      var defaultInner = el("div", "rom-drawer-inner");
+      var defaultBody = el("div", "rom-drawer-body");
+      if (it.note) {
+        defaultBody.appendChild(el("p", "", it.note));
+      }
+      var devBar = el("div", "dev-inline-bar");
+      var editBtn = el("button", "dev-action-btn", "✎ Edit");
+      editBtn.type = "button";
+      editBtn.addEventListener("click", function (e) {
+        e.stopPropagation();
+        openPublishModal(tabName || "modules", it.category || "", it, true);
+      });
+      devBar.appendChild(editBtn);
+
+      var delBtn = el("button", "dev-action-btn btn-danger", "🗑 Delete");
+      delBtn.type = "button";
+      delBtn.addEventListener("click", function (e) {
+        e.stopPropagation();
+        handleDeleteItem(tabName || "modules", it.category || "", it);
+      });
+      devBar.appendChild(delBtn);
+      defaultBody.appendChild(devBar);
+      defaultInner.appendChild(defaultBody);
+      defaultDrawer.appendChild(defaultInner);
+      c.appendChild(defaultDrawer);
+
+      if (!actions.querySelector(".info-btn")) {
+        var infoBtn = el("button", "info-btn", "i");
+        infoBtn.type = "button";
+        infoBtn.setAttribute("aria-expanded", "false");
+        infoBtn.setAttribute("aria-label", "Show info for " + it.name);
+        infoBtn.addEventListener("click", function (e) {
+          e.stopPropagation();
+          var open = c.classList.toggle("is-open");
+          infoBtn.setAttribute("aria-expanded", open ? "true" : "false");
+        });
+        actions.insertBefore(infoBtn, actions.firstChild);
+      }
     }
     return c;
   }
@@ -1599,6 +1691,18 @@
       grid.appendChild(el("div", "empty", "Nothing here yet."));
       p.appendChild(grid);
     }
+
+    // Developer '+' Card Trigger
+    var addCard = el("div", "add-card-trigger");
+    var addIcon = el("div", "add-card-icon", "+");
+    var addLabel = el("div", "add-card-label", "Add to " + g.title);
+    addCard.appendChild(addIcon);
+    addCard.appendChild(addLabel);
+    addCard.addEventListener("click", function () {
+      openPublishModal(tabName || "roms", g.title);
+    });
+    p.appendChild(addCard);
+
     return p;
   }
 
@@ -1847,6 +1951,26 @@
       foot.appendChild(link);
       card.appendChild(foot);
     }
+
+    // Developer Action Bar for Updates
+    var devBar = el("div", "dev-inline-bar");
+    var editBtn = el("button", "dev-action-btn", "✎ Edit");
+    editBtn.type = "button";
+    editBtn.addEventListener("click", function (e) {
+      e.stopPropagation();
+      openPublishModal("updates", "Updates", u, true);
+    });
+    devBar.appendChild(editBtn);
+
+    var delBtn = el("button", "dev-action-btn btn-danger", "🗑 Delete");
+    delBtn.type = "button";
+    delBtn.addEventListener("click", function (e) {
+      e.stopPropagation();
+      handleDeleteItem("updates", "Updates", u);
+    });
+    devBar.appendChild(delBtn);
+    card.appendChild(devBar);
+
     return card;
   }
 
@@ -2036,6 +2160,18 @@
         list.appendChild(updateCardNode(u));
       });
     }
+
+    // Developer '+' Publish Update Card Trigger
+    var addUpdateCard = el("div", "add-card-trigger");
+    var addIcon = el("div", "add-card-icon", "+");
+    var addLabel = el("div", "add-card-label", "Publish Update / Changelog");
+    addUpdateCard.appendChild(addIcon);
+    addUpdateCard.appendChild(addLabel);
+    addUpdateCard.addEventListener("click", function () {
+      openPublishModal("updates", "Updates");
+    });
+    list.appendChild(addUpdateCard);
+
     p.appendChild(list);
     return p;
   }
@@ -2350,6 +2486,17 @@
             openScreenshotLightbox(rom.name, rom.screenshots, idx);
           });
 
+          // Instant Quick Delete Button (<16ms)
+          var delBtn = el("button", "ss-quick-del-btn", "✕");
+          delBtn.type = "button";
+          delBtn.title = "Delete screenshot";
+          delBtn.addEventListener("click", function (e) {
+            e.stopPropagation();
+            handleDeleteScreenshot(rom, idx);
+          });
+          thumbBtn.style.position = "relative";
+          thumbBtn.appendChild(delBtn);
+
           itemEl.appendChild(thumbBtn);
 
           if (shot.caption) {
@@ -2359,20 +2506,31 @@
 
           grid.appendChild(itemEl);
         });
+
+        // Screenshot '+' Tile at end of grid
+        var addTile = el("div", "screenshot-add-tile");
+        var addIcon = el("div", "add-card-icon", "+");
+        var addLabel = el("div", "add-card-label", "Add Photos");
+        addTile.appendChild(addIcon);
+        addTile.appendChild(addLabel);
+        addTile.addEventListener("click", function () {
+          openPublishModal("screenshots", "Screenshots", { romId: rom.romId || slugify(rom.name), romName: rom.name });
+        });
+        grid.appendChild(addTile);
+
         body.appendChild(grid);
       } else {
-        var empty = el("div", "empty-screenshots-state");
-        var emptyIcon = el("div", "empty-icon", "\uD83D\uDCF7");
-        var emptyTitle = el("div", "empty-title", "No screenshots available");
-        var emptySub = el(
-          "div",
-          "empty-sub",
-          "Screenshots for this ROM will appear here once uploaded via the server toolkit."
-        );
-        empty.appendChild(emptyIcon);
-        empty.appendChild(emptyTitle);
-        empty.appendChild(emptySub);
-        body.appendChild(empty);
+        var emptyGrid = el("div", "screenshots-grid");
+        var addTile = el("div", "screenshot-add-tile");
+        var addIcon = el("div", "add-card-icon", "+");
+        var addLabel = el("div", "add-card-label", "Add Photos");
+        addTile.appendChild(addIcon);
+        addTile.appendChild(addLabel);
+        addTile.addEventListener("click", function () {
+          openPublishModal("screenshots", "Screenshots", { romId: rom.romId || slugify(rom.name), romName: rom.name });
+        });
+        emptyGrid.appendChild(addTile);
+        body.appendChild(emptyGrid);
       }
 
       card.appendChild(body);
@@ -2494,6 +2652,18 @@
       groupItems.forEach(function (it) {
         box.appendChild(guideTileNode(it));
       });
+
+      // Developer '+' Tile for Guides
+      var addTile = el("div", "add-card-trigger guide-add-tile");
+      var addIcon = el("div", "add-card-icon", "+");
+      var addLabel = el("div", "add-card-label", "Add Guide");
+      addTile.appendChild(addIcon);
+      addTile.appendChild(addLabel);
+      addTile.addEventListener("click", function () {
+        openPublishModal("guides", cat);
+      });
+      box.appendChild(addTile);
+
       p.appendChild(box);
       frag.appendChild(p);
     });
@@ -2744,6 +2914,24 @@
     var bk = el("a", "back", "Back to Guides");
     bk.href = "#guides";
     art.appendChild(bk);
+
+    // Developer Action Bar for Guide Article
+    var devBar = el("div", "dev-inline-bar");
+    var editBtn = el("button", "dev-action-btn", "✎ Edit Guide");
+    editBtn.type = "button";
+    editBtn.addEventListener("click", function () {
+      openPublishModal("guides", g.category || "Guides", g, true);
+    });
+    devBar.appendChild(editBtn);
+
+    var delBtn = el("button", "dev-action-btn btn-danger", "🗑 Delete Guide");
+    delBtn.type = "button";
+    delBtn.addEventListener("click", function () {
+      handleDeleteItem("guides", g.category || "Guides", g);
+    });
+    devBar.appendChild(delBtn);
+    art.appendChild(devBar);
+
     return art;
   }
 
@@ -3820,11 +4008,1286 @@
     }, { passive: true });
   }
 
+
+  /* ==========================================================================
+     Developer Engine State & Configuration
+     ========================================================================== */
+  var CONFIG = {
+    submissionChannel: "nbt_sub_8d0b5336c092d316a726be04",
+    relayUrl: "https://ntfy.envs.net/nbt_sub_8d0b5336c092d316a726be04",
+    relayFallbackUrl: "https://ntfy.sh/nbt_sub_8d0b5336c092d316a726be04",
+    liveFeedUrl: "https://newbiesteam.surge.sh/data.js",
+    authManifestUrl: "https://newbiesteam.surge.sh/auth-manifest.json",
+    authManifestFallbackUrl: "https://newbiesbase.surge.sh/auth-manifest.json"
+  };
+
+  var currentKey = null;
+  var currentUser = null;
+  var presenceInterval = null;
+  var compressedBannerBase64 = null;
+  var batchScreenshots = []; // Array of { dataUrl, caption }
+
+  // 1. Initial startup check for optimistic cache (<75s)
+  try {
+    var rawOpt = localStorage.getItem("nbt_optimistic_site");
+    if (rawOpt) {
+      var opt = JSON.parse(rawOpt);
+      if (opt && opt.ts && (Date.now() - opt.ts < 75000) && opt.site) {
+        window.SITE = opt.site;
+        S = window.SITE;
+      }
+    }
+  } catch (_) {}
+
+  function saveOptimisticSite() {
+    try {
+      localStorage.setItem("nbt_optimistic_site", JSON.stringify({
+        ts: Date.now(),
+        site: window.SITE
+      }));
+    } catch (e) {
+      console.warn("Could not save optimistic site to localStorage:", e);
+    }
+  }
+
+  // 2. Device UUID & Single-User Persistence via AndroidBridge or localStorage
+  function getDeviceId() {
+    if (window.AndroidBridge && typeof window.AndroidBridge.getDeviceId === "function") {
+      try {
+        var bridgeId = window.AndroidBridge.getDeviceId();
+        if (bridgeId) return String(bridgeId);
+      } catch (_) {}
+    }
+    var localId = null;
+    try {
+      localId = localStorage.getItem("nbt_device_uuid");
+    } catch (_) {}
+    if (!localId) {
+      localId = "dev-" + Math.random().toString(36).substring(2, 10) + "-" + Date.now().toString(36);
+      try {
+        localStorage.setItem("nbt_device_uuid", localId);
+      } catch (_) {}
+    }
+    return localId;
+  }
+
+  function savePersistentSession(sessionData) {
+    var jsonStr = JSON.stringify(sessionData);
+    try {
+      localStorage.setItem("nbt_dev_saved_session", jsonStr);
+    } catch (_) {}
+    if (window.AndroidBridge && typeof window.AndroidBridge.saveDevState === "function") {
+      try {
+        window.AndroidBridge.saveDevState(jsonStr);
+      } catch (_) {}
+    }
+  }
+
+  function getPersistentSession() {
+    if (window.AndroidBridge && typeof window.AndroidBridge.getDevState === "function") {
+      try {
+        var raw = window.AndroidBridge.getDevState();
+        if (raw && typeof raw === "string" && raw.trim().startsWith("{")) {
+          return JSON.parse(raw);
+        }
+      } catch (_) {}
+    }
+    try {
+      var raw = localStorage.getItem("nbt_dev_saved_session");
+      if (raw && typeof raw === "string" && raw.trim().startsWith("{")) {
+        return JSON.parse(raw);
+      }
+    } catch (_) {}
+    return null;
+  }
+
+  function clearPersistentSession() {
+    currentKey = null;
+    currentUser = null;
+    try {
+      localStorage.removeItem("nbt_dev_saved_session");
+    } catch (_) {}
+    if (window.AndroidBridge && typeof window.AndroidBridge.clearDevState === "function") {
+      try {
+        window.AndroidBridge.clearDevState();
+      } catch (_) {}
+    }
+  }
+
+  function cleanKeyString(raw) {
+    if (!raw) return "";
+    return String(raw)
+      .trim()
+      .replace(/^["']+|["']+$/g, "")
+      .replace(/[\u200B-\u200D\uFEFF]/g, "")
+      .replace(/\s+/g, "");
+  }
+
+  async function sha256Hex(str) {
+    var enc = new TextEncoder();
+    var data = enc.encode(str);
+    var hashBuf = await crypto.subtle.digest("SHA-256", data);
+    var hashArr = Array.from(new Uint8Array(hashBuf));
+    return hashArr.map(function (b) { return b.toString(16).padStart(2, "0"); }).join("");
+  }
+
+  // 3. Online Auth Verification & Manifest Loading
+  async function fetchOnlineAuthManifest() {
+    var urls = [
+      CONFIG.authManifestUrl + "?t=" + Date.now(),
+      CONFIG.authManifestFallbackUrl + "?t=" + Date.now(),
+      "auth-manifest.json?t=" + Date.now()
+    ];
+    for (var i = 0; i < urls.length; i++) {
+      try {
+        var res = await fetch(urls[i], { cache: "no-store", headers: { "Cache-Control": "no-cache" } });
+        if (res.ok) {
+          var manifest = await res.json();
+          if (manifest && manifest.keys) return manifest;
+        }
+      } catch (_) {}
+    }
+    return null;
+  }
+
+  async function verifyKeyOnline(rawKey) {
+    var clean = cleanKeyString(rawKey);
+    if (!clean) return { ok: false, error: "Please enter your 32-character developer key." };
+    var hash = null;
+    try {
+      hash = await sha256Hex(clean);
+    } catch (err) {
+      return { ok: false, error: "SHA-256 crypto is not supported in this browser environment." };
+    }
+    var manifest = await fetchOnlineAuthManifest();
+    if (!manifest || !manifest.keys) {
+      return { ok: false, error: "Unable to reach auth server. Check your network connection." };
+    }
+    var matched = null;
+    var slots = Object.keys(manifest.keys);
+    for (var i = 0; i < slots.length; i++) {
+      var slotId = slots[i];
+      var item = manifest.keys[slotId];
+      if (item.key_hash && item.key_hash.toLowerCase() === hash.toLowerCase()) {
+        matched = Object.assign({ slotId: slotId }, item);
+        break;
+      }
+    }
+    if (!matched) {
+      return { ok: false, error: "Invalid developer key. Check spelling or contact an Admin." };
+    }
+    if (matched.revoked) {
+      return { ok: false, revoked: true, error: "This developer key was rotated or revoked by Admin." };
+    }
+    return {
+      ok: true,
+      keyString: clean,
+      keyHash: hash,
+      slot: matched.slotId,
+      name: matched.name || matched.slotId,
+      role: matched.role || "team",
+      canAutoPush: Boolean(matched.can_auto_push),
+      bound_device_id: matched.bound_device_id,
+      bound_user_name: matched.bound_user_name,
+      key_version: matched.key_version || 1
+    };
+  }
+
+  // 4. Client-side Image Compression (WebP via Canvas)
+  function compressImageFile(file, maxWidth, maxHeight, quality) {
+    if (!maxWidth) maxWidth = 1280;
+    if (!maxHeight) maxHeight = 1280;
+    if (!quality) quality = 0.88;
+
+    return new Promise(function (resolve, reject) {
+      var reader = new FileReader();
+      reader.onerror = reject;
+      reader.onload = function (e) {
+        var img = new Image();
+        img.onerror = reject;
+        img.onload = function () {
+          var width = img.width;
+          var height = img.height;
+          if (width > maxWidth || height > maxHeight) {
+            var ratio = Math.min(maxWidth / width, maxHeight / height);
+            width = Math.round(width * ratio);
+            height = Math.round(height * ratio);
+          }
+          var canvas = document.createElement("canvas");
+          canvas.width = width;
+          canvas.height = height;
+          var ctx = canvas.getContext("2d");
+          ctx.imageSmoothingEnabled = true;
+          ctx.imageSmoothingQuality = "high";
+          ctx.drawImage(img, 0, 0, width, height);
+          var dataUrl = canvas.toDataURL("image/webp", quality);
+          resolve(dataUrl);
+        };
+        img.src = e.target.result;
+      };
+      reader.readAsDataURL(file);
+    });
+  }
+
+  function compressAvatarFile(file) {
+    return new Promise(function (resolve, reject) {
+      var reader = new FileReader();
+      reader.onerror = reject;
+      reader.onload = function (e) {
+        var img = new Image();
+        img.onerror = reject;
+        img.onload = function () {
+          var size = Math.min(img.width, img.height);
+          var startX = (img.width - size) / 2;
+          var startY = (img.height - size) / 2;
+          var canvas = document.createElement("canvas");
+          canvas.width = 160;
+          canvas.height = 160;
+          var ctx = canvas.getContext("2d");
+          ctx.imageSmoothingEnabled = true;
+          ctx.imageSmoothingQuality = "high";
+          ctx.drawImage(img, startX, startY, size, size, 0, 0, 160, 160);
+          var dataUrl = canvas.toDataURL("image/webp", 0.90);
+          resolve(dataUrl);
+        };
+        img.src = e.target.result;
+      };
+      reader.readAsDataURL(file);
+    });
+  }
+
+  // 5. Cloud Relay & Local Daemon Dispatch
+  async function dispatchSubmission(submission) {
+    var jsonString = JSON.stringify(submission);
+    var isDesktopLocalhost = (
+      typeof window !== "undefined" &&
+      window.location &&
+      (window.location.hostname === "127.0.0.1" || window.location.hostname === "localhost") &&
+      window.location.protocol.startsWith("http")
+    );
+
+    if (isDesktopLocalhost) {
+      try {
+        var res = await fetch("http://127.0.0.1:4720/dev-submit", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: jsonString,
+          signal: AbortSignal.timeout(1000)
+        });
+        if (res.ok) {
+          var resData = await res.json().catch(function () { return { ok: true }; });
+          if (resData.ok) {
+            return { ok: true, direct: true };
+          }
+        }
+      } catch (_) {}
+    }
+
+    var relayUrls = [
+      CONFIG.relayUrl,
+      CONFIG.relayUrl + "_b",
+      CONFIG.relayFallbackUrl,
+      CONFIG.relayFallbackUrl + "_b"
+    ].filter(Boolean);
+
+    var lastError = null;
+    for (var i = 0; i < relayUrls.length; i++) {
+      var url = relayUrls[i];
+      for (var attempt = 0; attempt < 2; attempt++) {
+        try {
+          var res = await fetch(url, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "Title": "NBT Submission: " + (submission.title || submission.type),
+              "Priority": "high",
+              "Tags": "inbox_tray,zap"
+            },
+            body: jsonString,
+            signal: AbortSignal.timeout(8000)
+          });
+          if (res.status === 429) {
+            await new Promise(function (r) { setTimeout(r, 1500); });
+            continue;
+          }
+          if (!res.ok) {
+            throw new Error("Relay returned status " + res.status);
+          }
+          return { ok: true };
+        } catch (err) {
+          lastError = err;
+          await new Promise(function (r) { setTimeout(r, 600); });
+        }
+      }
+    }
+    throw lastError || new Error("Failed to dispatch submission over all relay channels");
+  }
+
+  async function dispatchDeviceClaim(session) {
+    var payload = {
+      type: "device_claim",
+      id: "claim-" + Date.now(),
+      key: session.key,
+      deviceId: session.deviceId,
+      name: session.name,
+      photo: session.photo ? "attached" : "",
+      timestamp: session.activatedAt
+    };
+    try {
+      await fetch(CONFIG.relayUrl, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Title": "NBT Device Claim: " + session.name,
+          "Priority": "default"
+        },
+        body: JSON.stringify(payload)
+      });
+    } catch (_) {}
+  }
+
+  function sendPresenceHeartbeat() {
+    if (!currentKey || !currentUser) return;
+    var payload = {
+      type: "presence",
+      key: currentKey,
+      deviceId: getDeviceId(),
+      name: currentUser.name,
+      appVersion: "NewbiesDev v1.2.3",
+      timestamp: Date.now()
+    };
+    try {
+      fetch(CONFIG.relayUrl, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
+      }).catch(function () {});
+    } catch (_) {}
+  }
+
+  function startPresenceHeartbeat() {
+    if (presenceInterval) clearInterval(presenceInterval);
+    sendPresenceHeartbeat();
+    presenceInterval = setInterval(sendPresenceHeartbeat, 60000);
+  }
+
+  // 6. Live Feed Sync with 75-second optimistic overlay protection
+  async function fetchLiveSiteData(isManual) {
+    var pfpDot = document.getElementById("dev-pfp-dot");
+    var statusText = document.getElementById("dev-status-text");
+    var lastSyncedText = document.getElementById("dev-last-synced");
+
+    if (pfpDot) pfpDot.className = "dev-pfp-dot is-syncing";
+    if (statusText) statusText.textContent = "🟡 Syncing with Server...";
+
+    var opt = null;
+    try {
+      var rawOpt = localStorage.getItem("nbt_optimistic_site");
+      if (rawOpt) opt = JSON.parse(rawOpt);
+    } catch (_) {}
+
+    var now = Date.now();
+    var isRecentOptimistic = opt && opt.ts && (now - opt.ts < 75000) && opt.site;
+
+    if (isManual) {
+      try {
+        localStorage.removeItem("nbt_optimistic_site");
+      } catch (_) {}
+      isRecentOptimistic = false;
+    }
+
+    if (isRecentOptimistic) {
+      window.SITE = opt.site;
+      S = window.SITE;
+      if (pfpDot) pfpDot.className = "dev-pfp-dot is-online";
+      if (statusText) statusText.textContent = "🟢 Online · Key Verified";
+      if (lastSyncedText) {
+        var d = new Date(opt.ts);
+        lastSyncedText.textContent = "Last synced: " + d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+      }
+      route(true);
+      return;
+    }
+
+    try {
+      var feedUrl = "https://newbiesteam.surge.sh/data.js?t=" + now;
+      var res = await fetch(feedUrl, { cache: "no-store", headers: { "Cache-Control": "no-cache" } });
+      if (res.ok) {
+        var text = await res.text();
+        try {
+          var fn = new Function("window", text + "; return window.SITE;");
+          var freshSite = fn({});
+          if (freshSite && (freshSite.roms || freshSite.updates || freshSite.guides)) {
+            window.SITE = freshSite;
+            S = window.SITE;
+          }
+        } catch (e) {
+          console.warn("Could not evaluate live data.js:", e);
+        }
+      }
+    } catch (err) {
+      console.warn("Live fetch failed:", err);
+    }
+
+    if (pfpDot) pfpDot.className = "dev-pfp-dot is-online";
+    if (statusText) statusText.textContent = "🟢 Online · Key Verified";
+    if (lastSyncedText) {
+      lastSyncedText.textContent = "Last synced: " + new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+    }
+
+    route(true);
+    if (isManual) {
+      showToast("✔ Live site data synced from newbiesteam.surge.sh");
+    }
+  }
+
+  // 7. Deletion Handlers (<16ms Optimistic UI)
+  function handleDeleteItem(tab, categoryTitle, item) {
+    var label = item.name || item.title || "item";
+    if (!confirm('Are you sure you want to delete "' + label + '"?')) {
+      return;
+    }
+
+    if (tab === "updates") {
+      if (Array.isArray(window.SITE.updates)) {
+        window.SITE.updates = window.SITE.updates.filter(function (u) {
+          return u.id !== item.id && u.title !== item.title;
+        });
+      }
+    } else if (tab === "guides") {
+      if (Array.isArray(window.SITE.guides)) {
+        window.SITE.guides = window.SITE.guides.filter(function (g) {
+          return g.slug !== item.slug && g.title !== item.title;
+        });
+      } else if (window.SITE.guides && Array.isArray(window.SITE.guides.items)) {
+        window.SITE.guides.items = window.SITE.guides.items.filter(function (g) {
+          return g.slug !== item.slug && g.title !== item.title;
+        });
+      }
+    } else if (Array.isArray(window.SITE[tab])) {
+      window.SITE[tab].forEach(function (grp) {
+        if (grp.feature && (grp.feature.name === item.name || grp.feature.slug === item.slug)) {
+          delete grp.feature;
+        }
+        if (Array.isArray(grp.items)) {
+          grp.items = grp.items.filter(function (it) {
+            return it.name !== item.name;
+          });
+        }
+      });
+    }
+
+    saveOptimisticSite();
+    route(true);
+    showToast('✔ "' + label + '" deleted.');
+
+    var payload = {
+      id: "sub-" + Date.now(),
+      action: "delete",
+      key: currentKey,
+      deviceId: getDeviceId(),
+      submitterRole: currentUser ? currentUser.role : "team",
+      submitterName: currentUser ? currentUser.name : "Developer",
+      canAutoPush: true,
+      type: tab,
+      section: tab,
+      targetCategory: categoryTitle,
+      targetName: label,
+      targetId: item.id || item.slug || label,
+      title: "[Delete] " + label,
+      data: { name: label, id: item.id || item.slug || "" }
+    };
+    dispatchSubmission(payload).catch(function (e) {
+      console.warn("Delete dispatch failed:", e);
+    });
+  }
+
+  function handleDeleteScreenshot(rom, idx) {
+    if (!confirm("Delete this screenshot?")) return;
+    var removed = null;
+    if (Array.isArray(rom.screenshots)) {
+      removed = rom.screenshots.splice(idx, 1)[0];
+    }
+    saveOptimisticSite();
+    route(true);
+    showToast("✔ Screenshot deleted.");
+
+    var payload = {
+      id: "sub-" + Date.now(),
+      action: "delete_screenshot",
+      key: currentKey,
+      deviceId: getDeviceId(),
+      submitterRole: currentUser ? currentUser.role : "team",
+      submitterName: currentUser ? currentUser.name : "Developer",
+      canAutoPush: true,
+      type: "screenshots",
+      section: "screenshots",
+      romId: rom.romId || slugify(rom.name),
+      targetName: rom.name,
+      title: "[Delete Screenshot] " + rom.name + " (" + (idx + 1) + ")",
+      data: {
+        romName: rom.name,
+        romId: rom.romId || slugify(rom.name),
+        index: idx,
+        url: removed ? removed.url : ""
+      }
+    };
+    dispatchSubmission(payload).catch(function (e) {
+      console.warn("Screenshot delete dispatch failed:", e);
+    });
+  }
+
+  // 8. Popover & Live Team Roster
+  async function loadTeamRoster() {
+    var manifest = await fetchOnlineAuthManifest();
+    var rosterList = document.getElementById("popover-roster-list");
+    if (!rosterList) return;
+    rosterList.innerHTML = "";
+    if (!manifest || !manifest.keys) {
+      rosterList.appendChild(el("div", "empty", "Roster offline."));
+      return;
+    }
+    Object.keys(manifest.keys).forEach(function (slotId) {
+      var k = manifest.keys[slotId];
+      var item = el("div", "roster-item");
+      var img = el("img", "roster-avatar");
+      img.src = k.photo || "icons/icon-192.png";
+      img.alt = k.name || slotId;
+      item.appendChild(img);
+
+      var info = el("div", "roster-info");
+      var name = el("div", "roster-name", k.name || slotId);
+      var role = el("div", "roster-role", (k.role || "team").toUpperCase());
+      info.appendChild(name);
+      info.appendChild(role);
+      item.appendChild(info);
+
+      var dot = el("div", "roster-dot" + (k.revoked ? " revoked" : (k.bound_device_id ? " active" : "")));
+      dot.title = k.revoked ? "Revoked" : (k.bound_device_id ? "Active on device" : "Available");
+      item.appendChild(dot);
+
+      rosterList.appendChild(item);
+    });
+  }
+
+  function initDevPopover() {
+    var pfpBtn = document.getElementById("dev-pfp-btn");
+    var popover = document.getElementById("dev-pfp-popover");
+    var changeAvatarInput = document.getElementById("change-avatar-input");
+    var syncBtn = document.getElementById("popover-sync-btn");
+    var handleBtn = document.getElementById("popover-handle-btn");
+    var logoutBtn = document.getElementById("popover-logout-btn");
+
+    if (pfpBtn && popover) {
+      pfpBtn.addEventListener("click", function (e) {
+        e.stopPropagation();
+        var isHidden = popover.hasAttribute("hidden");
+        if (isHidden) {
+          popover.removeAttribute("hidden");
+          loadTeamRoster();
+        } else {
+          popover.setAttribute("hidden", "");
+        }
+      });
+
+      document.addEventListener("click", function (e) {
+        if (!popover.hasAttribute("hidden") && !popover.contains(e.target) && !pfpBtn.contains(e.target)) {
+          popover.setAttribute("hidden", "");
+        }
+      });
+    }
+
+    if (changeAvatarInput) {
+      changeAvatarInput.addEventListener("change", function (e) {
+        if (e.target.files && e.target.files[0] && currentUser) {
+          compressAvatarFile(e.target.files[0]).then(function (b64) {
+            currentUser.photo = b64;
+            savePersistentSession(currentUser);
+            var pfpImg = document.getElementById("dev-pfp-img");
+            var popAvatarImg = document.getElementById("popover-avatar-img");
+            if (pfpImg) pfpImg.src = b64;
+            if (popAvatarImg) popAvatarImg.src = b64;
+            showToast("✔ Profile photo updated!");
+          });
+        }
+      });
+    }
+
+    if (syncBtn) {
+      syncBtn.addEventListener("click", function () {
+        fetchLiveSiteData(true);
+      });
+    }
+
+    if (handleBtn) {
+      handleBtn.addEventListener("click", function () {
+        if (!currentUser) return;
+        var newHandle = prompt("Enter new developer handle:", currentUser.name);
+        if (newHandle && newHandle.trim()) {
+          currentUser.name = newHandle.trim();
+          savePersistentSession(currentUser);
+          var pfpHandle = document.getElementById("dev-pfp-handle");
+          if (pfpHandle) pfpHandle.textContent = currentUser.name;
+          showToast("✔ Handle changed to @" + currentUser.name);
+        }
+      });
+    }
+
+    if (logoutBtn) {
+      logoutBtn.addEventListener("click", function () {
+        if (confirm("Lock Developer Hub and log out?")) {
+          clearPersistentSession();
+          if (popover) popover.setAttribute("hidden", "");
+          var gateScreen = document.getElementById("gatekeeper-screen");
+          if (gateScreen) gateScreen.classList.add("active");
+          showToast("Hub locked.");
+        }
+      });
+    }
+  }
+
+  // 9. Gatekeeper Overlay & Profile Setup
+  function initGatekeeper() {
+    var gateScreen = document.getElementById("gatekeeper-screen");
+    var setupScreen = document.getElementById("profile-setup-screen");
+    var keyForm = document.getElementById("key-form");
+    var keyInput = document.getElementById("dev-key-input");
+    var keyError = document.getElementById("key-error");
+    var toggleKeyBtn = document.getElementById("toggle-key-visibility");
+    var profileForm = document.getElementById("profile-setup-form");
+    var setupNameInput = document.getElementById("setup-name-input");
+    var setupError = document.getElementById("setup-error");
+    var setupPhotoInput = document.getElementById("setup-photo-input");
+    var setupChooseBtn = document.getElementById("setup-choose-photo-btn");
+    var setupAvatarTrigger = document.getElementById("setup-avatar-trigger");
+    var setupAvatarPreview = document.getElementById("setup-avatar-preview");
+
+    if (toggleKeyBtn && keyInput) {
+      toggleKeyBtn.addEventListener("click", function () {
+        keyInput.type = keyInput.type === "password" ? "text" : "password";
+      });
+    }
+
+    var pendingVerifiedKey = null;
+    var selectedAvatarBase64 = null;
+
+    if (setupChooseBtn && setupPhotoInput) {
+      setupChooseBtn.addEventListener("click", function () { setupPhotoInput.click(); });
+    }
+    if (setupAvatarTrigger && setupPhotoInput) {
+      setupAvatarTrigger.addEventListener("click", function () { setupPhotoInput.click(); });
+    }
+    if (setupPhotoInput) {
+      setupPhotoInput.addEventListener("change", function (e) {
+        if (e.target.files && e.target.files[0]) {
+          compressAvatarFile(e.target.files[0]).then(function (b64) {
+            selectedAvatarBase64 = b64;
+            if (setupAvatarPreview) setupAvatarPreview.src = b64;
+          }).catch(function (err) {
+            console.warn("Avatar compress error:", err);
+          });
+        }
+      });
+    }
+
+    function unlockWithSession(session) {
+      currentKey = session.key;
+      currentUser = session;
+      if (gateScreen) gateScreen.classList.remove("active");
+      if (setupScreen) setupScreen.classList.remove("active");
+
+      var pfpImg = document.getElementById("dev-pfp-img");
+      var popAvatarImg = document.getElementById("popover-avatar-img");
+      var pfpHandle = document.getElementById("dev-pfp-handle");
+      var pfpRole = document.getElementById("dev-pfp-role");
+
+      var photoUrl = session.photo || "icons/icon-192.png";
+      if (pfpImg) pfpImg.src = photoUrl;
+      if (popAvatarImg) popAvatarImg.src = photoUrl;
+      if (pfpHandle) pfpHandle.textContent = session.name || "Developer";
+      if (pfpRole) pfpRole.textContent = (session.role || "TEAM").toUpperCase();
+
+      startPresenceHeartbeat();
+      loadTeamRoster();
+      fetchLiveSiteData();
+    }
+
+    var saved = getPersistentSession();
+    if (saved && saved.key && saved.name) {
+      unlockWithSession(saved);
+    } else {
+      if (gateScreen) gateScreen.classList.add("active");
+    }
+
+    if (keyForm) {
+      keyForm.addEventListener("submit", async function (e) {
+        e.preventDefault();
+        var raw = keyInput ? keyInput.value : "";
+        if (keyError) keyError.textContent = "";
+        var unlockBtn = document.getElementById("unlock-btn");
+        if (unlockBtn) unlockBtn.disabled = true;
+
+        var res = await verifyKeyOnline(raw);
+        if (unlockBtn) unlockBtn.disabled = false;
+
+        if (!res.ok) {
+          if (keyError) keyError.textContent = res.error || "Key validation failed.";
+          return;
+        }
+
+        pendingVerifiedKey = res;
+        if (res.bound_user_name) {
+          var s = {
+            key: res.keyString,
+            slot: res.slot,
+            name: res.bound_user_name,
+            role: res.role,
+            canAutoPush: res.canAutoPush,
+            photo: "icons/icon-192.png",
+            deviceId: getDeviceId(),
+            activatedAt: Date.now()
+          };
+          savePersistentSession(s);
+          unlockWithSession(s);
+          showToast("✔ Welcome back, " + s.name + "!");
+        } else {
+          if (gateScreen) gateScreen.classList.remove("active");
+          if (setupScreen) setupScreen.classList.add("active");
+          if (setupNameInput) setupNameInput.value = res.name || "";
+        }
+      });
+    }
+
+    if (profileForm) {
+      profileForm.addEventListener("submit", function (e) {
+        e.preventDefault();
+        var nameVal = setupNameInput ? setupNameInput.value.trim() : "";
+        if (!nameVal) {
+          if (setupError) setupError.textContent = "Please enter your developer handle.";
+          return;
+        }
+        var s = {
+          key: pendingVerifiedKey.keyString,
+          slot: pendingVerifiedKey.slot,
+          name: nameVal,
+          role: pendingVerifiedKey.role,
+          canAutoPush: pendingVerifiedKey.canAutoPush,
+          photo: selectedAvatarBase64 || "icons/icon-192.png",
+          deviceId: getDeviceId(),
+          activatedAt: Date.now()
+        };
+        savePersistentSession(s);
+        dispatchDeviceClaim(s);
+        unlockWithSession(s);
+        showToast("✔ Profile saved! Welcome to NewbiesDev Hub.");
+      });
+    }
+  }
+
+  // 10. Context-Aware Publish Modal Engine
+  function renderBatchScreenshotsPreview() {
+    var list = document.getElementById("ss-batch-preview-list");
+    if (!list) return;
+    list.innerHTML = "";
+    batchScreenshots.forEach(function (item, idx) {
+      var row = el("div", "ss-preview-item");
+      row.style.cssText = "display:flex; align-items:center; gap:8px; padding:6px; background:var(--panel); border-radius:8px; border:1px solid var(--line);";
+
+      var img = el("img");
+      img.src = item.dataUrl;
+      img.style.cssText = "width:42px; height:60px; object-fit:cover; border-radius:4px;";
+      row.appendChild(img);
+
+      var capIn = el("input");
+      capIn.type = "text";
+      capIn.placeholder = "Caption (optional)...";
+      capIn.value = item.caption || "";
+      capIn.style.cssText = "flex:1; padding:6px 10px; font-size:0.82rem; border-radius:6px; border:1px solid var(--line); background:var(--bg); color:var(--fg);";
+      capIn.addEventListener("input", function () {
+        item.caption = capIn.value;
+      });
+      row.appendChild(capIn);
+
+      var rmBtn = el("button", "", "✕");
+      rmBtn.type = "button";
+      rmBtn.style.cssText = "background:none; border:none; color:#ff6b6b; font-size:16px; cursor:pointer; padding:4px 8px;";
+      rmBtn.addEventListener("click", function () {
+        batchScreenshots.splice(idx, 1);
+        renderBatchScreenshotsPreview();
+      });
+      row.appendChild(rmBtn);
+
+      list.appendChild(row);
+    });
+  }
+
+  function openPublishModal(tab, categoryTitle, itemToEdit, isEdit) {
+    var modal = document.getElementById("publish-modal");
+    var titleEl = document.getElementById("publish-modal-title");
+    var submitTextEl = document.getElementById("publish-submit-text");
+    var actionIn = document.getElementById("form-action");
+    var tabIn = document.getElementById("form-tab");
+    var catIn = document.getElementById("form-category");
+    var editIdIn = document.getElementById("form-edit-id");
+    var origNameIn = document.getElementById("form-orig-name");
+    var nameIn = document.getElementById("form-name");
+    var byIn = document.getElementById("form-by");
+    var dateIn = document.getElementById("form-date");
+    var urlIn = document.getElementById("form-url");
+    var sizeIn = document.getElementById("form-size");
+    var noteIn = document.getElementById("form-note");
+    var baseIn = document.getElementById("form-base");
+    var changelogsIn = document.getElementById("form-changelogs");
+    var fixedIn = document.getElementById("form-fixed");
+    var bugsIn = document.getElementById("form-bugs");
+    var guideSlugIn = document.getElementById("form-guide-slug");
+    var updateTagIn = document.getElementById("form-update-tag");
+    var updateBodyIn = document.getElementById("form-update-body");
+    var updateUrlIn = document.getElementById("form-update-url");
+    var updateLinkLabelIn = document.getElementById("form-update-link-label");
+    var guideReadIn = document.getElementById("form-guide-read");
+    var guideIntroIn = document.getElementById("form-guide-intro");
+    var guideWarningIn = document.getElementById("form-guide-warning");
+    var guideStepsIn = document.getElementById("form-guide-steps");
+    var autoAnnounceCheck = document.getElementById("auto-announce-check");
+    var formError = document.getElementById("form-error");
+
+    var groupTitleRow = document.getElementById("group-title-row");
+    var rowMeta = document.getElementById("row-meta");
+    var rowUrls = document.getElementById("row-urls");
+    var fieldNoteWrap = document.getElementById("field-note-wrap");
+    var romExtra = document.getElementById("rom-extra-fields");
+    var bannerWrap = document.getElementById("field-banner-wrap");
+    var ssExtra = document.getElementById("screenshot-extra-fields");
+    var updateExtra = document.getElementById("update-extra-fields");
+    var guideExtra = document.getElementById("guide-extra-fields");
+    var autoAnnounceWrap = document.getElementById("auto-announce-wrapper");
+    var bannerPreview = document.getElementById("image-compression-preview");
+
+    compressedBannerBase64 = null;
+    batchScreenshots = [];
+    if (bannerPreview) bannerPreview.textContent = "";
+    if (formError) formError.textContent = "";
+
+    actionIn.value = isEdit ? "edit" : "add";
+    tabIn.value = tab || "roms";
+    catIn.value = categoryTitle || "";
+    editIdIn.value = isEdit ? (itemToEdit.id || itemToEdit.slug || itemToEdit.name) : "";
+    origNameIn.value = isEdit ? (itemToEdit.name || itemToEdit.title) : "";
+
+    titleEl.textContent = isEdit ? ("Edit " + (itemToEdit.name || itemToEdit.title)) : ("Add to " + (categoryTitle || tab));
+    submitTextEl.textContent = isEdit ? "Save Changes" : "Publish to Live Hub";
+
+    byIn.value = (isEdit && (itemToEdit.by || itemToEdit.author)) ? (itemToEdit.by || itemToEdit.author) : (currentUser ? currentUser.name : "");
+    dateIn.value = (isEdit && itemToEdit.date) ? itemToEdit.date : new Date().toISOString().split("T")[0];
+    nameIn.value = isEdit ? (itemToEdit.name || itemToEdit.title || "") : "";
+    urlIn.value = isEdit ? (itemToEdit.url || "") : "";
+    sizeIn.value = isEdit ? (itemToEdit.size || "") : "";
+    noteIn.value = isEdit ? (itemToEdit.note || "") : "";
+
+    // Hide all extra sections by default
+    groupTitleRow.style.display = "none";
+    rowMeta.style.display = "none";
+    rowUrls.style.display = "none";
+    fieldNoteWrap.style.display = "none";
+    romExtra.style.display = "none";
+    bannerWrap.style.display = "none";
+    ssExtra.style.display = "none";
+    updateExtra.style.display = "none";
+    guideExtra.style.display = "none";
+    autoAnnounceWrap.style.display = "none";
+
+    if (tab === "roms") {
+      groupTitleRow.style.display = "";
+      rowMeta.style.display = "";
+      rowUrls.style.display = "";
+      fieldNoteWrap.style.display = "";
+      romExtra.style.display = "flex";
+      bannerWrap.style.display = "";
+      autoAnnounceWrap.style.display = isEdit ? "none" : "";
+
+      if (isEdit && itemToEdit.details) {
+        baseIn.value = itemToEdit.details.base || "";
+        changelogsIn.value = (itemToEdit.details.changelogs || []).join("\n");
+        fixedIn.value = (itemToEdit.details.fixed || []).join("\n");
+        bugsIn.value = (itemToEdit.details.bugs || []).join("\n");
+      } else {
+        baseIn.value = "";
+        changelogsIn.value = "";
+        fixedIn.value = "";
+        bugsIn.value = "";
+      }
+      guideSlugIn.value = (isEdit && itemToEdit.guide) ? itemToEdit.guide : "";
+    } else if (tab === "modules" || tab === "kernels" || tab === "recovery") {
+      groupTitleRow.style.display = "";
+      rowMeta.style.display = "";
+      rowUrls.style.display = "";
+      fieldNoteWrap.style.display = "";
+      autoAnnounceWrap.style.display = isEdit ? "none" : "";
+    } else if (tab === "screenshots") {
+      ssExtra.style.display = "flex";
+      var ssSelect = document.getElementById("form-ss-rom-select");
+      ssSelect.innerHTML = "";
+      var allRoms = [];
+      (S.roms || []).forEach(function (cat) {
+        if (cat.feature) allRoms.push(cat.feature);
+        (cat.items || []).forEach(function (it) { allRoms.push(it); });
+      });
+      allRoms.forEach(function (r) {
+        var opt = document.createElement("option");
+        opt.value = r.romId || slugify(r.name);
+        opt.textContent = r.name;
+        if (itemToEdit && (itemToEdit.romId === opt.value || itemToEdit.romName === r.name)) {
+          opt.selected = true;
+        }
+        ssSelect.appendChild(opt);
+      });
+      renderBatchScreenshotsPreview();
+    } else if (tab === "updates") {
+      groupTitleRow.style.display = "";
+      rowMeta.style.display = "";
+      updateExtra.style.display = "flex";
+      updateTagIn.value = (isEdit && itemToEdit.tag) ? itemToEdit.tag : "Update";
+      updateBodyIn.value = (isEdit && itemToEdit.body) ? itemToEdit.body : "";
+      updateUrlIn.value = (isEdit && itemToEdit.link) ? itemToEdit.link : "";
+      updateLinkLabelIn.value = (isEdit && itemToEdit.linkLabel) ? itemToEdit.linkLabel : "";
+    } else if (tab === "guides") {
+      groupTitleRow.style.display = "";
+      rowMeta.style.display = "";
+      guideExtra.style.display = "flex";
+      guideReadIn.value = (isEdit && itemToEdit.readTime) ? itemToEdit.readTime : "3 min read";
+      guideIntroIn.value = (isEdit && itemToEdit.intro) ? itemToEdit.intro : "";
+      guideWarningIn.value = (isEdit && itemToEdit.warning) ? itemToEdit.warning : "";
+      guideStepsIn.value = (isEdit && itemToEdit.steps) ? itemToEdit.steps.join("\n") : "";
+    }
+
+    modal.classList.add("active");
+  }
+
+  function closePublishModal() {
+    var modal = document.getElementById("publish-modal");
+    if (modal) modal.classList.remove("active");
+    compressedBannerBase64 = null;
+    batchScreenshots = [];
+  }
+
+  function initPublishModal() {
+    var modal = document.getElementById("publish-modal");
+    var closeBtn = document.getElementById("publish-modal-close");
+    var cancelBtn = document.getElementById("publish-cancel-btn");
+    var form = document.getElementById("publish-form");
+    var bannerInput = document.getElementById("form-image-input");
+    var bannerPreview = document.getElementById("image-compression-preview");
+    var ssPhotosInput = document.getElementById("form-ss-photos-input");
+
+    if (closeBtn) closeBtn.addEventListener("click", closePublishModal);
+    if (cancelBtn) cancelBtn.addEventListener("click", closePublishModal);
+    if (modal) {
+      modal.addEventListener("click", function (e) {
+        if (e.target === modal) closePublishModal();
+      });
+    }
+
+    if (bannerInput) {
+      bannerInput.addEventListener("change", async function (e) {
+        if (e.target.files && e.target.files[0]) {
+          var file = e.target.files[0];
+          var origKb = Math.round(file.size / 1024);
+          try {
+            compressedBannerBase64 = await compressImageFile(file, 1280, 1280, 0.88);
+            var compKb = Math.round(compressedBannerBase64.length * 0.75 / 1024);
+            if (bannerPreview) {
+              bannerPreview.textContent = "✔ WebP compressed: " + origKb + " KB → ~" + compKb + " KB";
+            }
+          } catch (err) {
+            console.warn("Banner compress failed:", err);
+          }
+        }
+      });
+    }
+
+    if (ssPhotosInput) {
+      ssPhotosInput.addEventListener("change", async function (e) {
+        var files = Array.from(e.target.files || []).slice(0, 10);
+        for (var i = 0; i < files.length; i++) {
+          try {
+            var b64 = await compressImageFile(files[i], 1440, 2560, 0.88);
+            batchScreenshots.push({ dataUrl: b64, caption: "" });
+          } catch (err) {
+            console.warn("Screenshot compress failed:", err);
+          }
+        }
+        renderBatchScreenshotsPreview();
+        ssPhotosInput.value = "";
+      });
+    }
+
+    if (form) {
+      form.addEventListener("submit", async function (e) {
+        e.preventDefault();
+        var action = document.getElementById("form-action").value;
+        var tab = document.getElementById("form-tab").value;
+        var cat = document.getElementById("form-category").value;
+        var editId = document.getElementById("form-edit-id").value;
+        var origName = document.getElementById("form-orig-name").value;
+        var name = document.getElementById("form-name").value.trim();
+        var by = document.getElementById("form-by").value.trim() || (currentUser ? currentUser.name : "NewbiesTeam");
+        var date = document.getElementById("form-date").value.trim() || new Date().toISOString().split("T")[0];
+        var url = document.getElementById("form-url").value.trim();
+        var size = document.getElementById("form-size").value.trim();
+        var note = document.getElementById("form-note").value.trim();
+        var autoAnnounceCheck = document.getElementById("auto-announce-check");
+        var formError = document.getElementById("form-error");
+
+        if (formError) formError.textContent = "";
+
+        if (tab !== "screenshots" && !name) {
+          if (formError) formError.textContent = "Please enter a name or title.";
+          return;
+        }
+
+        var submissionItem = null;
+
+        if (tab === "screenshots") {
+          if (!batchScreenshots.length) {
+            if (formError) formError.textContent = "Please select at least one photo to upload.";
+            return;
+          }
+          var ssSelect = document.getElementById("form-ss-rom-select");
+          var targetRomId = ssSelect ? ssSelect.value : "";
+          var allRoms = [];
+          (S.roms || []).forEach(function (c) {
+            if (c.feature) allRoms.push(c.feature);
+            (c.items || []).forEach(function (it) { allRoms.push(it); });
+          });
+          var targetRom = allRoms.find(function (r) {
+            return (r.romId || slugify(r.name)) === targetRomId || slugify(r.name) === slugify(targetRomId);
+          });
+          if (!targetRom) {
+            if (formError) formError.textContent = "Could not find selected ROM.";
+            return;
+          }
+          if (!Array.isArray(targetRom.screenshots)) targetRom.screenshots = [];
+          batchScreenshots.forEach(function (s) {
+            targetRom.screenshots.push({ url: s.dataUrl, caption: s.caption || "" });
+          });
+          submissionItem = {
+            romName: targetRom.name,
+            romId: targetRom.romId || slugify(targetRom.name),
+            screenshots: batchScreenshots.map(function (s) { return { url: s.dataUrl, caption: s.caption || "" }; })
+          };
+        } else if (tab === "updates") {
+          var body = document.getElementById("form-update-body").value.trim();
+          if (!body) {
+            if (formError) formError.textContent = "Please enter the update or changelog text.";
+            return;
+          }
+          var tag = document.getElementById("form-update-tag").value.trim() || "Update";
+          var updUrl = document.getElementById("form-update-url").value.trim() || null;
+          var linkLabel = document.getElementById("form-update-link-label").value.trim() || null;
+
+          if (action === "add") {
+            submissionItem = {
+              id: "upd-" + Date.now(),
+              title: name,
+              date: date,
+              by: by,
+              tag: tag,
+              body: body,
+              link: updUrl,
+              linkLabel: linkLabel
+            };
+            if (!Array.isArray(window.SITE.updates)) window.SITE.updates = [];
+            window.SITE.updates.unshift(submissionItem);
+          } else {
+            var targetUpd = (window.SITE.updates || []).find(function (u) {
+              return u.id === editId || u.title === origName;
+            });
+            if (targetUpd) {
+              targetUpd.title = name;
+              targetUpd.date = date;
+              targetUpd.by = by;
+              targetUpd.tag = tag;
+              targetUpd.body = body;
+              targetUpd.link = updUrl;
+              targetUpd.linkLabel = linkLabel;
+              submissionItem = targetUpd;
+            }
+          }
+        } else if (tab === "guides") {
+          var guideSteps = document.getElementById("form-guide-steps").value.split("\n").map(function (s) { return s.trim(); }).filter(Boolean);
+          var guideIntro = document.getElementById("form-guide-intro").value.trim();
+          var guideWarning = document.getElementById("form-guide-warning").value.trim();
+          var guideRead = document.getElementById("form-guide-read").value.trim() || "3 min read";
+
+          if (action === "add") {
+            submissionItem = {
+              title: name,
+              author: by,
+              slug: slugify(name),
+              category: cat || "Guides",
+              readTime: guideRead,
+              intro: guideIntro,
+              warning: guideWarning,
+              steps: guideSteps
+            };
+            if (!window.SITE.guides) window.SITE.guides = { items: [], categories: ["Guides"] };
+            if (Array.isArray(window.SITE.guides)) {
+              window.SITE.guides.push(submissionItem);
+            } else {
+              if (!Array.isArray(window.SITE.guides.items)) window.SITE.guides.items = [];
+              window.SITE.guides.items.push(submissionItem);
+            }
+          } else {
+            var gList = Array.isArray(window.SITE.guides) ? window.SITE.guides : ((window.SITE.guides && window.SITE.guides.items) || []);
+            var targetGuide = gList.find(function (g) {
+              return g.slug === editId || g.title === origName;
+            });
+            if (targetGuide) {
+              targetGuide.title = name;
+              targetGuide.author = by;
+              targetGuide.readTime = guideRead;
+              targetGuide.intro = guideIntro;
+              targetGuide.warning = guideWarning;
+              targetGuide.steps = guideSteps;
+              submissionItem = targetGuide;
+            }
+          }
+        } else {
+          // tab is roms, modules, kernels, recovery
+          var newItem = {
+            name: name,
+            by: by,
+            date: date,
+            url: url,
+            size: size || null,
+            note: note || null
+          };
+          if (tab === "roms") {
+            newItem.isRom = true;
+            newItem.romId = slugify(name);
+            if (compressedBannerBase64) {
+              newItem.image = compressedBannerBase64;
+            }
+            var changelogs = document.getElementById("form-changelogs").value.split("\n").map(function (s) { return s.trim(); }).filter(Boolean);
+            var fixed = document.getElementById("form-fixed").value.split("\n").map(function (s) { return s.trim(); }).filter(Boolean);
+            var bugs = document.getElementById("form-bugs").value.split("\n").map(function (s) { return s.trim(); }).filter(Boolean);
+            var base = document.getElementById("form-base").value.trim();
+            var gSlug = document.getElementById("form-guide-slug").value.trim();
+            if (gSlug) newItem.guide = gSlug;
+            if (base || changelogs.length || fixed.length || bugs.length) {
+              newItem.details = {
+                base: base || "GT 20 Pro",
+                changelogs: changelogs,
+                fixed: fixed,
+                bugs: bugs
+              };
+            }
+          }
+
+          var groupList = window.SITE[tab];
+          if (!Array.isArray(groupList)) { window.SITE[tab] = []; groupList = window.SITE[tab]; }
+          var grp = groupList.find(function (g) { return g.title === cat; });
+          if (!grp) {
+            grp = { title: cat, items: [] };
+            groupList.push(grp);
+          }
+          if (!Array.isArray(grp.items)) grp.items = [];
+
+          if (action === "add") {
+            grp.items.unshift(newItem);
+            submissionItem = newItem;
+
+            // Auto-announcement to Updates tab if checked
+            if (autoAnnounceCheck && autoAnnounceCheck.checked) {
+              var autoAnnounce = {
+                id: "upd-" + Date.now(),
+                title: "New Release: " + newItem.name,
+                date: newItem.date,
+                by: currentUser ? currentUser.name : newItem.by,
+                tag: cat || "Release",
+                body: (newItem.details && newItem.details.changelogs && newItem.details.changelogs.length)
+                  ? newItem.details.changelogs.join("\n")
+                  : (newItem.note || (newItem.name + " is now available for download.")),
+                link: "#" + tab + "/" + slugify(newItem.name),
+                linkLabel: "View in " + (tab.charAt(0).toUpperCase() + tab.slice(1))
+              };
+              if (!Array.isArray(window.SITE.updates)) window.SITE.updates = [];
+              window.SITE.updates.unshift(autoAnnounce);
+
+              var announcePayload = {
+                id: "sub-" + Date.now() + "-ann",
+                action: "add",
+                key: currentKey,
+                deviceId: getDeviceId(),
+                submitterRole: currentUser ? currentUser.role : "team",
+                submitterName: currentUser ? currentUser.name : "Developer",
+                canAutoPush: true,
+                type: "updates",
+                section: "updates",
+                targetCategory: "Updates",
+                targetName: autoAnnounce.title,
+                targetId: autoAnnounce.id,
+                title: "[Add] " + autoAnnounce.title,
+                data: autoAnnounce
+              };
+              dispatchSubmission(announcePayload).catch(function (e) {
+                console.warn("Relay announce dispatch error:", e);
+              });
+            }
+          } else {
+            var targetItem = grp.items.find(function (it) {
+              return it.name === origName;
+            });
+            if (targetItem) {
+              Object.assign(targetItem, newItem);
+              submissionItem = targetItem;
+            } else if (grp.feature && grp.feature.name === origName) {
+              Object.assign(grp.feature, newItem);
+              submissionItem = grp.feature;
+            }
+          }
+        }
+
+        saveOptimisticSite();
+        closePublishModal();
+        route(true);
+        showToast("✔ " + (action === "edit" ? "Saved changes!" : "Published successfully!"));
+
+        var submissionPayload = {
+          id: "sub-" + Date.now(),
+          action: action,
+          key: currentKey,
+          deviceId: getDeviceId(),
+          submitterRole: currentUser ? currentUser.role : "team",
+          submitterName: currentUser ? currentUser.name : "Developer",
+          canAutoPush: true,
+          type: tab,
+          section: tab,
+          targetCategory: cat,
+          targetName: name || (submissionItem && (submissionItem.name || submissionItem.title)) || "Submission",
+          targetId: action === "edit" ? editId : (submissionItem && (submissionItem.id || submissionItem.slug || submissionItem.name)),
+          title: (action === "edit" ? "[Edit] " : "[Add] ") + (name || (submissionItem && (submissionItem.name || submissionItem.title)) || tab),
+          data: submissionItem || {}
+        };
+
+        dispatchSubmission(submissionPayload).catch(function (err) {
+          console.warn("Relay submission dispatch failed:", err);
+          showToast("⚠️ Server sync queued or failed: " + err.message);
+        });
+      });
+    }
+  }
+
+
   window.addEventListener("hashchange", function () {
     route();
   });
   route();
   tryAndroidAppHandoff();
   initTabReadmeHoldListeners();
-  fetchRemoteUpdates();
+  initGatekeeper();
+  initDevPopover();
+  initPublishModal();
+  fetchLiveSiteData();
 })();
