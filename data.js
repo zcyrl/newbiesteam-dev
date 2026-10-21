@@ -565,11 +565,33 @@ window.SITE = {
   ],
   appReleases: [
     {
+      version: "v2.0.1",
+      name: "NewbiesTeam Android App v2.0.1",
+      date: "2026-10-21",
+      by: "Softbrick & NewbiesTeam",
+      isLatest: true,
+      apkUrl:
+        "https://github.com/zcyrl/newbiesteam-app/releases/download/v2.0.1/NewbiesTeam-v2.0.1.apk",
+      fallbackApkUrl: "https://newbiesteam.surge.sh/assets/NewbiesTeam.apk",
+      releaseUrl:
+        "https://github.com/zcyrl/newbiesteam-app/releases/tag/v2.0.1",
+      size: "5.0 MB",
+      badge: "Bugfix",
+      summary:
+        "Resolved asset and screenshot resolution inside Developer APK, enhanced cross-origin asset serving, and added offline-safe image fallbacks.",
+      changelog: [
+        "Fixed broken image rendering in NewbiesDev APK via universal asset URL resolution.",
+        "Added automatic fallback handling for remote banners and screenshot gallery thumbnails.",
+        "Bundled vector logo assets directly into APK package assets for offline rendering.",
+        "Enabled CORS headers on Surge assets directory for seamless external streaming.",
+      ],
+    },
+    {
       version: "v2.0.0",
       name: "NewbiesTeam Android App v2.0.0",
       date: "2026-10-21",
       by: "Softbrick & NewbiesTeam",
-      isLatest: true,
+      isLatest: false,
       apkUrl:
         "https://github.com/zcyrl/newbiesteam-app/releases/download/v2.0.0/NewbiesTeam-v2.0.0.apk",
       fallbackApkUrl: "https://newbiesteam.surge.sh/assets/NewbiesTeam.apk",
