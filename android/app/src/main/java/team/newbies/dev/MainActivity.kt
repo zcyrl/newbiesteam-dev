@@ -342,6 +342,30 @@ class MainActivity : AppCompatActivity() {
             downloadApk(url, fileName)
             return true
         }
+        // Handle custom intent schemes safely to prevent net::ERR_UNKNOWN_URL_SCHEME
+        if (url.startsWith("intent:", ignoreCase = true)) {
+            return try {
+                val parsedIntent = Intent.parseUri(url, Intent.URI_INTENT_SCHEME)
+                if (parsedIntent != null) {
+                    val info = packageManager.resolveActivity(parsedIntent, 0)
+                    if (info != null) {
+                        startActivity(parsedIntent)
+                        return true
+                    }
+                    val fallback = parsedIntent.getStringExtra("browser_fallback_url")
+                    if (!fallback.isNullOrBlank()) {
+                        val fbIntent = Intent(Intent.ACTION_VIEW, Uri.parse(fallback)).apply {
+                            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                        }
+                        startActivity(fbIntent)
+                        return true
+                    }
+                }
+                true
+            } catch (e: Exception) {
+                true
+            }
+        }
         // External links open in browser
         return try {
             val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url)).apply {
@@ -350,7 +374,7 @@ class MainActivity : AppCompatActivity() {
             startActivity(intent)
             true
         } catch (e: Exception) {
-            false
+            true
         }
     }
 
