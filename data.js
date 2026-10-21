@@ -565,11 +565,32 @@ window.SITE = {
   ],
   appReleases: [
     {
+      version: "v2.0.4",
+      name: "NewbiesTeam Android App v2.0.4",
+      date: "2026-10-21",
+      by: "Softbrick & NewbiesTeam",
+      isLatest: true,
+      apkUrl:
+        "https://github.com/zcyrl/newbiesteam-app/releases/download/v2.0.4/NewbiesTeam-v2.0.4.apk",
+      fallbackApkUrl: "https://newbiesteam.surge.sh/assets/NewbiesTeam.apk",
+      releaseUrl:
+        "https://github.com/zcyrl/newbiesteam-app/releases/tag/v2.0.4",
+      size: "5.0 MB",
+      badge: "Bugfix",
+      summary:
+        "Fixed modal vertical scrolling on Android devices, resolved screenshot deletion freeze in dev app, and synchronized module info buttons and descriptions across public web and mobile apps.",
+      changelog: [
+        "Modules Info & Description: Added expandable info button and note drawer in public app so all dev-entered descriptions sync and display smoothly.",
+        "Screenshot Deletion Freeze Fix: Fixed missing native AlertDialog display and decoupled quick-delete button from thumbnail click handlers.",
+        "Publish & Edit Modal Scrolling: Fixed flexbox layout and scroll boundary constraints, enabling smooth vertical scrolling through all form fields on mobile.",
+      ],
+    },
+    {
       version: "v2.0.3",
       name: "NewbiesTeam Android App v2.0.3",
       date: "2026-10-21",
       by: "Softbrick & NewbiesTeam",
-      isLatest: true,
+      isLatest: false,
       apkUrl:
         "https://github.com/zcyrl/newbiesteam-app/releases/download/v2.0.3/NewbiesTeam-v2.0.3.apk",
       fallbackApkUrl: "https://newbiesteam.surge.sh/assets/NewbiesTeam.apk",

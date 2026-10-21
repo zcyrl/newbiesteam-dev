@@ -1293,6 +1293,13 @@
       addSec("Bugs", d.bugs);
     }
 
+    if (item && (item.note || item.description)) {
+      var noteSec = el("div", "rom-sec");
+      noteSec.appendChild(el("h3", "", "Description / Note"));
+      noteSec.appendChild(el("p", "card-drawer-note", item.note || item.description));
+      body.appendChild(noteSec);
+    }
+
     // Screenshots link or "No screenshots available" tag
     if (item && item.name) {
       var rSlug = slugify(item.name);
@@ -1522,8 +1529,8 @@
       var defaultDrawer = el("div", "rom-drawer");
       var defaultInner = el("div", "rom-drawer-inner");
       var defaultBody = el("div", "rom-drawer-body");
-      if (it.note) {
-        defaultBody.appendChild(el("p", "", it.note));
+      if (it.note || it.description) {
+        defaultBody.appendChild(el("p", "card-drawer-note", it.note || it.description));
       }
       var devBar = el("div", "dev-inline-bar");
       var editBtn = el("button", "dev-action-btn", "✎ Edit");
@@ -2531,12 +2538,14 @@
           delBtn.title = "Delete screenshot";
           delBtn.addEventListener("click", function (e) {
             e.stopPropagation();
+            e.preventDefault();
             handleDeleteScreenshot(rom, idx);
           });
-          thumbBtn.style.position = "relative";
-          thumbBtn.appendChild(delBtn);
 
-          itemEl.appendChild(thumbBtn);
+          var thumbWrap = el("div", "ss-thumb-wrap");
+          thumbWrap.appendChild(thumbBtn);
+          thumbWrap.appendChild(delBtn);
+          itemEl.appendChild(thumbWrap);
 
           if (shot.caption) {
             var cap = el("div", "screenshot-caption", shot.caption);
