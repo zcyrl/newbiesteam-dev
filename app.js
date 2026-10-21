@@ -1263,7 +1263,33 @@
       .replace(/^-+|-+$/g, "");
   }
 
-  function romDetailsDrawer(d, guideSlug, item) {
+  function resolveItemCategory(tab, item) {
+    if (!item) return "";
+    if (item.category) return item.category;
+    if (tab === "updates") return "Updates";
+    if (tab === "guides") return item.category || "Guides";
+    if (Array.isArray(window.SITE[tab])) {
+      for (var i = 0; i < window.SITE[tab].length; i++) {
+        var g = window.SITE[tab][i];
+        if (g.feature && (g.feature === item || g.feature.name === item.name || (item.romId && g.feature.romId === item.romId))) {
+          item.category = g.title;
+          return g.title;
+        }
+        if (Array.isArray(g.items)) {
+          for (var j = 0; j < g.items.length; j++) {
+            var it = g.items[j];
+            if (it === item || it.name === item.name || (item.id && it.id === item.id) || (item.romId && it.romId === item.romId)) {
+              item.category = g.title;
+              return g.title;
+            }
+          }
+        }
+      }
+    }
+    return "";
+  }
+
+  function romDetailsDrawer(d, guideSlug, item, tabName) {
     var drawer = el("div", "rom-drawer");
     var inner = el("div", "rom-drawer-inner");
     var body = el("div", "rom-drawer-body");
@@ -1365,19 +1391,24 @@
     // Developer Inline Action Bar
     if (item) {
       var devBar = el("div", "dev-inline-bar");
-      var addPhotosBtn = el("button", "dev-action-btn", "📸 + Photos");
-      addPhotosBtn.type = "button";
-      addPhotosBtn.addEventListener("click", function (e) {
-        e.stopPropagation();
-        openPublishModal("screenshots", "Screenshots", { romId: item.romId || slugify(item.name), romName: item.name });
-      });
-      devBar.appendChild(addPhotosBtn);
+      var itemTab = tabName || (item.isRom ? "roms" : "modules");
+      var itemCat = item.category || resolveItemCategory(itemTab, item) || "Latest";
+
+      if (itemTab === "roms" || item.isRom) {
+        var addPhotosBtn = el("button", "dev-action-btn", "📸 + Photos");
+        addPhotosBtn.type = "button";
+        addPhotosBtn.addEventListener("click", function (e) {
+          e.stopPropagation();
+          openPublishModal("screenshots", "Screenshots", { romId: item.romId || slugify(item.name), romName: item.name });
+        });
+        devBar.appendChild(addPhotosBtn);
+      }
 
       var editBtn = el("button", "dev-action-btn", "✎ Edit");
       editBtn.type = "button";
       editBtn.addEventListener("click", function (e) {
         e.stopPropagation();
-        openPublishModal("roms", item.category || "Latest", item, true);
+        openPublishModal(itemTab, itemCat, item, true);
       });
       devBar.appendChild(editBtn);
 
@@ -1385,7 +1416,7 @@
       delBtn.type = "button";
       delBtn.addEventListener("click", function (e) {
         e.stopPropagation();
-        handleDeleteItem("roms", item.category || "Latest", item);
+        handleDeleteItem(itemTab, itemCat, item);
       });
       devBar.appendChild(delBtn);
       body.appendChild(devBar);
@@ -1404,11 +1435,14 @@
 
     if (item) {
       var devBar = el("div", "dev-inline-bar");
+      var itemTab = tabName || "roms";
+      var itemCat = item.category || resolveItemCategory(itemTab, item) || "Firmware";
+
       var editBtn = el("button", "dev-action-btn", "✎ Edit");
       editBtn.type = "button";
       editBtn.addEventListener("click", function (e) {
         e.stopPropagation();
-        openPublishModal(tabName || "roms", item.category || "Firmware", item, true);
+        openPublishModal(itemTab, itemCat, item, true);
       });
       devBar.appendChild(editBtn);
 
@@ -1416,7 +1450,7 @@
       delBtn.type = "button";
       delBtn.addEventListener("click", function (e) {
         e.stopPropagation();
-        handleDeleteItem(tabName || "roms", item.category || "Firmware", item);
+        handleDeleteItem(itemTab, itemCat, item);
       });
       devBar.appendChild(delBtn);
       body.appendChild(devBar);
@@ -1520,7 +1554,7 @@
     });
 
     if (it.details || hasScreens || isRomItem) {
-      c.appendChild(romDetailsDrawer(it.details, it.guide, it));
+      c.appendChild(romDetailsDrawer(it.details, it.guide, it, tabName));
     } else if (it.guide) {
       c.appendChild(guideOnlyDrawer(it.guide, it, tabName));
     } else {
@@ -1533,11 +1567,12 @@
         defaultBody.appendChild(el("p", "card-drawer-note", it.note || it.description));
       }
       var devBar = el("div", "dev-inline-bar");
+      var itemCat = it.category || resolveItemCategory(tabName || "modules", it) || "";
       var editBtn = el("button", "dev-action-btn", "✎ Edit");
       editBtn.type = "button";
       editBtn.addEventListener("click", function (e) {
         e.stopPropagation();
-        openPublishModal(tabName || "modules", it.category || "", it, true);
+        openPublishModal(tabName || "modules", itemCat, it, true);
       });
       devBar.appendChild(editBtn);
 
@@ -1545,7 +1580,7 @@
       delBtn.type = "button";
       delBtn.addEventListener("click", function (e) {
         e.stopPropagation();
-        handleDeleteItem(tabName || "modules", it.category || "", it);
+        handleDeleteItem(tabName || "modules", itemCat, it);
       });
       devBar.appendChild(delBtn);
       defaultBody.appendChild(devBar);
@@ -1684,9 +1719,9 @@
     });
 
     if (f.details || hasScreens || isRomFeat) {
-      box.appendChild(romDetailsDrawer(f.details, f.guide, f));
+      box.appendChild(romDetailsDrawer(f.details, f.guide, f, tabName));
     } else if (f.guide) {
-      box.appendChild(guideOnlyDrawer(f.guide));
+      box.appendChild(guideOnlyDrawer(f.guide, f, tabName));
     }
     return box;
   }
@@ -1708,6 +1743,7 @@
     p.appendChild(el("h2", "", g.title));
     if (g.feature) {
       if (isRomPanel) g.feature.isRom = true;
+      if (!g.feature.category) g.feature.category = g.title;
       p.appendChild(featureNode(g.feature, true, tabName));
     }
     if (items.length) {
@@ -1718,6 +1754,7 @@
         var list = el("div", "feat-list");
         items.forEach(function (it) {
           if (isRomPanel) it.isRom = true;
+          if (!it.category) it.category = g.title;
           list.appendChild(it.image ? featureNode(it, false, tabName) : cardNode(it, tabName));
         });
         p.appendChild(list);
@@ -1725,6 +1762,7 @@
         var grid = el("div", "grid");
         items.forEach(function (it) {
           if (isRomPanel) it.isRom = true;
+          if (!it.category) it.category = g.title;
           grid.appendChild(cardNode(it, tabName));
         });
         p.appendChild(grid);
@@ -4099,12 +4137,12 @@
   var compressedBannerBase64 = null;
   var batchScreenshots = []; // Array of { dataUrl, caption }
 
-  // 1. Initial startup check for optimistic cache (<75s)
+  // 1. Initial startup check for persistent optimistic cache & pending mutations
   try {
     var rawOpt = localStorage.getItem("nbt_optimistic_site");
     if (rawOpt) {
       var opt = JSON.parse(rawOpt);
-      if (opt && opt.ts && (Date.now() - opt.ts < 75000) && opt.site) {
+      if (opt && opt.site && (opt.site.roms || opt.site.updates || opt.site.guides)) {
         window.SITE = opt.site;
         S = window.SITE;
       }
@@ -4119,6 +4157,182 @@
       }));
     } catch (e) {
       console.warn("Could not save optimistic site to localStorage:", e);
+    }
+  }
+
+  function recordPendingMutation(mutation) {
+    try {
+      var list = [];
+      var raw = localStorage.getItem("nbt_pending_mutations");
+      if (raw) list = JSON.parse(raw);
+      var cutoff = Date.now() - 15 * 60 * 1000;
+      list = list.filter(function (m) { return m && m.ts > cutoff; });
+      list.push(mutation);
+      localStorage.setItem("nbt_pending_mutations", JSON.stringify(list));
+    } catch (_) {}
+  }
+
+  function mergePendingMutations(freshSite) {
+    try {
+      var raw = localStorage.getItem("nbt_pending_mutations");
+      if (!raw) return freshSite;
+      var list = JSON.parse(raw);
+      if (!Array.isArray(list) || !list.length) return freshSite;
+
+      var cutoff = Date.now() - 15 * 60 * 1000;
+      var remaining = [];
+
+      list.forEach(function (m) {
+        if (!m || m.ts < cutoff) return;
+        var tab = m.type || m.section;
+        var act = m.action;
+        var data = m.data || {};
+        var targetName = m.targetName || data.name || data.title;
+        var targetCat = m.targetCategory || data.category;
+
+        if (act === "edit") {
+          var matched = false;
+          if (tab === "updates" && Array.isArray(freshSite.updates)) {
+            var u = freshSite.updates.find(function (x) { return x.id === m.targetId || x.title === targetName; });
+            if (u) {
+              matched = true;
+              if (u.title === data.title && u.body === data.body && u.tag === data.tag) {
+                return;
+              }
+              Object.assign(u, data);
+              remaining.push(m);
+            }
+          } else if (tab === "guides") {
+            var gItems = Array.isArray(freshSite.guides) ? freshSite.guides : (freshSite.guides && freshSite.guides.items);
+            if (Array.isArray(gItems)) {
+              var g = gItems.find(function (x) { return x.slug === m.targetId || x.title === targetName; });
+              if (g) {
+                matched = true;
+                if (g.title === data.title && g.readTime === data.readTime) {
+                  return;
+                }
+                Object.assign(g, data);
+                remaining.push(m);
+              }
+            }
+          } else if (Array.isArray(freshSite[tab])) {
+            for (var i = 0; i < freshSite[tab].length; i++) {
+              var cat = freshSite[tab][i];
+              if (cat.feature && (cat.feature.name === targetName || (m.targetId && (cat.feature.romId === m.targetId || cat.feature.id === m.targetId)))) {
+                matched = true;
+                if (cat.feature.name === data.name && cat.feature.url === data.url && cat.feature.date === data.date && (!data.note || cat.feature.note === data.note)) {
+                  return;
+                }
+                Object.assign(cat.feature, data);
+                remaining.push(m);
+                break;
+              }
+              if (Array.isArray(cat.items)) {
+                var it = cat.items.find(function (x) { return x.name === targetName || (m.targetId && (x.id === m.targetId || x.romId === m.targetId)); });
+                if (it) {
+                  matched = true;
+                  if (it.name === data.name && it.url === data.url && it.date === data.date && (!data.note || it.note === data.note)) {
+                    return;
+                  }
+                  Object.assign(it, data);
+                  remaining.push(m);
+                  break;
+                }
+              }
+            }
+          }
+          if (!matched) {
+            remaining.push(m);
+          }
+        } else if (act === "add") {
+          var exists = false;
+          if (tab === "updates" && Array.isArray(freshSite.updates)) {
+            exists = freshSite.updates.some(function (x) { return x.id === data.id || x.title === data.title; });
+            if (!exists) {
+              freshSite.updates.unshift(data);
+              remaining.push(m);
+            }
+          } else if (tab === "guides") {
+            var gItems = Array.isArray(freshSite.guides) ? freshSite.guides : (freshSite.guides && freshSite.guides.items);
+            if (Array.isArray(gItems)) {
+              exists = gItems.some(function (x) { return x.slug === data.slug || x.title === data.title; });
+              if (!exists) {
+                gItems.unshift(data);
+                remaining.push(m);
+              }
+            }
+          } else if (Array.isArray(freshSite[tab])) {
+            for (var i = 0; i < freshSite[tab].length; i++) {
+              var c = freshSite[tab][i];
+              if (c.feature && (c.feature.name === data.name || (data.romId && c.feature.romId === data.romId))) { exists = true; break; }
+              if (Array.isArray(c.items) && c.items.some(function (x) { return x.name === data.name || (data.romId && x.romId === data.romId); })) { exists = true; break; }
+            }
+            if (!exists) {
+              var targetGrp = freshSite[tab].find(function (c) { return targetCat && c.title.toLowerCase() === targetCat.toLowerCase(); });
+              if (!targetGrp) {
+                targetGrp = { title: targetCat || "Latest", items: [] };
+                freshSite[tab].push(targetGrp);
+              }
+              if (!Array.isArray(targetGrp.items)) targetGrp.items = [];
+              targetGrp.items.unshift(data);
+              remaining.push(m);
+            }
+          }
+        } else if (act === "delete") {
+          if (tab === "updates" && Array.isArray(freshSite.updates)) {
+            var len = freshSite.updates.length;
+            freshSite.updates = freshSite.updates.filter(function (x) { return x.id !== m.targetId && x.title !== targetName; });
+            if (freshSite.updates.length < len) remaining.push(m);
+          } else if (tab === "guides") {
+            var gItems = Array.isArray(freshSite.guides) ? freshSite.guides : (freshSite.guides && freshSite.guides.items);
+            if (Array.isArray(gItems)) {
+              var len = gItems.length;
+              var filtered = gItems.filter(function (x) { return x.slug !== m.targetId && x.title !== targetName; });
+              if (Array.isArray(freshSite.guides)) freshSite.guides = filtered;
+              else freshSite.guides.items = filtered;
+              if (filtered.length < len) remaining.push(m);
+            }
+          } else if (Array.isArray(freshSite[tab])) {
+            freshSite[tab].forEach(function (c) {
+              if (c.feature && (c.feature.name === targetName || (m.targetId && c.feature.romId === m.targetId))) {
+                delete c.feature;
+                remaining.push(m);
+              }
+              if (Array.isArray(c.items)) {
+                var len = c.items.length;
+                c.items = c.items.filter(function (x) { return x.name !== targetName && (!m.targetId || (x.id !== m.targetId && x.romId !== m.targetId)); });
+                if (c.items.length < len) remaining.push(m);
+              }
+            });
+          }
+        } else if (act === "delete_screenshot") {
+          var targetRomId = m.romId || targetName;
+          var targetUrl = m.url;
+          if (Array.isArray(freshSite.roms)) {
+            for (var i = 0; i < freshSite.roms.length; i++) {
+              var c = freshSite.roms[i];
+              var rom = (c.feature && (c.feature.romId === targetRomId || c.feature.name === targetRomId)) ? c.feature : null;
+              if (!rom && Array.isArray(c.items)) {
+                rom = c.items.find(function (x) { return x.romId === targetRomId || x.name === targetRomId; });
+              }
+              if (rom && Array.isArray(rom.screenshots) && targetUrl) {
+                var len = rom.screenshots.length;
+                rom.screenshots = rom.screenshots.filter(function (s) {
+                  return s.url !== targetUrl && (!s.url || !targetUrl || (!s.url.endsWith(targetUrl) && !targetUrl.endsWith(s.url)));
+                });
+                if (rom.screenshots.length < len) remaining.push(m);
+                break;
+              }
+            }
+          }
+        }
+      });
+
+      localStorage.setItem("nbt_pending_mutations", JSON.stringify(remaining));
+      return freshSite;
+    } catch (e) {
+      console.warn("Could not merge pending mutations:", e);
+      return freshSite;
     }
   }
 
@@ -4431,7 +4645,7 @@
       key: currentKey,
       deviceId: getDeviceId(),
       name: currentUser.name,
-      appVersion: "NewbiesDev v2.0.0",
+      appVersion: "NewbiesDev v2.1.0",
       timestamp: Date.now()
     };
     try {
@@ -4449,7 +4663,7 @@
     presenceInterval = setInterval(sendPresenceHeartbeat, 60000);
   }
 
-  // 6. Live Feed Sync with 75-second optimistic overlay protection
+  // 6. Live Feed Sync with persistent optimistic mutation overlay
   async function fetchLiveSiteData(isManual) {
     var pfpDot = document.getElementById("dev-pfp-dot");
     var statusText = document.getElementById("dev-status-text");
@@ -4458,34 +4672,8 @@
     if (pfpDot) pfpDot.className = "dev-pfp-dot is-syncing";
     if (statusText) statusText.textContent = "🟡 Syncing with Server...";
 
-    var opt = null;
-    try {
-      var rawOpt = localStorage.getItem("nbt_optimistic_site");
-      if (rawOpt) opt = JSON.parse(rawOpt);
-    } catch (_) {}
-
     var now = Date.now();
-    var isRecentOptimistic = opt && opt.ts && (now - opt.ts < 75000) && opt.site;
-
-    if (isManual) {
-      try {
-        localStorage.removeItem("nbt_optimistic_site");
-      } catch (_) {}
-      isRecentOptimistic = false;
-    }
-
-    if (isRecentOptimistic) {
-      window.SITE = opt.site;
-      S = window.SITE;
-      if (pfpDot) pfpDot.className = "dev-pfp-dot is-online";
-      if (statusText) statusText.textContent = "🟢 Online · Key Verified";
-      if (lastSyncedText) {
-        var d = new Date(opt.ts);
-        lastSyncedText.textContent = "Last synced: " + d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
-      }
-      route(true);
-      return;
-    }
+    var fetchedFresh = false;
 
     try {
       var feedUrl = "https://newbiesteam.surge.sh/data.js?t=" + now;
@@ -4496,8 +4684,11 @@
           var fn = new Function("window", text + "; return window.SITE;");
           var freshSite = fn({});
           if (freshSite && (freshSite.roms || freshSite.updates || freshSite.guides)) {
+            freshSite = mergePendingMutations(freshSite);
             window.SITE = freshSite;
             S = window.SITE;
+            saveOptimisticSite();
+            fetchedFresh = true;
           }
         } catch (e) {
           console.warn("Could not evaluate live data.js:", e);
@@ -4507,15 +4698,35 @@
       console.warn("Live fetch failed:", err);
     }
 
+    if (!fetchedFresh) {
+      try {
+        var rawOpt = localStorage.getItem("nbt_optimistic_site");
+        if (rawOpt) {
+          var opt = JSON.parse(rawOpt);
+          if (opt && opt.site) {
+            window.SITE = opt.site;
+            S = window.SITE;
+          }
+        }
+      } catch (_) {}
+    }
+
     if (pfpDot) pfpDot.className = "dev-pfp-dot is-online";
     if (statusText) statusText.textContent = "🟢 Online · Key Verified";
-    if (lastSyncedText) {
+    if (lastSyncedText && fetchedFresh) {
       lastSyncedText.textContent = "Last synced: " + new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
     }
 
-    route(true);
+    requestAnimationFrame(function () {
+      route(true);
+    });
+
     if (isManual) {
-      showToast("✔ Live site data synced from newbiesteam.surge.sh");
+      if (fetchedFresh) {
+        showToast("✔ Live site data synced from newbiesteam.surge.sh");
+      } else {
+        showToast("⚠️ Could not reach server; keeping local changes.");
+      }
     }
   }
 
@@ -4623,6 +4834,16 @@
       title: "[Delete] " + label,
       data: { name: label, id: item.id || item.slug || "" }
     };
+    recordPendingMutation({
+      id: payload.id,
+      action: "delete",
+      type: tab,
+      section: tab,
+      targetCategory: categoryTitle,
+      targetName: label,
+      targetId: item.id || item.slug || label,
+      ts: Date.now()
+    });
     dispatchSubmission(payload).catch(function (e) {
       console.warn("Delete dispatch failed:", e);
     });
@@ -4667,6 +4888,15 @@
         url: removed ? removed.url : ""
       }
     };
+    recordPendingMutation({
+      id: payload.id,
+      action: "delete_screenshot",
+      type: "screenshots",
+      section: "screenshots",
+      romId: rom.romId || slugify(rom.name),
+      url: removed ? removed.url : "",
+      ts: Date.now()
+    });
     dispatchSubmission(payload).catch(function (e) {
       console.warn("Screenshot delete dispatch failed:", e);
     });
@@ -5046,19 +5276,22 @@
 
     actionIn.value = isEdit ? "edit" : "add";
     tabIn.value = tab || "roms";
+    if (isEdit && itemToEdit && (!categoryTitle || categoryTitle === "")) {
+      categoryTitle = itemToEdit.category || resolveItemCategory(tab, itemToEdit);
+    }
     catIn.value = categoryTitle || "";
-    editIdIn.value = isEdit ? (itemToEdit.id || itemToEdit.slug || itemToEdit.name) : "";
-    origNameIn.value = isEdit ? (itemToEdit.name || itemToEdit.title) : "";
+    editIdIn.value = isEdit && itemToEdit ? (itemToEdit.id || itemToEdit.romId || itemToEdit.slug || itemToEdit.name || "") : "";
+    origNameIn.value = isEdit && itemToEdit ? (itemToEdit.name || itemToEdit.title || "") : "";
 
-    titleEl.textContent = isEdit ? ("Edit " + (itemToEdit.name || itemToEdit.title)) : ("Add to " + (categoryTitle || tab));
+    titleEl.textContent = isEdit ? ("Edit " + (itemToEdit.name || itemToEdit.title || "Item")) : ("Add to " + (categoryTitle || tab));
     submitTextEl.textContent = isEdit ? "Save Changes" : "Publish to Live Hub";
 
-    byIn.value = (isEdit && (itemToEdit.by || itemToEdit.author)) ? (itemToEdit.by || itemToEdit.author) : (currentUser ? currentUser.name : "");
-    dateIn.value = (isEdit && itemToEdit.date) ? itemToEdit.date : new Date().toISOString().split("T")[0];
-    nameIn.value = isEdit ? (itemToEdit.name || itemToEdit.title || "") : "";
-    urlIn.value = isEdit ? (itemToEdit.url || "") : "";
-    sizeIn.value = isEdit ? (itemToEdit.size || "") : "";
-    noteIn.value = isEdit ? (itemToEdit.note || "") : "";
+    byIn.value = (isEdit && itemToEdit && (itemToEdit.by || itemToEdit.author)) ? (itemToEdit.by || itemToEdit.author) : (currentUser ? currentUser.name : "");
+    dateIn.value = (isEdit && itemToEdit && itemToEdit.date) ? itemToEdit.date : new Date().toISOString().split("T")[0];
+    nameIn.value = isEdit && itemToEdit ? (itemToEdit.name || itemToEdit.title || "") : "";
+    urlIn.value = isEdit && itemToEdit ? (itemToEdit.url || "") : "";
+    sizeIn.value = isEdit && itemToEdit ? (itemToEdit.size || "") : "";
+    noteIn.value = isEdit && itemToEdit ? (itemToEdit.note || itemToEdit.description || "") : "";
 
     // Hide all extra sections by default
     groupTitleRow.style.display = "none";
@@ -5287,6 +5520,19 @@
               targetUpd.link = updUrl;
               targetUpd.linkLabel = linkLabel;
               submissionItem = targetUpd;
+            } else {
+              submissionItem = {
+                id: editId || ("upd-" + Date.now()),
+                title: name,
+                date: date,
+                by: by,
+                tag: tag,
+                body: body,
+                link: updUrl,
+                linkLabel: linkLabel
+              };
+              if (!Array.isArray(window.SITE.updates)) window.SITE.updates = [];
+              window.SITE.updates.unshift(submissionItem);
             }
           }
         } else if (tab === "guides") {
@@ -5326,6 +5572,23 @@
               targetGuide.warning = guideWarning;
               targetGuide.steps = guideSteps;
               submissionItem = targetGuide;
+            } else {
+              submissionItem = {
+                title: name,
+                author: by,
+                slug: editId || slugify(name),
+                category: cat || "Guides",
+                readTime: guideRead,
+                intro: guideIntro,
+                warning: guideWarning,
+                steps: guideSteps
+              };
+              if (Array.isArray(window.SITE.guides)) window.SITE.guides.push(submissionItem);
+              else {
+                if (!window.SITE.guides) window.SITE.guides = { items: [], categories: ["Guides"] };
+                if (!Array.isArray(window.SITE.guides.items)) window.SITE.guides.items = [];
+                window.SITE.guides.items.push(submissionItem);
+              }
             }
           }
         } else {
@@ -5336,11 +5599,12 @@
             date: date,
             url: url,
             size: size || null,
-            note: note || null
+            note: note || null,
+            description: note || null
           };
           if (tab === "roms") {
             newItem.isRom = true;
-            newItem.romId = slugify(name);
+            newItem.romId = editId || slugify(name);
             if (compressedBannerBase64) {
               newItem.image = compressedBannerBase64;
             }
@@ -5362,14 +5626,15 @@
 
           var groupList = window.SITE[tab];
           if (!Array.isArray(groupList)) { window.SITE[tab] = []; groupList = window.SITE[tab]; }
-          var grp = groupList.find(function (g) { return g.title === cat; });
-          if (!grp) {
-            grp = { title: cat, items: [] };
-            groupList.push(grp);
-          }
-          if (!Array.isArray(grp.items)) grp.items = [];
 
           if (action === "add") {
+            var grp = groupList.find(function (g) { return g.title === cat; });
+            if (!grp) {
+              grp = { title: cat || "Latest", items: [] };
+              groupList.push(grp);
+            }
+            if (!Array.isArray(grp.items)) grp.items = [];
+            newItem.category = cat;
             grp.items.unshift(newItem);
             submissionItem = newItem;
 
@@ -5411,15 +5676,48 @@
               });
             }
           } else {
-            var targetItem = grp.items.find(function (it) {
-              return it.name === origName;
-            });
+            // Find across ALL groups in window.SITE[tab]
+            var targetItem = null;
+            var targetGrp = null;
+            var isFeat = false;
+
+            for (var gi = 0; gi < groupList.length; gi++) {
+              var curG = groupList[gi];
+              if (curG.feature && (curG.feature.name === origName || curG.feature.name === name || (editId && (curG.feature.romId === editId || curG.feature.id === editId)))) {
+                targetItem = curG.feature;
+                targetGrp = curG;
+                isFeat = true;
+                break;
+              }
+              if (Array.isArray(curG.items)) {
+                var found = curG.items.find(function (it) {
+                  return (it.name && it.name === origName) || (it.name && it.name === name) || (editId && (it.id === editId || it.romId === editId || it.slug === editId));
+                });
+                if (found) {
+                  targetItem = found;
+                  targetGrp = curG;
+                  break;
+                }
+              }
+            }
+
             if (targetItem) {
               Object.assign(targetItem, newItem);
+              if (targetGrp) {
+                targetItem.category = targetGrp.title;
+                cat = targetGrp.title;
+              }
               submissionItem = targetItem;
-            } else if (grp.feature && grp.feature.name === origName) {
-              Object.assign(grp.feature, newItem);
-              submissionItem = grp.feature;
+            } else {
+              var grp = groupList.find(function (g) { return g.title === cat; });
+              if (!grp) {
+                grp = { title: cat || "Latest", items: [] };
+                groupList.push(grp);
+              }
+              if (!Array.isArray(grp.items)) grp.items = [];
+              newItem.category = cat;
+              grp.items.unshift(newItem);
+              submissionItem = newItem;
             }
           }
         }
@@ -5430,14 +5728,8 @@
           return;
         }
 
-        saveOptimisticSite();
-        closePublishModal();
-        route(true);
-        if (perm.autoPush) {
-          showToast("✔ " + (action === "edit" ? "Saved changes!" : "Published successfully!") + " (Live Auto-Push)");
-        } else {
-          showToast("✔ Submitted to Admin! Awaiting PC verification.");
-        }
+        var resolvedTargetName = (action === "edit" ? (origName || name) : name) || (submissionItem && (submissionItem.name || submissionItem.title)) || "Submission";
+        var resolvedTargetId = action === "edit" ? (editId || origName || name) : (submissionItem && (submissionItem.id || submissionItem.slug || submissionItem.name || editId));
 
         var submissionPayload = {
           id: "sub-" + Date.now(),
@@ -5450,11 +5742,35 @@
           type: tab,
           section: tab,
           targetCategory: cat,
-          targetName: name || (submissionItem && (submissionItem.name || submissionItem.title)) || "Submission",
-          targetId: action === "edit" ? editId : (submissionItem && (submissionItem.id || submissionItem.slug || submissionItem.name)),
-          title: (action === "edit" ? "[Edit] " : "[Add] ") + (name || (submissionItem && (submissionItem.name || submissionItem.title)) || tab),
-          data: submissionItem || {}
+          targetName: resolvedTargetName,
+          targetId: resolvedTargetId,
+          title: (action === "edit" ? "[Edit] " : "[Add] ") + (name || origName || resolvedTargetName),
+          data: submissionItem || newItem
         };
+
+        recordPendingMutation({
+          id: submissionPayload.id,
+          action: action,
+          type: tab,
+          section: tab,
+          targetCategory: cat,
+          targetName: resolvedTargetName,
+          targetId: resolvedTargetId,
+          data: submissionItem || newItem,
+          ts: Date.now()
+        });
+
+        saveOptimisticSite();
+        closePublishModal();
+        requestAnimationFrame(function () {
+          route(true);
+        });
+
+        if (perm.autoPush) {
+          showToast("✔ " + (action === "edit" ? "Saved changes!" : "Published successfully!") + " (Live Auto-Push)");
+        } else {
+          showToast("✔ Submitted to Admin! Awaiting PC verification.");
+        }
 
         dispatchSubmission(submissionPayload).catch(function (err) {
           console.warn("Relay submission dispatch failed:", err);
