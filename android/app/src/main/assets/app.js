@@ -1465,7 +1465,10 @@
     var url = safeUrl(it.url);
     var hasScreens = Array.isArray(it.screenshots) && it.screenshots.length > 0;
     var isRomItem = it.isRom || (it.category && /rom|firmware/i.test(it.category)) || (it.details && it.details.base);
-    var hasDrawer = !!(it.details || it.guide || hasScreens || isRomItem);
+    var isModule = (tabName === "modules") || (it.category && /module/i.test(it.category)) || (it.group && /module/i.test(it.group));
+    var isToolOrKernel = (tabName === "kernels" || tabName === "recovery");
+    var hasNote = !!(it.note || it.description);
+    var hasDrawer = !!(it.details || it.guide || hasScreens || isRomItem || hasNote || isModule || isToolOrKernel);
     var c = el("div", hasDrawer ? "card has-drawer" : "card");
 
     var itemSlug = slugify(it.name);
@@ -1508,7 +1511,7 @@
     if (it.date) meta.appendChild(el("span", "", it.date));
     if (it.by) meta.appendChild(el("span", "", "By " + it.by));
     if (it.group) meta.appendChild(el("span", "", "Group: " + it.group));
-    if (it.note && !hasDrawer) meta.appendChild(el("span", "", it.note));
+    if (it.note) meta.appendChild(el("span", "", it.note));
     if (it.size) meta.appendChild(el("span", "", it.size));
     if (meta.childNodes.length) left.appendChild(meta);
     top.appendChild(left);
@@ -4645,7 +4648,7 @@
       key: currentKey,
       deviceId: getDeviceId(),
       name: currentUser.name,
-      appVersion: "NewbiesDev v2.1.0",
+      appVersion: "NewbiesDev v2.1.1",
       timestamp: Date.now()
     };
     try {

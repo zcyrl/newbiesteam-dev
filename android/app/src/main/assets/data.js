@@ -390,7 +390,7 @@ window.SITE = {
       items: [
         {
           romId: "rom_boot_img_xos_16_0__ddf3",
-          name: "Boot.img XOS 16.0.3.155",
+          name: "Boot.img  16.0.3.155",
           date: "2026-10-21",
           by: "Transition",
           url: "https://drive.google.com/file/d/1N2BXj3AdbqwxUIgM2pMijMkjYcFrvIOR/view?usp=drivesdk",
@@ -589,11 +589,33 @@ window.SITE = {
   ],
   appReleases: [
     {
+      version: "v2.1.1",
+      name: "NewbiesTeam Android App v2.1.1",
+      date: "2026-10-21",
+      by: "Softbrick & NewbiesTeam",
+      isLatest: true,
+      apkUrl:
+        "https://github.com/zcyrl/newbiesteam-app/releases/download/v2.1.1/NewbiesTeam-v2.1.1.apk",
+      fallbackApkUrl: "https://newbiesteam.surge.sh/assets/NewbiesTeam.apk",
+      releaseUrl:
+        "https://github.com/zcyrl/newbiesteam-app/releases/tag/v2.1.1",
+      size: "5.0 MB",
+      badge: "Real-Time Sync Engine",
+      summary:
+        "Enabled automatic live data.js sync in the public app and website, zero-cache headers, and forced network refresh so all developer posts appear instantly on the public hub.",
+      changelog: [
+        "Live Web/App Sync Engine: Public app and web now dynamically re-fetch and hot-reload data.js on startup, tab focus, and background interval.",
+        "Zero-Cache HTML Headers: Configured no-cache headers so web browsers and WebViews never serve stale HTML.",
+        "Forced Network Pull-to-Refresh: Swipe down to refresh in the Android app now bypasses cache completely to pull live server updates.",
+        "Unified Module Info: Aligned module notes and expandable drawers identically across dev app and public web hub."
+      ]
+    },
+    {
       version: "v2.1.0",
       name: "NewbiesTeam Android App v2.1.0",
       date: "2026-10-21",
       by: "Softbrick & NewbiesTeam",
-      isLatest: true,
+      isLatest: false,
       apkUrl:
         "https://github.com/zcyrl/newbiesteam-app/releases/download/v2.1.0/NewbiesTeam-v2.1.0.apk",
       fallbackApkUrl: "https://newbiesteam.surge.sh/assets/NewbiesTeam.apk",
