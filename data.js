@@ -565,11 +565,33 @@ window.SITE = {
   ],
   appReleases: [
     {
+      version: "v2.0.2",
+      name: "NewbiesTeam Android App v2.0.2",
+      date: "2026-10-21",
+      by: "Softbrick & NewbiesTeam",
+      isLatest: true,
+      apkUrl:
+        "https://github.com/zcyrl/newbiesteam-app/releases/download/v2.0.2/NewbiesTeam-v2.0.2.apk",
+      fallbackApkUrl: "https://newbiesteam.surge.sh/assets/NewbiesTeam.apk",
+      releaseUrl:
+        "https://github.com/zcyrl/newbiesteam-app/releases/tag/v2.0.2",
+      size: "5.0 MB",
+      badge: "Feature",
+      summary:
+        "Added granular developer key access level management with scoped auto-push controls (e.g. guides only) and PC verification moderation queues, seamlessly synced to server backend.",
+      changelog: [
+        "Interactive Access Level & Permission editor in newbies-toolkit and admin daemon.",
+        "Scoped auto-push controls allowing keys to auto-publish specific sections (e.g. guides) while queueing others for PC verification.",
+        "Automatic live server backend synchronization pushing updated keys and manifests directly to Surge CDN.",
+        "Enhanced in-app developer permission validation and real-time roster role status badges.",
+      ],
+    },
+    {
       version: "v2.0.1",
       name: "NewbiesTeam Android App v2.0.1",
       date: "2026-10-21",
       by: "Softbrick & NewbiesTeam",
-      isLatest: true,
+      isLatest: false,
       apkUrl:
         "https://github.com/zcyrl/newbiesteam-app/releases/download/v2.0.1/NewbiesTeam-v2.0.1.apk",
       fallbackApkUrl: "https://newbiesteam.surge.sh/assets/NewbiesTeam.apk",
