@@ -1,635 +1,375 @@
-<!DOCTYPE html>
-<html lang="en">
+<!doctype html>
+<html lang="en" data-theme="dark">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-  <title>NewbiesDev Hub</title>
-  <link rel="manifest" href="manifest.json">
-  <meta name="theme-color" content="#120d0d">
-  <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <link rel="stylesheet" href="styles.css">
-  <link rel="icon" type="image/png" href="icons/icon-192.png">
-  <script src="data.js"></script>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>NewbiesDev · GT 20 Pro Hub</title>
+<meta name="description" content="NewbiesTeam Developer Control Center for the Infinix GT 20 Pro (X6871).">
+<meta name="theme-color" id="meta-theme" content="#1f1e1c">
+<meta name="color-scheme" content="dark light">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="NewbiesDev">
+<link rel="manifest" href="manifest.json">
+<script src="theme.js?v=14"></script>
+<link rel="preload" href="assets/fonts/source-serif-4-latin-400-normal.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="assets/fonts/source-serif-4-latin-700-normal.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="icon" type="image/x-icon" href="favicon.ico">
+<link rel="icon" type="image/png" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<link rel="stylesheet" href="styles.css?v=30">
+<script src="data.js"></script>
 </head>
 <body>
+<div class="page">
 
-  <!-- ================= KEY GATEKEEPER SCREEN ================= -->
-  <section id="gatekeeper-screen" class="screen active">
-    <div class="gatekeeper-card">
-      <div class="logo-circle">
-        <img src="icons/icon-192.png" alt="NewbiesTeam Logo">
-      </div>
-      <h1 class="glow-title">NewbiesDev Hub</h1>
-      <p class="subtitle">GT 20 PRO DEVELOPER ACCESS</p>
+  <header class="nav-wrap">
+    <nav class="nav" aria-label="Main">
+      <a class="logo" id="logo" href="#roms" aria-label="NewbiesDev home">
+        <svg class="logo-banner-svg" xmlns="http://www.w3.org/2000/svg" viewBox="42 46 256 99" role="img" aria-label="Newbies Team"><g id="letters" fill="currentColor"><path id="letter-N" d="M45.22 104V99.97L51.67 99.54H54.02L61.46 99.97V104ZM50.49 104V65.19H54.08L54.89 85.34V104ZM71.75 67.23V63.27H88V67.23L81.74 67.73H79.44ZM75.91 104.12 54.27 70.95H52.72L51.11 67.48L45.71 67.3V63.27H60.78L79.13 91.41L79.01 91.6L78.39 79.88V63.27H82.79V104.12Z"/><path id="letter-e" d="M107.33 104.93Q102.37 104.93 98.65 103.04Q94.93 101.15 92.86 97.55Q90.78 93.96 90.78 88.81Q90.78 83.66 92.86 79.94Q94.93 76.22 98.59 74.18Q102.25 72.13 106.84 72.13Q111.12 72.13 114.19 73.81Q117.25 75.48 118.93 78.43Q120.6 81.37 120.6 85.34Q120.6 86.58 120.51 87.48Q120.42 88.38 120.23 89.31H97.29V85.96H109.32Q110.5 85.34 110.9 84.47Q111.3 83.6 111.3 81.99Q111.3 79.94 110.74 78.55Q110.19 77.15 109.16 76.44Q108.14 75.73 106.84 75.73Q105.16 75.73 103.92 76.84Q102.68 77.96 102.03 80.53Q101.38 83.11 101.38 87.51Q101.38 91.35 102.59 93.89Q103.8 96.44 105.88 97.65Q107.95 98.85 110.56 98.85Q113.16 98.85 114.99 97.99Q116.82 97.12 118.25 95.44L120.85 97.49Q119.49 99.72 117.66 101.4Q115.83 103.07 113.29 104Q110.74 104.93 107.33 104.93Z"/><path id="letter-w" d="M134.54 104.06 123.76 73.06H134.67L141.12 96.44L141.86 90.67L147.63 73.06H154.63L161.64 96.25L162.51 89.93L167.47 73.06H172.61L161.64 104.06H155.13L148 81.12H148.18L147.56 85.96L141.36 104.06ZM122.02 76.53V73.06H139.57V76.53L132.81 77.46H128.22ZM142.67 76.53V73.06H159.41V76.53L153.7 77.34H149.3ZM162.63 76.53V73.06H174.6V76.53L169.45 77.4H167.96Z"/><path id="letter-b" d="M176.14 104V100.59L179.86 99.72Q179.92 98.23 179.92 96.68Q179.92 95.13 179.92 93.58Q179.92 92.03 179.92 90.67V65.62L175.77 64.75V61.72L187.98 59.3L190.21 59.61L190.09 68.1L189.84 78.27L190.21 78.7V98.54L189.96 98.67L188.66 104.68ZM199.26 104.93Q196.78 104.93 195.05 104.16Q193.31 103.38 192.07 101.98Q190.83 100.59 189.84 98.73H187.24L187.55 94.45Q189.41 96.62 191.08 97.8Q192.75 98.98 194.86 98.98Q196.85 98.98 198.27 97.89Q199.7 96.81 200.5 94.51Q201.31 92.22 201.31 88.62Q201.31 83.23 199.57 80.84Q197.84 78.46 194.92 78.46Q193.5 78.46 192.17 79.14Q190.83 79.82 189.62 80.87Q188.41 81.93 187.3 83.04L187.05 78.27H190.21Q191.39 76.22 192.75 74.89Q194.12 73.56 195.85 72.84Q197.59 72.13 199.82 72.13Q203.29 72.13 206.05 74.02Q208.81 75.91 210.42 79.54Q212.04 83.17 212.04 88.44Q212.04 93.58 210.33 97.3Q208.63 101.02 205.71 102.98Q202.8 104.93 199.26 104.93Z"/><path id="letter-i" d="M215.13 104V100.34L221.39 99.72H226.41L232.86 100.34V104ZM218.79 104Q218.85 102.14 218.85 99.85Q218.85 97.55 218.88 95.13Q218.91 92.72 218.91 90.67V87.45Q218.91 85.28 218.88 83.51Q218.85 81.74 218.79 79.88L214.69 79.63V76.35L226.97 72.63L229.26 72.94L229.2 81.62V90.67Q229.2 92.72 229.2 95.13Q229.2 97.55 229.23 99.85Q229.26 102.14 229.26 104Z"/><path id="letter-e" d="M252.13 104.93Q247.17 104.93 243.45 103.04Q239.73 101.15 237.66 97.55Q235.58 93.96 235.58 88.81Q235.58 83.66 237.66 79.94Q239.73 76.22 243.39 74.18Q247.05 72.13 251.64 72.13Q255.92 72.13 258.98 73.81Q262.05 75.48 263.73 78.43Q265.4 81.37 265.4 85.34Q265.4 86.58 265.31 87.48Q265.22 88.38 265.03 89.31H242.09V85.96H254.12Q255.3 85.34 255.7 84.47Q256.1 83.6 256.1 81.99Q256.1 79.94 255.54 78.55Q254.99 77.15 253.96 76.44Q252.94 75.73 251.64 75.73Q249.96 75.73 248.72 76.84Q247.48 77.96 246.83 80.53Q246.18 83.11 246.18 87.51Q246.18 91.35 247.39 93.89Q248.6 96.44 250.68 97.65Q252.75 98.85 255.36 98.85Q257.96 98.85 259.79 97.99Q261.62 97.12 263.05 95.44L265.65 97.49Q264.29 99.72 262.46 101.4Q260.63 103.07 258.09 104Q255.54 104.93 252.13 104.93Z"/><path id="letter-s" d="M280.03 104.93Q276.68 104.93 273.76 104.22Q270.85 103.5 268.68 102.45L268.87 94.82H274.01L275.25 102.51L272.15 102.64V99.47Q273.83 100.28 275.72 100.78Q277.61 101.27 279.84 101.27Q281.76 101.27 283.03 100.78Q284.3 100.28 284.89 99.41Q285.48 98.54 285.48 97.37Q285.48 95.82 284.27 94.82Q283.06 93.83 279.96 92.9L277.55 92.22Q274.94 91.35 272.96 90.11Q270.97 88.87 269.86 86.98Q268.74 85.09 268.74 82.49Q268.74 79.45 270.35 77.12Q271.97 74.8 275.04 73.47Q278.1 72.13 282.38 72.13Q285.23 72.13 287.81 72.78Q290.38 73.43 292.74 74.49L292.24 81.43H287.09L285.85 74.05H288.77V77.28Q287.28 76.53 285.79 76.19Q284.3 75.85 282.44 75.85Q280.03 75.85 278.75 76.78Q277.48 77.71 277.48 79.39Q277.48 80.81 278.63 81.74Q279.78 82.67 282.94 83.66L285.23 84.28Q288.21 85.21 290.29 86.55Q292.36 87.88 293.45 89.77Q294.53 91.66 294.53 94.33Q294.53 97.61 292.77 100Q291 102.39 287.75 103.66Q284.49 104.93 280.03 104.93Z"/></g><g id="head" transform="translate(223.78 65.55)"><path id="dome" d="M-11 0A11 11 0 0 1 11 0Z" fill="#d97757"/><circle id="eye-left" cx="-4" cy="-4" r="1.7" fill="var(--bg, #1b1a18)"/><circle id="eye-right" cx="4" cy="-4" r="1.7" fill="var(--bg, #1b1a18)"/><line id="antenna-left" x1="-6" y1="-8" x2="-10" y2="-15" stroke="#d97757" stroke-width="2" stroke-linecap="round"/><line id="antenna-right" x1="6" y1="-8" x2="10" y2="-15" stroke="#d97757" stroke-width="2" stroke-linecap="round"/></g><g id="team" fill="currentColor"><path id="team-T" d="M140.44 131.34V142H139.05V131.34ZM143.87 131.34V132.49H135.63V131.34Z"/><path id="team-E" d="M162.22 140.85V142H156.58V140.85ZM156.86 131.34V142H155.45V131.34ZM161.48 135.92V137.07H156.58V135.92ZM162.15 131.34V132.49H156.58V131.34Z"/><path id="team-A" d="M177.92 132.28 174.39 142H172.95L177.01 131.34H177.94ZM180.88 142 177.34 132.28 177.32 131.34H178.25L182.33 142ZM180.7 138.05V139.21H174.71V138.05Z"/><path id="team-M" d="M194.21 131.34H195.58L199.07 140.03L202.56 131.34H203.93L199.6 142H198.53ZM193.76 131.34H194.97L195.17 137.84V142H193.76ZM203.16 131.34H204.37V142H202.97V137.84Z"/></g><line id="dash-left" x1="84" y1="136" x2="124" y2="136" stroke="#d97757" stroke-width="3" stroke-linecap="round"/><line id="dash-right" x1="216" y1="136" x2="256" y2="136" stroke="#d97757" stroke-width="3" stroke-linecap="round"/></svg>
+      </a>
+      <div class="tabs" id="tabs" role="navigation" aria-label="Categories"></div>
+      <div class="nav-right">
+        <button class="theme" id="theme" type="button" aria-label="Switch theme" title="Switch theme">
+          <svg class="icon-sun" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
+          <svg class="icon-moon" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>
+        </button>
 
-      <div class="lock-shield-icon">
-        <svg viewBox="0 0 24 24" width="44" height="44" fill="none" stroke="currentColor" stroke-width="2">
-          <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
-          <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
-        </svg>
-      </div>
-
-      <p class="gatekeeper-hint">Enter your 32-character developer key to unlock phone uploading.</p>
-
-      <form id="key-form" autocomplete="off" onsubmit="return false;">
-        <div class="input-group">
-          <input type="password" id="dev-key-input" placeholder="Enter 32-character key..." maxlength="64" spellcheck="false" required>
-          <button type="button" id="toggle-key-visibility" class="icon-btn" title="Show/Hide Key">
-            <svg id="eye-icon" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
-              <circle cx="12" cy="12" r="3"></circle>
-            </svg>
+        <!-- Developer Corner PFP Avatar Button -->
+        <div class="dev-pfp-wrapper">
+          <button class="dev-pfp-btn" id="dev-pfp-btn" type="button" aria-label="Developer Profile & Roster" title="Developer Profile & Roster">
+            <img id="dev-pfp-img" src="icons/icon-192.png" alt="Profile">
+            <span id="dev-pfp-dot" class="dev-pfp-dot is-online"></span>
           </button>
-        </div>
 
-        <div id="key-error" class="error-msg"></div>
-
-        <button type="submit" id="unlock-btn" class="btn btn-primary btn-block">
-          <span>Unlock Dev Hub</span>
-          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"></polyline></svg>
-        </button>
-      </form>
-
-      <div class="gatekeeper-footer">
-        <span>Restricted Developers Tool</span>
-      </div>
-    </div>
-  </section>
-
-  <!-- ================= PROFILE ONBOARDING SCREEN ================= -->
-  <section id="profile-setup-screen" class="screen">
-    <div class="gatekeeper-card">
-      <div class="setup-badge">PROFILE SETUP</div>
-      <h1 class="glow-title">Developer Identity</h1>
-      <p class="subtitle">GT 20 PRO TEAM ACCESS</p>
-
-      <p class="gatekeeper-hint">Set up your profile photo and developer name. This identity will appear on all your uploads, live updates, and the team roster.</p>
-
-      <form id="profile-setup-form" autocomplete="off" onsubmit="return false;">
-        <div class="avatar-setup-wrapper">
-          <div class="avatar-circle-preview" id="setup-avatar-trigger" title="Tap to choose profile photo">
-            <img id="setup-avatar-preview" src="icons/icon-192.png" alt="Profile Photo">
-            <div class="avatar-camera-overlay">
-              <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path><circle cx="12" cy="13" r="4"></circle></svg>
-            </div>
-          </div>
-          <input type="file" id="setup-photo-input" accept="image/*" style="display: none;">
-          <button type="button" id="setup-choose-photo-btn" class="photo-select-btn">
-            <span>Choose Profile Photo</span>
-          </button>
-        </div>
-
-        <div class="input-field-group">
-          <label class="field-label" for="setup-name-input">Developer Name / Handle</label>
-          <input type="text" id="setup-name-input" placeholder="e.g. Softbrick, Alex, Dev" maxlength="24" required>
-        </div>
-
-        <div id="setup-error" class="error-msg"></div>
-
-        <button type="submit" id="setup-submit-btn" class="btn btn-primary btn-block">
-          <span>Complete Setup &amp; Enter Hub</span>
-          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"></polyline></svg>
-        </button>
-      </form>
-
-      <div class="gatekeeper-footer">
-        <span>Restricted Developers Tool</span>
-      </div>
-    </div>
-  </section>
-
-  <!-- ================= MAIN DASHBOARD SCREEN ================= -->
-  <section id="dashboard-screen" class="screen">
-    
-    <!-- Top Mobile App Bar -->
-    <header class="app-bar">
-      <div class="app-bar-left">
-        <img src="icons/icon-192.png" class="bar-logo" alt="Logo">
-        <div>
-          <div class="bar-title">NewbiesDev <span class="badge-app-ver" id="app-ver-badge">v1.2.0</span></div>
-          <div id="bar-user-name" class="bar-subtitle">Developer</div>
-        </div>
-      </div>
-      <div class="app-bar-right">
-        <!-- M3 Theme Toggle Chip -->
-        <button id="theme-toggle-btn" class="theme-toggle-btn" title="Toggle Theme (Auto / Dark / Light)">
-          <span id="theme-btn-icon">🌓</span>
-          <span id="theme-btn-label">Auto</span>
-        </button>
-
-        <!-- Corner Profile Pill with Photo & Name (Smoothly Expands Roster) -->
-        <button id="dev-profile-pill" class="dev-profile-pill" title="Tap to view team roster & details">
-          <div class="pill-avatar-wrap">
-            <img id="pill-avatar-img" src="icons/icon-192.png" alt="Avatar">
-            <span class="pill-status-dot"></span>
-          </div>
-          <span id="pill-dev-name" class="pill-dev-name">Softbrick</span>
-          <svg class="pill-arrow" viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"></polyline></svg>
-        </button>
-      </div>
-    </header>
-
-    <!-- Live Web Sync Banner -->
-    <div class="sync-banner" id="sync-banner">
-      <div class="sync-status-badge">
-        <span class="sync-dot" id="sync-dot"></span>
-        <span id="sync-status-text">Web Data Linked</span>
-      </div>
-      <button id="sync-refresh-btn" class="sync-btn" title="Sync live data from surge">
-        🔄 Sync Surge
-      </button>
-    </div>
-
-    <!-- Main Scrollable Content -->
-    <main class="content-container">
-      
-      <!-- User Status Banner -->
-      <div id="status-card" class="card status-card">
-        <div class="status-header">
-          <div class="status-indicator-dot"></div>
-          <span id="status-headline" class="status-headline">Master Admin Active</span>
-        </div>
-        <p id="status-description" class="status-description">
-          Your key has direct auto-push privileges. Anything you upload is published live immediately.
-        </p>
-      </div>
-
-      <!-- Quick Action Cards Grid -->
-      <div class="section-title">Quick Uploads</div>
-      <div class="actions-grid">
-        <button class="action-card" data-category="rom">
-          <div class="action-icon action-icon-rom">📱</div>
-          <div class="action-name">Add ROM</div>
-          <div class="action-desc">Port or AOSP release</div>
-        </button>
-
-        <button class="action-card" data-category="screenshots">
-          <div class="action-icon action-icon-ss">📸</div>
-          <div class="action-name">Screenshots</div>
-          <div class="action-desc">Link photos to ROM</div>
-        </button>
-
-        <button class="action-card" data-category="guide">
-          <div class="action-icon action-icon-guide">📖</div>
-          <div class="action-name">Add Guide</div>
-          <div class="action-desc">Flashing, root &amp; tools</div>
-        </button>
-
-        <button class="action-card" data-category="news">
-          <div class="action-icon action-icon-news">📢</div>
-          <div class="action-name">Post News</div>
-          <div class="action-desc">Instant changelog feed</div>
-        </button>
-
-        <button class="action-card" data-category="module">
-          <div class="action-icon action-icon-module">⚡</div>
-          <div class="action-name">Module / Tool</div>
-          <div class="action-desc">Recovery &amp; Magisk</div>
-        </button>
-
-        <button class="action-card" data-category="dev-apk">
-          <div class="action-icon action-icon-apk">📦</div>
-          <div class="action-name">Dev APK Updates</div>
-          <div class="action-desc">In-App Download (v1.2.0)</div>
-        </button>
-
-        <button class="action-card" data-category="site-link">
-          <div class="action-icon action-icon-site">🌐</div>
-          <div class="action-name">Live Hub</div>
-          <div class="action-desc">View newbiesteam.surge.sh</div>
-        </button>
-      </div>
-
-      <!-- Manage Live Web Content -->
-      <div class="section-title" style="margin-top: 24px;">Manage Live Web Content</div>
-      
-      <!-- Segmented Category Filter Chips -->
-      <div class="segmented-chips" id="live-category-chips">
-        <button class="m3-chip active" data-live-cat="roms">
-          <span>ROMs</span>
-          <span class="m3-chip-count" id="count-roms">0</span>
-        </button>
-        <button class="m3-chip" data-live-cat="updates">
-          <span>Updates &amp; News</span>
-          <span class="m3-chip-count" id="count-updates">0</span>
-        </button>
-        <button class="m3-chip" data-live-cat="guides">
-          <span>Guides</span>
-          <span class="m3-chip-count" id="count-guides">0</span>
-        </button>
-        <button class="m3-chip" data-live-cat="modules">
-          <span>Modules &amp; Tools</span>
-          <span class="m3-chip-count" id="count-modules">0</span>
-        </button>
-        <button class="m3-chip" data-live-cat="dev-apks">
-          <span>Dev APK Updates</span>
-          <span class="m3-chip-count" id="count-dev-apks">v1.2.3</span>
-        </button>
-      </div>
-
-      <!-- Container for dynamically rendered live items with Edit/Delete -->
-      <div id="live-items-container" class="live-items-list">
-        <!-- Rendered dynamically -->
-      </div>
-
-      <!-- Recent Local Submissions Feed -->
-      <div class="section-title" style="margin-top: 24px;">Your Recent Submissions</div>
-      <div id="history-container" class="history-list">
-        <div class="empty-history">
-          <div class="empty-icon">📂</div>
-          <p>No recent submissions on this device yet.</p>
-          <small>Tap the circle <strong>(+)</strong> button below to make your first upload.</small>
-        </div>
-      </div>
-
-    </main>
-
-    <!-- FLOATING ACTION BUTTON (CIRCLE PLUS BUTTON) -->
-    <button id="fab-plus" class="fab-circle" title="Upload New Content">
-      <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round">
-        <line x1="12" y1="5" x2="12" y2="19"></line>
-        <line x1="5" y1="12" x2="19" y2="12"></line>
-      </svg>
-    </button>
-
-  </section>
-
-  <!-- ================= UPLOAD BOTTOM SHEET MODAL ================= -->
-  <div id="upload-modal" class="modal-backdrop">
-    <div class="modal-sheet">
-      <div class="sheet-drag-handle"></div>
-
-      <div class="sheet-header">
-        <div class="sheet-title-group">
-          <h2 id="modal-title" class="sheet-title">Upload Content</h2>
-          <p id="modal-subtitle" class="sheet-subtitle">Select upload type below</p>
-        </div>
-        <button id="modal-close-btn" class="icon-circle-btn">
-          <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
-        </button>
-      </div>
-
-      <!-- Category Switcher Pill Tabs -->
-      <div class="category-tabs" id="modal-category-tabs">
-        <button type="button" class="cat-tab active" data-type="rom">📱 ROM</button>
-        <button type="button" class="cat-tab" data-type="screenshots">📸 Photos</button>
-        <button type="button" class="cat-tab" data-type="guide">📖 Guide</button>
-        <button type="button" class="cat-tab" data-type="news">📢 News</button>
-        <button type="button" class="cat-tab" data-type="module">⚡ Module</button>
-      </div>
-
-      <!-- Scrollable Form Container -->
-      <form id="submission-form" class="sheet-form" onsubmit="return false;">
-        <input type="hidden" id="form-action" value="add">
-        <input type="hidden" id="edit-section" value="">
-        <input type="hidden" id="edit-target-name" value="">
-        <input type="hidden" id="edit-target-category" value="">
-        <input type="hidden" id="edit-target-id" value="">
-        
-        <!-- ================= ROM FORM ================= -->
-        <div id="fields-rom" class="form-section">
-          <div class="form-group">
-            <label>ROM Name <span class="req">*</span></label>
-            <input type="text" id="rom-name" placeholder="e.g. HiOS 16.3 Port or HyperOS 3 V2" required>
-          </div>
-
-          <div class="form-row">
-            <div class="form-group">
-              <label>Category <span class="req">*</span></label>
-              <select id="rom-category">
-                <option value="Port ROMs">Port ROMs</option>
-                <option value="AOSP ROMs">AOSP ROMs</option>
-                <option value="Latest">Latest</option>
-                <option value="Flashable firmware">Flashable firmware</option>
-                <option value="Base Firmware (Complete files)">Base Firmware</option>
-                <option value="boot.img files">boot.img files</option>
-              </select>
-            </div>
-            <div class="form-group">
-              <label>Android Ver</label>
-              <input type="text" id="rom-android" placeholder="e.g. 14 or 15">
-            </div>
-          </div>
-
-          <div class="form-group">
-            <label>Author / Maintainer <span class="req">*</span></label>
-            <input type="text" id="rom-by" placeholder="e.g. MBuTT3178 or Softbrick" required>
-          </div>
-
-          <div class="form-group">
-            <label>Base Device / Port Base</label>
-            <input type="text" id="rom-base" placeholder="e.g. Tecno Camon 30 Premier (CL9)">
-          </div>
-
-          <div class="form-group">
-            <label>Primary Download Link (Google Drive / SourceForge) <span class="req">*</span></label>
-            <input type="url" id="rom-url" placeholder="https://drive.google.com/..." required>
-          </div>
-
-          <div class="form-group">
-            <label>Mirror Download Link (Mega / MediaFire / Telegram)</label>
-            <input type="url" id="rom-mirror" placeholder="https://mega.nz/... or https://t.me/...">
-          </div>
-
-          <div class="form-group">
-            <label>Changelog &amp; Key Features (one per line)</label>
-            <textarea id="rom-changelog" rows="3" placeholder="Working FOD &amp; 120Hz&#10;Dolby Atmos included&#10;SELinux Enforcing"></textarea>
-          </div>
-
-          <div class="form-group">
-            <label>Known Bugs (one per line, leave empty if none)</label>
-            <textarea id="rom-bugs" rows="2" placeholder="e.g. MemFusion display bug in settings"></textarea>
-          </div>
-
-          <div class="form-group">
-            <label>ROM Banner Image (From Phone Gallery)</label>
-            <div class="file-picker-box">
-              <input type="file" id="rom-image-file" accept="image/*" class="file-input">
-              <div id="rom-image-preview" class="image-preview-slot">
-                <div class="preview-placeholder">
-                  <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg>
-                  <span>Tap to choose image from phone</span>
+          <!-- Glassmorphism Live Popover -->
+          <div class="dev-pfp-popover" id="dev-pfp-popover" hidden>
+            <div class="popover-header">
+              <div class="popover-avatar-wrap">
+                <img id="popover-avatar-img" src="icons/icon-192.png" alt="Avatar">
+                <label class="popover-avatar-edit-label" title="Change Avatar">
+                  <input type="file" id="change-avatar-input" accept="image/*" style="display:none;">
+                  <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+                </label>
+              </div>
+              <div class="popover-user-info">
+                <div class="popover-handle-row">
+                  <span class="popover-handle" id="dev-pfp-handle">Developer</span>
+                  <span class="popover-role-badge" id="dev-pfp-role">TEAM</span>
                 </div>
+                <div class="popover-status-row">
+                  <span class="popover-status-text" id="dev-status-text">🟢 Online · Key Verified</span>
+                </div>
+                <div class="popover-sync-time" id="dev-last-synced">Last synced: Just now</div>
               </div>
             </div>
-          </div>
-        </div>
 
-        <!-- ================= SCREENSHOTS FORM ================= -->
-        <div id="fields-screenshots" class="form-section hidden">
-          <!-- 1. Target ROM Selection from Live Menu -->
-          <div class="form-group">
-            <label>Target ROM <span class="req">*</span></label>
-            <select id="ss-rom-select" required>
-              <option value="">-- Choose Target ROM --</option>
-            </select>
-          </div>
-
-          <!-- 2. Existing Screenshots Gallery & Quick Delete -->
-          <div id="ss-gallery-section" class="ss-gallery-section hidden">
-            <div class="ss-gallery-header">
-              <span class="ss-gallery-title">Current Screenshots</span>
-              <span id="ss-gallery-count" class="ss-gallery-badge">0 photos</span>
-            </div>
-            <div id="ss-gallery-list" class="ss-gallery-list">
-              <!-- Dynamically populated -->
-            </div>
-          </div>
-
-          <!-- 3. Upload Screenshots (Up to 10 with individual descriptions) -->
-          <div class="ss-upload-box">
-            <div class="ss-upload-header">
-              <div>
-                <div class="ss-divider-label">Add Screenshots to ROM</div>
-                <div class="ss-upload-subhint">Select up to 10 screenshots per push with separated descriptions</div>
-              </div>
-              <span id="ss-batch-counter" class="ss-batch-badge">0 / 10 selected</span>
-            </div>
-
-            <div class="ss-picker-actions">
-              <input type="file" id="ss-multi-file-input" accept="image/*" multiple style="display:none;">
-              <button type="button" id="btn-choose-screenshots" class="btn-ss-add">
-                <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg>
-                <span>Choose Photos from Gallery (1 to 10)</span>
+            <div class="popover-actions">
+              <button type="button" class="popover-btn" id="popover-sync-btn">
+                <span>🔄 Sync Live Server</span>
               </button>
-              <button type="button" id="btn-clear-all-screenshots" class="btn-ss-clear hidden">Clear All</button>
+              <button type="button" class="popover-btn" id="popover-handle-btn">
+                <span>✎ Handle</span>
+              </button>
+              <button type="button" class="popover-btn popover-btn-danger" id="popover-logout-btn" title="Lock & Switch Key">
+                <span>🔒 Logout</span>
+              </button>
             </div>
 
-            <!-- Dynamic list of selected screenshots with preview & individual description -->
-            <div id="ss-selected-list" class="ss-selected-list">
-              <div class="ss-empty-hint" id="ss-empty-placeholder">
-                <svg viewBox="0 0 24 24" width="30" height="30" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg>
-                <span>No screenshots selected yet. Tap the button above to pick up to 10 photos from your phone gallery.</span>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- ================= GUIDE FORM ================= -->
-        <div id="fields-guide" class="form-section hidden">
-          <div class="form-group">
-            <label>Guide Title <span class="req">*</span></label>
-            <input type="text" id="guide-title" placeholder="e.g. Complete Flashing Guide for Port ROMs" required>
-          </div>
-
-          <div class="form-row">
-            <div class="form-group">
-              <label>Category <span class="req">*</span></label>
-              <select id="guide-category">
-                <option value="Flashing Guides">Flashing Guides</option>
-                <option value="Bootloader Guides">Bootloader Guides</option>
-                <option value="Rooting Guides">Rooting Guides</option>
-                <option value="General Guides">General Guides</option>
-              </select>
-            </div>
-            <div class="form-group">
-              <label>Author / Credit</label>
-              <input type="text" id="guide-by" placeholder="e.g. Softbrick or Mehraann">
-            </div>
-          </div>
-
-          <div class="form-group">
-            <label>Guide Steps (one step per line) <span class="req">*</span></label>
-            <textarea id="guide-steps" rows="4" placeholder="1. Unlock bootloader in developer options&#10;2. Reboot to fastboot: adb reboot bootloader&#10;3. Flash recovery: fastboot flash recovery_ab ofox.img" required></textarea>
-          </div>
-
-          <div class="form-group">
-            <label>Warnings / Important Cautions (one per line)</label>
-            <textarea id="guide-cautions" rows="2" placeholder="Backup all user data! Bootloader unlock formats phone."></textarea>
-          </div>
-        </div>
-
-        <!-- ================= NEWS & CHANGELOG FORM ================= -->
-        <div id="fields-news" class="form-section hidden">
-          <div class="notice-badge">
-            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
-            <span>Updates &amp; News post <strong>instantly to live site</strong> for all keys.</span>
-          </div>
-
-          <div class="form-group">
-            <label>Post Title <span class="req">*</span></label>
-            <input type="text" id="news-title" placeholder="e.g. HiOS 16.3 Port Released for GT 20 Pro" required>
-          </div>
-
-          <div class="form-row">
-            <div class="form-group">
-              <label>Category Tag</label>
-              <select id="news-tag">
-                <option value="New ROM">New ROM</option>
-                <option value="Web Update">Web Update</option>
-                <option value="Site Update">Site Update</option>
-                <option value="Kernel Update">Kernel Update</option>
-                <option value="Module Update">Module Update</option>
-                <option value="Notice">Notice</option>
-              </select>
-            </div>
-            <div class="form-group">
-              <label>Posted By <span class="req">*</span></label>
-              <input type="text" id="news-by" placeholder="Author name" required>
-            </div>
-          </div>
-
-          <div class="form-group">
-            <label>Details / Changelog Body <span class="req">*</span></label>
-            <textarea id="news-body" rows="4" placeholder="Describe the release, fixes, and installation notes..." required></textarea>
-          </div>
-
-          <div class="form-group">
-            <label>Optional Button Link URL</label>
-            <input type="text" id="news-url" placeholder="https://... or #roms">
-          </div>
-          <div class="form-group">
-            <label>Button Label</label>
-            <input type="text" id="news-link-label" placeholder="e.g. Download ROM">
-          </div>
-
-          <div class="form-group">
-            <label>Optional Post Image</label>
-            <div class="file-picker-box">
-              <input type="file" id="news-image-file" accept="image/*" class="file-input">
-              <div id="news-image-preview" class="image-preview-slot">
-                <div class="preview-placeholder">
-                  <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg>
-                  <span>Select photo from phone</span>
-                </div>
-              </div>
+            <div class="popover-section-title">Team Roster</div>
+            <div class="popover-roster-list" id="popover-roster-list">
+              <!-- Loaded from auth-manifest.json -->
             </div>
           </div>
         </div>
+      </div>
+    </nav>
+  </header>
 
-        <!-- ================= MODULE / TOOL FORM ================= -->
-        <div id="fields-module" class="form-section hidden">
-          <div class="form-group">
-            <label>Tool / Module Name <span class="req">*</span></label>
-            <input type="text" id="mod-name" placeholder="e.g. OrangeFox Recovery or KernelSU v0.9" required>
-          </div>
+  <section class="hero" id="hero">
+    <h1>NewbiesDev</h1>
+    <p class="device">GT 20 Pro · Developer Edition</p>
+    <p class="tagline">Manage ROMs, kernels, tools, changelogs and screenshots directly</p>
+  </section>
 
-          <div class="form-row">
-            <div class="form-group">
-              <label>Section <span class="req">*</span></label>
-              <select id="mod-section">
-                <option value="recovery">Recovery &amp; Tools</option>
-                <option value="modules">Magisk &amp; KSU Modules</option>
-                <option value="kernels">Custom Kernels</option>
-              </select>
-            </div>
-            <div class="form-group">
-              <label>Category Group <span class="req">*</span></label>
-              <select id="mod-category-select">
-                <option value="Ofox Recovery">Ofox Recovery</option>
-                <option value="Fenrir">Fenrir</option>
-                <option value="Penumbra &amp; Debugging">Penumbra &amp; Debugging</option>
-                <option value="Rooted Apps toolkit">Rooted Apps toolkit</option>
-                <option value="__custom__">+ Custom Category...</option>
-              </select>
-              <input type="text" id="mod-category" class="hidden" placeholder="Enter custom category name..." style="margin-top: 8px;">
-            </div>
-          </div>
+  <div class="search" id="searchbox" role="search">
+    <svg class="search-icon" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
+    <input id="search" type="search" placeholder="Search ROMs, modules, kernels, tools, updates, guides..." aria-label="Search all tabs" autocomplete="off" spellcheck="false" enterkeyhint="search">
+    <kbd class="search-kbd" id="search-kbd" aria-hidden="true" title="Press / to search">/</kbd>
+    <button class="search-clear" id="search-clear" type="button" aria-label="Clear search" hidden>
+      <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M18 6L6 18M6 6l12 12"/></svg>
+    </button>
+  </div>
 
-          <div class="form-group">
-            <label>Primary Download Link <span class="req">*</span></label>
-            <input type="url" id="mod-url" placeholder="https://..." required>
-          </div>
+  <main id="view"></main>
+</div>
 
-          <div class="form-group">
-            <label>Mirror Download Link</label>
-            <input type="url" id="mod-mirror" placeholder="https://...">
-          </div>
+<footer class="footer" aria-label="Site footer">
+  <div class="footer-inner">
+    <div class="footer-top">
+      <h2 class="footer-brand">NewbiesDev</h2>
+      <p class="footer-desc">NewbiesTeam Developer Control Center for Infinix GT 20 Pro (X6871) — Direct In-App Content Management, Instant Sync & Team Collaboration.</p>
+    </div>
 
-          <div class="form-group">
-            <label>Author / Credits</label>
-            <input type="text" id="mod-by" placeholder="e.g. Softbrick or Team">
-          </div>
+    <div class="footer-cols">
+      <div class="footer-col">
+        <h3>Browse</h3>
+        <a href="#roms">ROMs &amp; Firmware</a>
+        <a href="#app">Official App Releases</a>
+        <a href="#modules">Modules</a>
+        <a href="#kernels">Kernels</a>
+        <a href="#recovery">Recovery &amp; Tools</a>
+        <a href="#screenshots">Screenshots</a>
+        <a href="#updates">Changelogs &amp; Updates</a>
+      </div>
+      <div class="footer-col">
+        <h3>Flashing &amp; Root</h3>
+        <a href="#guides/xos16-local-update">XOS 16.3 Local Update</a>
+        <a href="#guides/ofox-flash">OFOX Flash</a>
+        <a href="#guides/flash-port-rom">Flash a Port ROM</a>
+        <a href="#guides/flash-aosp-rom">Flash an AOSP ROM</a>
+        <a href="#guides/patched-and-gki-kernels">Patched &amp; GKI Kernels</a>
+      </div>
+      <div class="footer-col">
+        <h3>Bootloader</h3>
+        <a href="#guides/unlock-bootloader">Unlock Bootloader</a>
+        <a href="#guides/lock-bootloader">Lock Bootloader</a>
+        <a href="#guides/flash-fenrir">Flash Fenrir</a>
+        <a href="#guides/downgrade-xos">Downgrade XOS</a>
+      </div>
+    </div>
 
-          <div class="form-group">
-            <label>Description &amp; Instructions</label>
-            <textarea id="mod-details" rows="3" placeholder="Installation advice and notes..."></textarea>
-          </div>
-        </div>
-      </form>
+    <div class="footer-bottom">
+      <p class="legal" id="legal"></p>
+      <div class="footer-app-ver" id="footer-app-ver">NewbiesDev v1.2.3</div>
+      <p class="signoff">Made by <span id="credit">softbrick</span> and the NewBies Team</p>
+    </div>
+  </div>
+</footer>
 
-      <!-- Pinned Bottom Action Footer (Always Visible on Screen) -->
-      <div class="sheet-footer">
-        <button type="button" id="modal-cancel-btn" class="btn btn-secondary">Cancel</button>
-        <button type="button" id="submit-btn" class="btn btn-primary" style="flex: 1;">
-          <span id="submit-btn-text">🚀 Upload &amp; Publish</span>
-          <div id="submit-spinner" class="spinner hidden"></div>
+<!-- ================= 1. KEY GATEKEEPER OVERLAY SCREEN ================= -->
+<section id="gatekeeper-screen" class="dev-gatekeeper-overlay active">
+  <div class="gatekeeper-card">
+    <div class="logo-circle">
+      <img src="icons/icon-192.png" alt="NewbiesDev Logo">
+    </div>
+    <h1 class="glow-title">NewbiesDev Hub</h1>
+    <p class="subtitle">GT 20 PRO DEVELOPER ACCESS</p>
+    <p class="gatekeeper-hint">Enter your 32-character developer key to unlock developer controls.</p>
+
+    <form id="key-form" autocomplete="off" onsubmit="return false;">
+      <div class="input-group">
+        <input type="password" id="dev-key-input" placeholder="Enter 32-character key..." maxlength="64" spellcheck="false" required>
+        <button type="button" id="toggle-key-visibility" class="icon-btn" title="Show/Hide Key">
+          <svg id="eye-icon" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+            <circle cx="12" cy="12" r="3"></circle>
+          </svg>
         </button>
       </div>
-
-    </div>
+      <div id="key-error" class="error-msg"></div>
+      <button type="submit" id="unlock-btn" class="btn-primary">
+        <span>Unlock Dev Hub</span>
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"></polyline></svg>
+      </button>
+    </form>
+    <div class="gatekeeper-footer">Restricted Developers Tool</div>
   </div>
+</section>
 
-  <!-- ================= EXPANDABLE CURRENT DEVS DRAWER ================= -->
-  <div id="roster-modal" class="roster-overlay">
-    <div class="roster-card">
-      <div class="roster-header">
-        <div class="roster-header-left">
-          <div class="roster-title">Team Roster</div>
-          <div class="roster-subtitle">Active Developers &amp; Single-User Devices</div>
-        </div>
-        <button id="close-roster-btn" class="roster-close-btn">&times;</button>
-      </div>
+<!-- ================= 2. PROFILE SETUP OVERLAY SCREEN ================= -->
+<section id="profile-setup-screen" class="dev-gatekeeper-overlay">
+  <div class="gatekeeper-card">
+    <div class="subtitle" style="margin-bottom:6px;">PROFILE ONBOARDING</div>
+    <h1 class="glow-title">Developer Identity</h1>
+    <p class="gatekeeper-hint">Set your developer handle and profile photo. This identity will appear on your uploads and live team roster.</p>
 
-      <!-- Current User Highlight Card -->
-      <div class="my-profile-card">
-        <div class="my-avatar-box">
-          <img id="my-profile-avatar" src="icons/icon-192.png" alt="My Photo">
-        </div>
-        <div class="my-profile-info">
-          <div class="my-profile-name" id="my-profile-name">Softbrick</div>
-          <div class="my-profile-badges">
-            <span id="my-profile-role" class="badge-pill badge-admin">ADMIN</span>
-            <span class="badge-pill badge-single-user">🔒 Single-User Active</span>
+    <form id="profile-setup-form" autocomplete="off" onsubmit="return false;">
+      <div class="avatar-setup-wrapper">
+        <div class="avatar-circle-preview" id="setup-avatar-trigger" title="Tap to choose photo">
+          <img id="setup-avatar-preview" src="icons/icon-192.png" alt="Profile">
+          <div class="avatar-camera-overlay">
+            <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path><circle cx="12" cy="13" r="4"></circle></svg>
           </div>
         </div>
+        <input type="file" id="setup-photo-input" accept="image/*" style="display:none;">
+        <button type="button" id="setup-choose-photo-btn" class="photo-select-btn">Choose Photo</button>
       </div>
 
-      <!-- Team Roster List -->
-      <div class="roster-list-heading">Current Developers</div>
-      <div id="roster-list-container" class="roster-list-container">
-        <!-- Rendered dynamically -->
+      <div class="input-field-group">
+        <label class="field-label" for="setup-name-input">Developer Handle / Name</label>
+        <input type="text" id="setup-name-input" placeholder="e.g. Softbrick, MBuTT3178" maxlength="28" required>
       </div>
 
-      <div class="roster-footer">
-        <span>⚡ 1 Key / 1 Device Enforced · Real-Time Cloud Sync</span>
-      </div>
-    </div>
-  </div>
+      <div id="setup-error" class="error-msg"></div>
 
-  <!-- ================= POPUP ALERT MODAL ================= -->
-  <div id="alert-modal" class="alert-overlay">
-    <div class="alert-card">
-      <div class="alert-icon-wrap">
-        <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
-      </div>
-      <h3 id="alert-title" class="alert-title">Access Restricted</h3>
-      <p id="alert-message" class="alert-message">This key is used by another member.</p>
-      <button type="button" id="alert-dismiss-btn" class="btn btn-primary btn-block">
-        <span>Understood</span>
+      <button type="submit" id="setup-submit-btn" class="btn-primary">
+        <span>Complete Setup &amp; Enter Hub</span>
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"></polyline></svg>
       </button>
-    </div>
+    </form>
+    <div class="gatekeeper-footer">NewbiesTeam Core Access</div>
   </div>
+</section>
 
-  <!-- ================= POPUP CONFIRMATION MODAL ================= -->
-  <div id="confirm-modal" class="alert-overlay">
-    <div class="alert-card">
-      <div class="alert-icon-wrap" style="background: rgba(239, 68, 68, 0.12); color: var(--color-error); border-color: rgba(239, 68, 68, 0.3);">
-        <svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
-      </div>
-      <h3 id="confirm-title" class="alert-title">Confirm Deletion</h3>
-      <p id="confirm-message" class="alert-message">Are you sure you want to delete this item from the live site?</p>
-      <div style="display: flex; gap: 10px; margin-top: 14px;">
-        <button type="button" id="confirm-cancel-btn" class="btn btn-secondary" style="flex: 1;">Cancel</button>
-        <button type="button" id="confirm-ok-btn" class="btn" style="flex: 1; background: var(--color-error); color: #fff;">Delete</button>
-      </div>
+<!-- ================= 3. CONTEXT-AWARE PUBLISH / EDIT MODAL ================= -->
+<div id="publish-modal" class="dev-modal-overlay">
+  <div class="dev-modal-card">
+    <div class="dev-modal-header">
+      <h2 class="dev-modal-title" id="publish-modal-title">Publish Item</h2>
+      <button type="button" class="dev-modal-close" id="publish-modal-close" aria-label="Close modal">✕</button>
     </div>
+    <form id="publish-form" autocomplete="off" onsubmit="return false;">
+      <div class="dev-modal-body">
+        <input type="hidden" id="form-action" value="add">
+        <input type="hidden" id="form-tab" value="roms">
+        <input type="hidden" id="form-category" value="Latest">
+        <input type="hidden" id="form-edit-id" value="">
+        <input type="hidden" id="form-orig-name" value="">
+
+        <!-- Basic fields row -->
+        <div class="input-field-group" id="group-title-row">
+          <label class="field-label" id="field-label-name">Title / Name</label>
+          <input type="text" id="form-name" placeholder="Name..." required>
+        </div>
+
+        <div class="dev-form-row" id="row-meta">
+          <div class="input-field-group">
+            <label class="field-label" id="field-label-by">Developer / Maintainer</label>
+            <input type="text" id="form-by" placeholder="Author name" required>
+          </div>
+          <div class="input-field-group" id="field-date-wrap">
+            <label class="field-label">Release Date</label>
+            <input type="text" id="form-date" placeholder="YYYY-MM-DD">
+          </div>
+        </div>
+
+        <div class="dev-form-row" id="row-urls">
+          <div class="input-field-group">
+            <label class="field-label">Primary Download URL</label>
+            <input type="url" id="form-url" placeholder="https://...">
+          </div>
+          <div class="input-field-group" id="field-size-wrap">
+            <label class="field-label">File Size</label>
+            <input type="text" id="form-size" placeholder="e.g. 2.4 GB">
+          </div>
+        </div>
+
+        <div class="input-field-group" id="field-note-wrap">
+          <label class="field-label">Description / Note</label>
+          <input type="text" id="form-note" placeholder="Brief note or summary...">
+        </div>
+
+        <!-- ROM-Specific Details -->
+        <div id="rom-extra-fields" style="display:none; flex-direction:column; gap:12px;">
+          <div class="input-field-group">
+            <label class="field-label">Ported From / Base</label>
+            <input type="text" id="form-base" placeholder="e.g. Tecno Camon 30 Premier (CL9)">
+          </div>
+          <div class="input-field-group">
+            <label class="field-label">Changelogs (one line per bullet)</label>
+            <textarea id="form-changelogs" rows="3" placeholder="Feature 1&#10;Feature 2&#10;Feature 3"></textarea>
+          </div>
+          <div class="input-field-group">
+            <label class="field-label">What is Fixed (one line per bullet)</label>
+            <textarea id="form-fixed" rows="2" placeholder="FOD working&#10;Audio fixed"></textarea>
+          </div>
+          <div class="input-field-group">
+            <label class="field-label">Known Bugs (one line per bullet)</label>
+            <textarea id="form-bugs" rows="2" placeholder="NFC broken"></textarea>
+          </div>
+          <div class="input-field-group">
+            <label class="field-label">Linked Guide Slug (optional)</label>
+            <input type="text" id="form-guide-slug" placeholder="e.g. flash-port-rom or xos16-local-update">
+          </div>
+        </div>
+
+        <!-- Banner image upload with auto-compression -->
+        <div class="input-field-group" id="field-banner-wrap">
+          <label class="field-label">Banner Image (Auto-compressed to WebP)</label>
+          <input type="file" id="form-image-input" accept="image/*">
+          <div id="image-compression-preview" style="font-size:0.75rem; color:var(--accent); margin-top:4px;"></div>
+        </div>
+
+        <!-- Screenshot Batch Upload fields -->
+        <div id="screenshot-extra-fields" style="display:none; flex-direction:column; gap:12px;">
+          <div class="input-field-group">
+            <label class="field-label">Target ROM</label>
+            <select id="form-ss-rom-select"></select>
+          </div>
+          <div class="input-field-group">
+            <label class="field-label">Select Screenshots (Up to 10 photos, auto-compressed to WebP)</label>
+            <input type="file" id="form-ss-photos-input" accept="image/*" multiple>
+            <div id="ss-batch-preview-list" style="display:flex; flex-direction:column; gap:6px; margin-top:8px;"></div>
+          </div>
+        </div>
+
+        <!-- Update / Announcement Extra Fields -->
+        <div id="update-extra-fields" style="display:none; flex-direction:column; gap:12px;">
+          <div class="input-field-group">
+            <label class="field-label">Category Tag</label>
+            <input type="text" id="form-update-tag" placeholder="e.g. Official Firmware, New Port, Fix">
+          </div>
+          <div class="input-field-group">
+            <label class="field-label">Update Details / Announcement Body</label>
+            <textarea id="form-update-body" rows="4" placeholder="Announcement text..."></textarea>
+          </div>
+          <div class="dev-form-row">
+            <div class="input-field-group">
+              <label class="field-label">Action Button Link (Optional)</label>
+              <input type="text" id="form-update-url" placeholder="URL or #roms slug">
+            </div>
+            <div class="input-field-group">
+              <label class="field-label">Button Label (Optional)</label>
+              <input type="text" id="form-update-link-label" placeholder="e.g. Download Stock OTA">
+            </div>
+          </div>
+        </div>
+
+        <!-- Guide Extra Fields -->
+        <div id="guide-extra-fields" style="display:none; flex-direction:column; gap:12px;">
+          <div class="input-field-group">
+            <label class="field-label">Estimated Read Time</label>
+            <input type="text" id="form-guide-read" placeholder="e.g. 3 min read">
+          </div>
+          <div class="input-field-group">
+            <label class="field-label">Introduction / Overview</label>
+            <textarea id="form-guide-intro" rows="2" placeholder="Intro paragraph..."></textarea>
+          </div>
+          <div class="input-field-group">
+            <label class="field-label">Safety Warning</label>
+            <textarea id="form-guide-warning" rows="2" placeholder="Warning text..."></textarea>
+          </div>
+          <div class="input-field-group">
+            <label class="field-label">Step-by-Step Instructions (one step per line)</label>
+            <textarea id="form-guide-steps" rows="6" placeholder="1. Step one&#10;2. Step two&#10;3. Step three"></textarea>
+          </div>
+        </div>
+
+        <!-- Auto-announcement Checkbox -->
+        <div id="auto-announce-wrapper">
+          <label class="dev-checkbox-row">
+            <input type="checkbox" id="auto-announce-check" checked>
+            <span>🔔 Auto-post release announcement to Updates tab (notifies app users)</span>
+          </label>
+        </div>
+
+        <div id="form-error" class="error-msg"></div>
+      </div>
+
+      <div class="dev-modal-footer">
+        <button type="button" class="dev-btn-secondary" id="publish-cancel-btn">Cancel</button>
+        <button type="submit" class="btn-primary" id="publish-submit-btn" style="width:auto; padding:10px 24px;">
+          <span id="publish-submit-text">Publish to Live Hub</span>
+        </button>
+      </div>
+    </form>
   </div>
+</div>
 
-  <!-- TOAST NOTIFICATION POPUP -->
-  <div id="toast" class="toast"></div>
+<div id="toast" class="toast" role="status" aria-live="polite"></div>
 
-  <script src="app.js"></script>
+<script src="app.js?v=30"></script>
 </body>
 </html>
