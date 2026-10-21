@@ -389,6 +389,22 @@ window.SITE = {
       title: "boot.img files",
       items: [
         {
+          romId: "rom_boot_img_xos_16_0__ddf3",
+          name: "Boot.img XOS 16.0.3.155",
+          date: "2026-10-21",
+          by: "Transition",
+          url: "https://drive.google.com/file/d/1N2BXj3AdbqwxUIgM2pMijMkjYcFrvIOR/view?usp=drivesdk",
+          guide: "patched-and-gki-kernels",
+          details: {
+            changelogs: [],
+            bugs: [],
+            fixed: [],
+          },
+          note: null,
+          description: null,
+          size: null,
+        },
+        {
           name: "Boot.img 15.1.2.180",
           guide: "patched-and-gki-kernels",
           url: "https://drive.google.com/file/d/1G3OScojgJh14RPlUPWTO50RI-hADRaoq/view?usp=drive_link",
@@ -411,9 +427,12 @@ window.SITE = {
           name: "Re-Malwack V8.2",
           by: "Softbrick",
           group: "Utitity",
-          note: "System-wide debloater, telemetry disabler, and security hardening module for Infinix GT 20 Pro.",
+          note: "System-wide debloater, telemetry disabler, and security hardening module",
           url: "https://github.com/ZG089/Re-Malwack/releases/download/v8.2/Re-Malwack_v8.2.zip",
           date: "2026-04-18",
+          description:
+            "System-wide debloater, telemetry disabler, and security hardening module",
+          size: null,
         },
         {
           name: "Viper4android V2.1.1",
@@ -433,6 +452,10 @@ window.SITE = {
           group: "Themeing",
           note: "Enables full third-party icon pack customization on XOS and HiOS launchers with dynamic system theming.",
           url: "https://drive.google.com/file/d/149t_GlVnWGiB4pIWiRsegLvrKRWEv39c/view?usp=drive_link",
+          date: "2026-10-21",
+          description:
+            "Enables full third-party icon pack customization on XOS and HiOS launchers with dynamic system theming.",
+          size: "190mb (est.)",
         },
         {
           name: "HiOS/XOS 16 IOS statusbar",
@@ -481,11 +504,21 @@ window.SITE = {
           name: "Vortex",
           guide: "patched-and-gki-kernels",
           url: "https://drive.google.com/file/d/19KSayWu7oDEPlCBNC4SJ1pJ_lpFPYcws/view?usp=drive_link",
+          by: "Softbrick (Admin)",
+          date: "2026-10-21",
+          note: "For XOS 15 ONLY",
+          description: "For XOS 15 ONLY",
+          size: null,
         },
         {
           name: "Zixine",
           guide: "patched-and-gki-kernels",
           url: "https://drive.google.com/file/d/1MMXyXGVkl3YF06pduNQMiOggZMl6JOad/view?usp=drive_link",
+          by: "Softbrick (Admin)",
+          date: "2026-10-21",
+          note: "For XOS 15 ONLY",
+          description: "For XOS 15 ONLY",
+          size: null,
         },
       ],
     },
@@ -849,6 +882,15 @@ window.SITE = {
     },
   ],
   updates: [
+    {
+      id: "sub-1792592637783-ann",
+      date: "2026-10-21",
+      tag: "boot.img files",
+      by: "Softbrick (Admin)",
+      title: "New Release: Boot.img XOS 16.0.3.155",
+      body: "Boot.img XOS 16.0.3.155 is now available for download.",
+      linkLabel: "View in Roms",
+    },
     {
       id: "sub-1792448180805",
       date: "2026-10-20",
