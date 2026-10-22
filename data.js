@@ -606,11 +606,33 @@ window.SITE = {
   ],
   appReleases: [
     {
+      version: "v3.1.1",
+      name: "NewbiesTeam Android App v3.1.1",
+      date: "2026-10-23",
+      by: "Softbrick & NewbiesTeam",
+      isLatest: true,
+      apkUrl:
+        "https://github.com/zcyrl/newbiesteam-app/releases/download/v3.1.1/NewbiesTeam-v3.1.1.apk",
+      fallbackApkUrl: "https://newbiesteam.pages.dev/assets/NewbiesTeam.apk",
+      releaseUrl:
+        "https://github.com/zcyrl/newbiesteam-app/releases/tag/v3.1.1",
+      size: "5.2 MB",
+      badge: "Dev App Image Fix",
+      summary:
+        "Dev app bug fix: ROM banners and posted update images now load from the set bundled inside the APK (local-first with Cloudflare Pages retry), so cards always show the real artwork instead of the NB placeholder. Public app rebuilt at the same version — no behavior change.",
+      changelog: [
+        "Dev App Image Fix: ROM screenshots, posted update photos and logos are bundled into the APK assets; the WebView serves every assets/ path locally and only retries the CDN for posts newer than the installed build.",
+        "Full Image Bundle: the sync pipeline now ships assets/*.webp, *.png and the screenshots/ + updates/ folders inside the dev APK, while build archives and secrets stay excluded.",
+        "Offline Content: already-published ROM artwork, logos and update images render without network — the NB placeholder only appears for genuinely unknown assets.",
+        "Public app rebuilt at v3.1.1 for signing continuity — no public app behavior changed.",
+      ],
+    },
+    {
       version: "v3.1.0",
       name: "NewbiesTeam Android App v3.1.0",
       date: "2026-10-23",
       by: "Softbrick & NewbiesTeam",
-      isLatest: true,
+      isLatest: false,
       apkUrl:
         "https://github.com/zcyrl/newbiesteam-app/releases/download/v3.1.0/NewbiesTeam-v3.1.0.apk",
       fallbackApkUrl: "https://newbiesteam.pages.dev/assets/NewbiesTeam.apk",
