@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<network-security-config>
+    <base-config cleartextTrafficPermitted="false">
+        <trust-anchors>
+            <certificates src="system" />
+        </trust-anchors>
+    </base-config>
+    <domain-config cleartextTrafficPermitted="false">
+        <domain includeSubdomains="true">newbiesteam.pages.dev</domain>
+        <domain includeSubdomains="true">newbiesteam.surge.sh</domain>
+        <domain includeSubdomains="true">newbiesbase.surge.sh</domain>
+        <domain includeSubdomains="true">ntfy.sh</domain>
+        <domain includeSubdomains="true">ntfy.envs.net</domain>
+    </domain-config>
+    <domain-config cleartextTrafficPermitted="true">
+        <domain includeSubdomains="false">localhost</domain>
+        <domain includeSubdomains="false">127.0.0.1</domain>
+    </domain-config>
+</network-security-config>
