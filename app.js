@@ -61,7 +61,7 @@
       ) {
         return clean;
       }
-      return "https://newbiesteam.surge.sh/" + clean;
+      return "https://newbiesteam.pages.dev/" + clean;
     }
     return u;
   }
@@ -73,7 +73,7 @@
       this.dataset.fallbackApplied = "1";
       if (originalUrl) {
         var clean = String(originalUrl).replace(/^(\.\/|\/)+/, "");
-        var surgeUrl = "https://newbiesteam.surge.sh/" + clean;
+        var surgeUrl = "https://newbiesteam.pages.dev/" + clean;
         if (this.src !== surgeUrl) {
           this.src = surgeUrl;
           return;
@@ -497,7 +497,7 @@
 
     // Official Web Portal
     var webLink = el("a", "ksu-list-item");
-    webLink.href = "https://newbiesteam.surge.sh";
+    webLink.href = "https://newbiesteam.pages.dev";
     webLink.target = "_blank";
     webLink.rel = "noopener noreferrer";
     webLink.innerHTML = '<div class="ksu-item-icon"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1 4-10z"/></svg></div><div class="ksu-item-label">Official Web Portal</div><div class="ksu-item-arrow"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M9 18l6-6-6-6"/></svg></div>';
@@ -3409,7 +3409,7 @@
 
     // 1. Fetch live updates.json with cache-busting
     var jsonUrls = [
-      "updates.json?t=" + Date.now(),
+      "https://newbiesteam.pages.dev/updates.json?t=" + Date.now(),
       "https://newbiesteam.surge.sh/updates.json?t=" + Date.now(),
       "https://newbiesbase.surge.sh/updates.json?t=" + Date.now()
     ];
@@ -4130,9 +4130,9 @@
     submissionChannel: "nbt_sub_8d0b5336c092d316a726be04",
     relayUrl: "https://ntfy.envs.net/nbt_sub_8d0b5336c092d316a726be04",
     relayFallbackUrl: "https://ntfy.sh/nbt_sub_8d0b5336c092d316a726be04",
-    liveFeedUrl: "https://newbiesteam.surge.sh/data.js",
-    authManifestUrl: "https://newbiesteam.surge.sh/auth-manifest.json",
-    authManifestFallbackUrl: "https://newbiesbase.surge.sh/auth-manifest.json"
+    liveFeedUrl: "https://newbiesteam.pages.dev/data.js",
+    authManifestUrl: "https://newbiesteam.pages.dev/auth-manifest.json",
+    authManifestFallbackUrl: "https://newbiesteam.surge.sh/auth-manifest.json"
   };
 
   var currentKey = null;
@@ -4680,7 +4680,7 @@
     var fetchedFresh = false;
 
     try {
-      var feedUrl = "https://newbiesteam.surge.sh/data.js?t=" + now;
+      var feedUrl = "https://newbiesteam.pages.dev/data.js?t=" + now;
       var res = await fetch(feedUrl, { cache: "no-store", headers: { "Cache-Control": "no-cache" } });
       if (res.ok) {
         var text = await res.text();
@@ -4727,7 +4727,7 @@
 
     if (isManual) {
       if (fetchedFresh) {
-        showToast("✔ Live site data synced from newbiesteam.surge.sh");
+        showToast("✔ Live site data synced from newbiesteam.pages.dev");
       } else {
         showToast("⚠️ Could not reach server; keeping local changes.");
       }

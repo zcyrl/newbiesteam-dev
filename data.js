@@ -594,14 +594,37 @@ window.SITE = {
   ],
   appReleases: [
     {
+      version: "v3.0.0",
+      name: "NewbiesTeam Android App v3.0.0",
+      date: "2026-10-22",
+      by: "Softbrick & NewbiesTeam",
+      isLatest: true,
+      apkUrl:
+        "https://github.com/zcyrl/newbiesteam-app/releases/download/v3.0.0/NewbiesTeam-v3.0.0.apk",
+      fallbackApkUrl: "https://newbiesteam.pages.dev/assets/NewbiesTeam.apk",
+      releaseUrl:
+        "https://github.com/zcyrl/newbiesteam-app/releases/tag/v3.0.0",
+      size: "5.0 MB",
+      badge: "Cloudflare Pages Backend",
+      summary:
+        "Primary backend migrated to Cloudflare Pages (https://newbiesteam.pages.dev) with Surge (https://newbiesteam.surge.sh) as automatic secondary failover mirror. Unified fetch endpoints, SEO headers, and cache rules across public app, developer app, and web hub.",
+      changelog: [
+        "Cloudflare Pages Primary Backend: Web hub, data.js, updates.json, and auth-manifest.json now served from https://newbiesteam.pages.dev with Surge as automatic failover mirror.",
+        "Edge Cache Rules: Configured _headers for no-cache JSON endpoints and immutable 7-day asset caching via Cloudflare native cache rules.",
+        "SEO & Crawlers: robots.txt, sitemap.xml, and Google Site Verification updated for the Cloudflare Pages primary domain.",
+        "Unified UI: Public app and NewbiesDev developer app share identical layout, cards, navigation, and themed publish cards.",
+        "Sensitive Files: release.jks, .relay-keys.json, keys.txt, *.pem, *.key, code-bundle.txt, and *.zip protected in .gitignore and .surgeignore.",
+      ]
+    },
+    {
       version: "v2.1.2",
       name: "NewbiesTeam Android App v2.1.2",
       date: "2026-10-21",
       by: "Softbrick & NewbiesTeam",
-      isLatest: true,
+      isLatest: false,
       apkUrl:
         "https://github.com/zcyrl/newbiesteam-app/releases/download/v2.1.2/NewbiesTeam-v2.1.2.apk",
-      fallbackApkUrl: "https://newbiesteam.surge.sh/assets/NewbiesTeam.apk",
+      fallbackApkUrl: "https://newbiesteam.pages.dev/assets/NewbiesTeam.apk",
       releaseUrl:
         "https://github.com/zcyrl/newbiesteam-app/releases/tag/v2.1.2",
       size: "5.0 MB",
@@ -620,7 +643,7 @@ window.SITE = {
       isLatest: false,
       apkUrl:
         "https://github.com/zcyrl/newbiesteam-app/releases/download/v2.1.1/NewbiesTeam-v2.1.1.apk",
-      fallbackApkUrl: "https://newbiesteam.surge.sh/assets/NewbiesTeam.apk",
+      fallbackApkUrl: "https://newbiesteam.pages.dev/assets/NewbiesTeam.apk",
       releaseUrl:
         "https://github.com/zcyrl/newbiesteam-app/releases/tag/v2.1.1",
       size: "5.0 MB",
@@ -642,7 +665,7 @@ window.SITE = {
       isLatest: false,
       apkUrl:
         "https://github.com/zcyrl/newbiesteam-app/releases/download/v2.1.0/NewbiesTeam-v2.1.0.apk",
-      fallbackApkUrl: "https://newbiesteam.surge.sh/assets/NewbiesTeam.apk",
+      fallbackApkUrl: "https://newbiesteam.pages.dev/assets/NewbiesTeam.apk",
       releaseUrl:
         "https://github.com/zcyrl/newbiesteam-app/releases/tag/v2.1.0",
       size: "5.0 MB",
@@ -663,7 +686,7 @@ window.SITE = {
       isLatest: false,
       apkUrl:
         "https://github.com/zcyrl/newbiesteam-app/releases/download/v2.0.5/NewbiesTeam-v2.0.5.apk",
-      fallbackApkUrl: "https://newbiesteam.surge.sh/assets/NewbiesTeam.apk",
+      fallbackApkUrl: "https://newbiesteam.pages.dev/assets/NewbiesTeam.apk",
       releaseUrl:
         "https://github.com/zcyrl/newbiesteam-app/releases/tag/v2.0.5",
       size: "5.0 MB",
@@ -684,7 +707,7 @@ window.SITE = {
       isLatest: false,
       apkUrl:
         "https://github.com/zcyrl/newbiesteam-app/releases/download/v2.0.4/NewbiesTeam-v2.0.4.apk",
-      fallbackApkUrl: "https://newbiesteam.surge.sh/assets/NewbiesTeam.apk",
+      fallbackApkUrl: "https://newbiesteam.pages.dev/assets/NewbiesTeam.apk",
       releaseUrl:
         "https://github.com/zcyrl/newbiesteam-app/releases/tag/v2.0.4",
       size: "5.0 MB",
@@ -705,7 +728,7 @@ window.SITE = {
       isLatest: false,
       apkUrl:
         "https://github.com/zcyrl/newbiesteam-app/releases/download/v2.0.3/NewbiesTeam-v2.0.3.apk",
-      fallbackApkUrl: "https://newbiesteam.surge.sh/assets/NewbiesTeam.apk",
+      fallbackApkUrl: "https://newbiesteam.pages.dev/assets/NewbiesTeam.apk",
       releaseUrl:
         "https://github.com/zcyrl/newbiesteam-app/releases/tag/v2.0.3",
       size: "5.0 MB",
@@ -727,7 +750,7 @@ window.SITE = {
       isLatest: false,
       apkUrl:
         "https://github.com/zcyrl/newbiesteam-app/releases/download/v2.0.2/NewbiesTeam-v2.0.2.apk",
-      fallbackApkUrl: "https://newbiesteam.surge.sh/assets/NewbiesTeam.apk",
+      fallbackApkUrl: "https://newbiesteam.pages.dev/assets/NewbiesTeam.apk",
       releaseUrl:
         "https://github.com/zcyrl/newbiesteam-app/releases/tag/v2.0.2",
       size: "5.0 MB",
@@ -749,7 +772,7 @@ window.SITE = {
       isLatest: false,
       apkUrl:
         "https://github.com/zcyrl/newbiesteam-app/releases/download/v2.0.1/NewbiesTeam-v2.0.1.apk",
-      fallbackApkUrl: "https://newbiesteam.surge.sh/assets/NewbiesTeam.apk",
+      fallbackApkUrl: "https://newbiesteam.pages.dev/assets/NewbiesTeam.apk",
       releaseUrl:
         "https://github.com/zcyrl/newbiesteam-app/releases/tag/v2.0.1",
       size: "5.0 MB",
@@ -771,7 +794,7 @@ window.SITE = {
       isLatest: false,
       apkUrl:
         "https://github.com/zcyrl/newbiesteam-app/releases/download/v2.0.0/NewbiesTeam-v2.0.0.apk",
-      fallbackApkUrl: "https://newbiesteam.surge.sh/assets/NewbiesTeam.apk",
+      fallbackApkUrl: "https://newbiesteam.pages.dev/assets/NewbiesTeam.apk",
       releaseUrl:
         "https://github.com/zcyrl/newbiesteam-app/releases/tag/v2.0.0",
       size: "5.0 MB",
@@ -794,7 +817,7 @@ window.SITE = {
       isLatest: false,
       apkUrl:
         "https://github.com/zcyrl/newbiesteam-app/releases/download/v1.2.3/NewbiesTeam-v1.2.3.apk",
-      fallbackApkUrl: "https://newbiesteam.surge.sh/assets/NewbiesTeam.apk",
+      fallbackApkUrl: "https://newbiesteam.pages.dev/assets/NewbiesTeam.apk",
       releaseUrl:
         "https://github.com/zcyrl/newbiesteam-app/releases/tag/v1.2.3",
       size: "5.0 MB",
