@@ -1,5 +1,8 @@
 package team.newbies.dev
 
+import android.animation.AnimatorSet
+import android.animation.ObjectAnimator
+import android.animation.ValueAnimator
 import android.annotation.SuppressLint
 import android.app.Activity
 import android.app.DownloadManager
@@ -10,17 +13,24 @@ import android.content.Intent
 import android.content.IntentFilter
 import android.graphics.Bitmap
 import android.graphics.Color
+import android.graphics.drawable.Animatable
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.os.Environment
+import android.os.Handler
+import android.os.Looper
 import android.view.View
+import android.view.animation.AccelerateDecelerateInterpolator
 import android.webkit.ValueCallback
 import android.webkit.WebChromeClient
+import android.webkit.WebResourceError
 import android.webkit.WebResourceRequest
 import android.webkit.WebSettings
 import android.webkit.WebView
 import android.webkit.WebViewClient
+import android.widget.FrameLayout
+import android.widget.ImageView
 import android.widget.Toast
 import androidx.activity.OnBackPressedCallback
 import androidx.activity.result.contract.ActivityResultContracts
@@ -32,9 +42,21 @@ import java.io.File
 
 class MainActivity : AppCompatActivity() {
 
+    companion object {
+        private const val SPLASH_TIMEOUT_MS = 4500L
+    }
+
     private lateinit var swipeRefresh: SwipeRefreshLayout
     private lateinit var webView: WebView
+    private lateinit var splashOverlay: FrameLayout
+    private lateinit var splashGlow: View
+    private lateinit var splashLogo: ImageView
     private var filePathCallback: ValueCallback<Array<Uri>>? = null
+
+    private var splashAnimatorSet: AnimatorSet? = null
+    private var isSplashDismissed = false
+    private val splashHandler = Handler(Looper.getMainLooper())
+    private val splashTimeoutRunnable = Runnable { dismissSplash() }
 
     private var onDownloadCompleteReceiver: BroadcastReceiver? = null
     private var lastDownloadId: Long = -1L
@@ -67,8 +89,14 @@ class MainActivity : AppCompatActivity() {
         setupEdgeToEdge()
         setContentView(R.layout.activity_main)
 
+        // Unlock the display's maximum panel refresh rate (up to 144Hz on supported panels)
+        unlockHighRefreshRate()
+
         swipeRefresh = findViewById(R.id.swipeRefresh)
         webView = findViewById(R.id.webView)
+        splashOverlay = findViewById(R.id.splashOverlay)
+        splashGlow = findViewById(R.id.splashGlow)
+        splashLogo = findViewById(R.id.splashLogo)
 
         checkVersionAndWipeSessionOnUpdate()
 
@@ -76,9 +104,69 @@ class MainActivity : AppCompatActivity() {
         setupWebView()
         setupSwipeRefresh()
         setupBackNavigation()
+        startSplashAnimation()
 
         // Load offline embedded assets
         webView.loadUrl("file:///android_asset/index.html")
+
+        // Safety fallback timer so the splash always dismisses even if assets load slowly
+        splashHandler.postDelayed(splashTimeoutRunnable, SPLASH_TIMEOUT_MS)
+    }
+
+    private fun unlockHighRefreshRate() {
+        try {
+            val display = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                display
+            } else {
+                @Suppress("DEPRECATION")
+                windowManager.defaultDisplay
+            } ?: return
+            val modes = display.supportedModes ?: return
+            val current = display.mode
+            val best = modes
+                .filter { it.physicalWidth == current.physicalWidth && it.physicalHeight == current.physicalHeight }
+                .maxByOrNull { it.refreshRate } ?: return
+            if (best.modeId != current.modeId) {
+                val params = window.attributes
+                params.preferredDisplayModeId = best.modeId
+                window.attributes = params
+            }
+        } catch (_: Exception) {
+            // Some devices deny mode switching; silently keep system default.
+        }
+    }
+
+    /** Animated brand splash, same choreography as the NewbiesTeam public app. */
+    private fun startSplashAnimation() {
+        (splashLogo.drawable as? Animatable)?.start()
+
+        val glowAlpha = ObjectAnimator.ofFloat(splashGlow, View.ALPHA, 0.35f, 0.85f).apply {
+            duration = 1300
+            repeatMode = ValueAnimator.REVERSE
+            repeatCount = ValueAnimator.INFINITE
+            interpolator = AccelerateDecelerateInterpolator()
+        }
+
+        splashAnimatorSet = AnimatorSet().apply {
+            play(glowAlpha)
+            start()
+        }
+    }
+
+    private fun dismissSplash() {
+        if (isSplashDismissed) return
+        isSplashDismissed = true
+        splashHandler.removeCallbacks(splashTimeoutRunnable)
+
+        splashOverlay.animate()
+            .alpha(0f)
+            .setDuration(420)
+            .withEndAction {
+                splashAnimatorSet?.cancel()
+                (splashLogo.drawable as? Animatable)?.stop()
+                splashOverlay.visibility = View.GONE
+            }
+            .start()
     }
 
     private fun checkVersionAndWipeSessionOnUpdate() {
@@ -314,6 +402,18 @@ class MainActivity : AppCompatActivity() {
                 super.onPageFinished(view, url)
                 injectNativeBridgeState(view)
                 swipeRefresh.isRefreshing = false
+                dismissSplash()
+            }
+
+            override fun onReceivedError(
+                view: WebView?,
+                request: WebResourceRequest?,
+                error: WebResourceError?
+            ) {
+                super.onReceivedError(view, request, error)
+                if (request?.isForMainFrame == true) {
+                    dismissSplash()
+                }
             }
 
             override fun shouldOverrideUrlLoading(
@@ -423,6 +523,9 @@ class MainActivity : AppCompatActivity() {
 
     override fun onDestroy() {
         super.onDestroy()
+        splashHandler.removeCallbacks(splashTimeoutRunnable)
+        splashAnimatorSet?.cancel()
+        (splashLogo.drawable as? Animatable)?.stop()
         if (onDownloadCompleteReceiver != null) {
             try {
                 unregisterReceiver(onDownloadCompleteReceiver)

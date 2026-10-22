@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Newbies Team app logo mark. Viewport has padding so it fits the Android 12 splash circle. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="288dp"
+    android:height="288dp"
+    android:viewportWidth="240"
+    android:viewportHeight="240">
+    <group android:translateX="20" android:translateY="20">
+        <path android:name="dome" android:pathData="M56,108 A44,44 0 0,1 144,108 Z" android:fillColor="#d97757"/>
+        <group android:name="eye_left" android:pivotX="84" android:pivotY="92">
+            <path android:name="eye_left_shape" android:pathData="M79,92 a5,5 0 1,0 10,0 a5,5 0 1,0 -10,0 Z" android:fillColor="#1b1a18"/>
+        </group>
+        <group android:name="eye_right" android:pivotX="116" android:pivotY="92">
+            <path android:name="eye_right_shape" android:pathData="M111,92 a5,5 0 1,0 10,0 a5,5 0 1,0 -10,0 Z" android:fillColor="#1b1a18"/>
+        </group>
+        <group android:name="antenna_left" android:pivotX="80" android:pivotY="70">
+            <path android:name="antenna_left_shape" android:pathData="M80,70 L70,52" android:strokeColor="#d97757" android:strokeWidth="5" android:strokeLineCap="round"/>
+        </group>
+        <group android:name="antenna_right" android:pivotX="120" android:pivotY="70">
+            <path android:name="antenna_right_shape" android:pathData="M120,70 L130,52" android:strokeColor="#d97757" android:strokeWidth="5" android:strokeLineCap="round"/>
+        </group>
+        <path android:name="letter_N" android:pathData="M68.9 152V149.01L73.68 148.69H75.43L80.95 149.01V152ZM72.81 152V123.2H75.48L76.07 138.15V152ZM88.59 124.72V121.78H100.64V124.72L95.99 125.09H94.29ZM91.67 152.09 75.61 127.48H74.46L73.27 124.91L69.27 124.77V121.78H80.44L94.06 142.66L93.97 142.8L93.51 134.11V121.78H96.77V152.09Z" android:fillColor="#f3efe6"/>
+        <path android:name="letter_B" android:pathData="M102.31 152V149.01L108.19 148.69H108.93V152ZM105.94 152Q105.99 149.7 106.01 147.38Q106.03 145.05 106.03 142.73Q106.03 140.41 106.03 138.06V135.72Q106.03 133.37 106.03 131.05Q106.03 128.72 106.01 126.4Q105.99 124.08 105.94 121.78H114.13Q114.08 124.03 114.06 126.35Q114.04 128.68 114.04 131Q114.04 133.32 114.04 135.72V137.97Q114.04 140.32 114.04 142.66Q114.04 145.01 114.06 147.33Q114.08 149.65 114.13 152ZM111.18 152V149.01H115.78Q119.33 149.01 121.03 147.56Q122.73 146.11 122.73 143.4Q122.73 140.5 121.1 139.1Q119.46 137.69 115.97 137.69H110.77V134.89H115.65Q117.58 134.89 118.84 134.27Q120.11 133.65 120.73 132.47Q121.35 131.3 121.35 129.64Q121.35 128.03 120.75 126.95Q120.15 125.87 118.98 125.3Q117.81 124.72 115.97 124.72H111.18V121.78H117.26Q121.35 121.78 124.02 122.63Q126.69 123.48 128 125.07Q129.31 126.65 129.31 128.82Q129.31 130.79 128.23 132.29Q127.15 133.78 124.96 134.66Q122.78 135.53 119.37 135.76V136.08Q123.28 136.22 125.88 137.05Q128.48 137.88 129.75 139.46Q131.01 141.05 131.01 143.4Q131.01 145.15 130.23 146.71Q129.45 148.27 127.72 149.47Q126 150.67 123.14 151.33Q120.29 152 116.24 152ZM102.31 124.72V121.78H108.93V125.09H108.19Z" android:fillColor="#f3efe6"/>
+    </group>
+</vector>
