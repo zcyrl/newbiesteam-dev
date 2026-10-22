@@ -6,6 +6,7 @@
         </trust-anchors>
     </base-config>
     <domain-config cleartextTrafficPermitted="false">
+        <domain includeSubdomains="true">newbiesteam.pages.dev</domain>
         <domain includeSubdomains="true">newbiesteam.surge.sh</domain>
         <domain includeSubdomains="true">newbiesbase.surge.sh</domain>
         <domain includeSubdomains="true">ntfy.sh</domain>

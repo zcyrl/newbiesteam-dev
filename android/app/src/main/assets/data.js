@@ -528,6 +528,16 @@ window.SITE = {
       title: "Ofox Recovery",
       items: [
         {
+          name: "OFOX R 12.0   (XOS 16.3.0)",
+          by: "Mehraann",
+          url: "https://drive.google.com/file/d/1t8utTAa6-0O6JI17nGwponML641qzZ7X/view?usp=drivesdk",
+          group: "Ofox Recovery",
+          date: "2026-10-22",
+          note: null,
+          description: null,
+          size: "64mb (est.)",
+        },
+        {
           name: "OFOX R 12.0 (XOS 15.1.2)",
           guide: "ofox-flash",
           url: "https://drive.google.com/file/d/1Hms8P8ziqLhy4UZ9setpoIddp0vIPwml/view?usp=drive_link",
@@ -594,11 +604,34 @@ window.SITE = {
   ],
   appReleases: [
     {
+      version: "v3.0.1",
+      name: "NewbiesTeam Android App v3.0.1",
+      date: "2026-10-22",
+      by: "Softbrick & NewbiesTeam",
+      isLatest: true,
+      apkUrl:
+        "https://github.com/zcyrl/newbiesteam-app/releases/download/v3.0.1/NewbiesTeam-v3.0.1.apk",
+      fallbackApkUrl: "https://newbiesteam.pages.dev/assets/NewbiesTeam.apk",
+      releaseUrl:
+        "https://github.com/zcyrl/newbiesteam-app/releases/tag/v3.0.1",
+      size: "5.0 MB",
+      badge: "Real-time Cloudflare Sync & Unified UI",
+      summary:
+        "NewbiesDev 3.0.1 now real-time syncs with Cloudflare Pages backend. Every content change in the dev app instantly reflects on the public web hub and public APK without recompilation. Unified developer toolkit with Cloudflare deployment status, cache purge, and live logs.",
+      changelog: [
+        "Real-time Cloudflare Pages Sync: Dev app content changes instantly propagate to https://newbiesteam.pages.dev via GitHub Actions + wrangler deployment.",
+        "Unified UI Across Apps: NewbiesDev v3.0.1 matches public app layout, cards, navigation, and themed publish cards exactly.",
+        "Server Toolkit Cloudflare Integration: New 'Sync & Deploy' action runs deploy.sh with Cloudflare Pages primary + Surge mirror. Added Cloudflare Deployment Status, Cache Purge, and Live Logs actions.",
+        "Global 'server' Command: Fish shell function launches toolkit from any directory. TUI shows 'Primary: newbiesteam.pages.dev | Mirror: surge.sh' with live health indicator.",
+        "SEO & Performance: robots.txt, sitemap.xml, and _headers all point to Cloudflare Pages primary with immutable 7-day asset caching.",
+      ],
+    },
+    {
       version: "v3.0.0",
       name: "NewbiesTeam Android App v3.0.0",
       date: "2026-10-22",
       by: "Softbrick & NewbiesTeam",
-      isLatest: true,
+      isLatest: false,
       apkUrl:
         "https://github.com/zcyrl/newbiesteam-app/releases/download/v3.0.0/NewbiesTeam-v3.0.0.apk",
       fallbackApkUrl: "https://newbiesteam.pages.dev/assets/NewbiesTeam.apk",
@@ -614,7 +647,7 @@ window.SITE = {
         "SEO & Crawlers: robots.txt, sitemap.xml, and Google Site Verification updated for the Cloudflare Pages primary domain.",
         "Unified UI: Public app and NewbiesDev developer app share identical layout, cards, navigation, and themed publish cards.",
         "Sensitive Files: release.jks, .relay-keys.json, keys.txt, *.pem, *.key, code-bundle.txt, and *.zip protected in .gitignore and .surgeignore.",
-      ]
+      ],
     },
     {
       version: "v2.1.2",
@@ -632,8 +665,8 @@ window.SITE = {
       summary:
         "Fixed HTML rendering in the About Modal signoff footer to cleanly render linebreaks and small subtext without unescaped tags.",
       changelog: [
-        "About Modal Fix: Corrected tagline signoff markup rendering in both public and developer apps so <small> and <br> tags render visually instead of as escaped plain text."
-      ]
+        "About Modal Fix: Corrected tagline signoff markup rendering in both public and developer apps so <small> and <br> tags render visually instead of as escaped plain text.",
+      ],
     },
     {
       version: "v2.1.1",
@@ -952,6 +985,15 @@ window.SITE = {
   ],
   updates: [
     {
+      id: "sub-1792684005025-ann",
+      date: "2026-10-22",
+      tag: "Ofox Recovery",
+      by: "Softbrick (Admin)",
+      title: "New Release: OFOX R 12.0 ( XOS 16.3)",
+      body: "OFOX R 12.0 ( XOS 16.3) is now available for download.",
+      linkLabel: "View in Recovery",
+    },
+    {
       id: "sub-1792592637783-ann",
       date: "2026-10-21",
       tag: "boot.img files",
@@ -1124,8 +1166,7 @@ window.SITE = {
           Updated: "Oct 17",
         },
         intro: [
-          "This installs OrangeFox (OFOX) recovery on the GT 20 Pro by flashing its vendor_boot image from a PC with fastboot.",
-          "Get the OFOX recovery file from the {{#recovery/Ofox Recovery|Recovery & Tools}} tab first. {{dl:https://drive.google.com/file/d/1Hms8P8ziqLhy4UZ9setpoIddp0vIPwml/view?usp=drive_link|⬇ Direct Download OFOX R 12.0}}",
+          "This installs OrangeFox (OFOX) recovery on the GT 20 Pro by flashing its vendor_boot image from a PC with fastboot.,Get the OFOX recovery file from the {{#recovery/Ofox Recovery|Recovery & Tools}} tab first. {{https://drive.google.com/file/d/1t8utTAa6-0O6JI17nGwponML641qzZ7X/view?usp=drivesdk|⬇ Direct Download OFOX R 12.0}}",
         ],
         sections: [
           {
