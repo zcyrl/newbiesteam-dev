@@ -53,12 +53,10 @@
     var clean = u.replace(/^(\.\/|\/)+/, "");
     // In Android APK WebView (file:///android_asset/...)
     if (window.location.protocol === "file:" || window.location.protocol === "content:") {
-      // Local icons, fonts, and bundled SVG vector assets exist in APK assets
-      if (
-        clean.startsWith("icons/") ||
-        clean.startsWith("assets/fonts/") ||
-        (clean.startsWith("assets/") && clean.endsWith(".svg"))
-      ) {
+      // Everything under assets/ and icons/ ships inside the APK (fonts, sprite
+      // SVGs, ROM banners, posted update images, logos) — serve locally first;
+      // attachImgFallback retries the CDN when a newer asset isn't bundled yet.
+      if (clean.startsWith("icons/") || clean.startsWith("assets/")) {
         return clean;
       }
       return "https://newbiesteam.pages.dev/" + clean;
