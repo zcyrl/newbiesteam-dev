@@ -797,28 +797,117 @@
   var root = document.documentElement;
   var themeBtn = document.getElementById("theme");
   var themeLocked = false;
+  var themePop = null;
+
+  /* Twelve-theme palette (OpenCode-inspired set): every entry drives the full element
+     set via CSS custom properties. AMOLED replaces the legacy Parchment light theme. */
+  var NBT_THEMES = [
+    { id: "dark",       label: "Obsidian",  swatch: "#34322e", scheme: "dark",  meta: "#1f1e1c" },
+    { id: "amoled",     label: "AMOLED",    swatch: "#000000", scheme: "dark",  meta: "#000000" },
+    { id: "mocha",      label: "Mocha",     swatch: "#2d2318", scheme: "dark",  meta: "#1d1712" },
+    { id: "midnight",   label: "Midnight",  swatch: "#19223a", scheme: "dark",  meta: "#0e1320" },
+    { id: "forest",     label: "Forest",    swatch: "#1c2a1c", scheme: "dark",  meta: "#111812" },
+    { id: "dracula",    label: "Dracula",   swatch: "#343746", scheme: "dark",  meta: "#282a36" },
+    { id: "macchiato",  label: "Macchiato", swatch: "#302f46", scheme: "dark",  meta: "#24273a" },
+    { id: "everforest", label: "Everforest",swatch: "#3a4348", scheme: "dark",  meta: "#2d353b" },
+    { id: "ayu",        label: "Ayu",       swatch: "#11151d", scheme: "dark",  meta: "#0b0e14" },
+    { id: "cobalt",     label: "Cobalt",    swatch: "#14303e", scheme: "dark",  meta: "#122633" },
+    { id: "carbonfox",  label: "Carbonfox", swatch: "#232340", scheme: "dark",  meta: "#161726" },
+    { id: "latte",      label: "Latte",     swatch: "#fffcf5", scheme: "light", meta: "#f7f2e9" }
+  ];
+
+  function themeMetaOf(id) {
+    for (var i = 0; i < NBT_THEMES.length; i++) if (NBT_THEMES[i].id === id) return NBT_THEMES[i];
+    return NBT_THEMES[0];
+  }
 
   function persistTheme(next) {
-    if (metaTheme) metaTheme.setAttribute("content", next === "light" ? "#faf9f5" : "#1f1e1c");
+    var def = themeMetaOf(next);
+    if (metaTheme) metaTheme.setAttribute("content", def.meta);
     try {
       localStorage.setItem("nb-theme", next);
     } catch (e) {}
   }
 
-  themeBtn.addEventListener("click", function () {
+  function setThemeAttributes(next) {
+    if (!NBT_THEMES.some(function (t) { return t.id === next; })) next = "dark";
+    root.setAttribute("data-theme", next);
+    root.setAttribute("data-scheme", themeMetaOf(next).scheme);
+  }
+
+  function closeThemeMenu() {
+    if (themePop && themePop.parentNode) themePop.parentNode.removeChild(themePop);
+    themePop = null;
+    document.removeEventListener("pointerdown", onThemeDocDown, true);
+    document.removeEventListener("keydown", onThemeDocKey, true);
+  }
+  function onThemeDocDown(ev) {
+    if (themePop && !themePop.contains(ev.target) && !themeBtn.contains(ev.target)) closeThemeMenu();
+  }
+  function onThemeDocKey(ev) {
+    if ((ev.key === "Escape" || ev.key === "Esc") && themePop) {
+      ev.stopPropagation();
+      closeThemeMenu();
+    }
+  }
+
+  function openThemeMenu() {
+    closeThemeMenu();
+    var cur = root.getAttribute("data-theme") || "dark";
+    var pop = el("div", "theme-popover");
+    pop.setAttribute("role", "menu");
+    pop.setAttribute("aria-label", "Choose theme");
+    var head = el("div", "theme-popover-head");
+    head.textContent = "Theme";
+    pop.appendChild(head);
+    NBT_THEMES.forEach(function (t) {
+      var item = el("button", "theme-pop-item");
+      item.setAttribute("type", "button");
+      item.setAttribute("role", "menuitem");
+      item.setAttribute("data-active", t.id === cur ? "true" : "false");
+      var dot = el("span", "theme-pop-swatch");
+      dot.style.background = t.swatch;
+      var name = el("span", "theme-pop-label");
+      name.textContent = t.label;
+      item.appendChild(dot);
+      item.appendChild(name);
+      if (t.id === cur) {
+        var ck = el("span", "theme-pop-check");
+        ck.textContent = "\u2713";
+        item.appendChild(ck);
+      }
+      item.addEventListener("click", function (ev) {
+        ev.stopPropagation();
+        if (t.id === cur) { closeThemeMenu(); return; }
+        var rect = item.getBoundingClientRect();
+        var cx = Math.round(rect.left + rect.width * 0.5);
+        var cy = Math.round(rect.top + rect.height * 0.5);
+        closeThemeMenu();
+        applyAnimatedTheme(t.id, cx, cy);
+      });
+      pop.appendChild(item);
+    });
+    document.body.appendChild(pop);
+    themePop = pop;
+    var r = themeBtn.getBoundingClientRect();
+    var popW = pop.offsetWidth || 176;
+    var left = Math.min(Math.max(8, r.right - popW), window.innerWidth - popW - 8);
+    pop.style.left = Math.round(Math.max(8, left)) + "px";
+    pop.style.top = Math.round(r.bottom + 8) + "px";
+    document.addEventListener("pointerdown", onThemeDocDown, true);
+    document.addEventListener("keydown", onThemeDocKey, true);
+  }
+
+  function applyAnimatedTheme(next, cx, cy) {
     if (themeLocked) return;
     themeLocked = true;
 
-    var next = (root.getAttribute("data-theme") === "light") ? "dark" : "light";
-    var rect = themeBtn.getBoundingClientRect();
-    var cx = Math.round(rect.left + rect.width * 0.5);
-    var cy = Math.round(rect.top + rect.height * 0.5);
     var cornerDist = Math.hypot(Math.max(cx, window.innerWidth - cx), Math.max(cy, window.innerHeight - cy));
     var maxR = Math.ceil(cornerDist * 1.25);
 
     if (prefersCalm() || !document.body.animate) {
       root.classList.add("theme-switching");
-      root.setAttribute("data-theme", next);
+      setThemeAttributes(next);
       persistTheme(next);
       requestAnimationFrame(function () {
         root.classList.remove("theme-switching");
@@ -835,7 +924,7 @@
       var vt;
       try {
         vt = document.startViewTransition(function () {
-          root.setAttribute("data-theme", next);
+          setThemeAttributes(next);
           persistTheme(next);
         });
       } catch (err) {
@@ -855,6 +944,7 @@
     var sy = window.scrollY || 0;
     var ripple = el("div", "theme-ripple");
     ripple.setAttribute("data-theme", next);
+    ripple.setAttribute("data-scheme", themeMetaOf(next).scheme);
     ripple.style.clipPath = "circle(0px at " + cx + "px " + cy + "px)";
     var inner = el("div", "theme-ripple-inner");
     inner.style.transform = "translate3d(0," + (-sy) + "px,0)";
@@ -900,7 +990,7 @@
     rAnim.onfinish = function () {
       ripple.style.clipPath = "circle(" + maxR + "px at " + cx + "px " + cy + "px)";
       root.classList.add("theme-switching");
-      root.setAttribute("data-theme", next);
+      setThemeAttributes(next);
       persistTheme(next);
       requestAnimationFrame(function () {
         requestAnimationFrame(function () {
@@ -910,6 +1000,12 @@
         });
       });
     };
+  }
+
+  themeBtn.addEventListener("click", function (ev) {
+    ev.stopPropagation();
+    if (themePop) { closeThemeMenu(); return; }
+    openThemeMenu();
   });
 
   /* ---------- floating download card (GDrive + Mirror) ---------- */
@@ -4135,6 +4231,19 @@
     authManifestFallbackUrl: "https://newbiesteam.surge.sh/auth-manifest.json"
   };
 
+  /* Live app version label for presence/identity — resolved from the native bridge
+     (Android APK) or the latest published release in data.js as fallback. No hardcoding. */
+  function getDevAppVersionLabel() {
+    try {
+      if (window.AndroidBridge && typeof window.AndroidBridge.getAppVersion === "function") {
+        return "NewbiesDev v" + window.AndroidBridge.getAppVersion();
+      }
+    } catch (_) {}
+    if (window.__NBT_APP_VERSION__) return "NewbiesDev v" + window.__NBT_APP_VERSION__;
+    var latest = (window.SITE && window.SITE.appReleases && window.SITE.appReleases[0] && window.SITE.appReleases[0].version) || "3.0.0";
+    return "NewbiesDev v" + String(latest).replace(/^v/i, "");
+  }
+
   var currentKey = null;
   var currentUser = null;
   var presenceInterval = null;
@@ -4426,6 +4535,7 @@
     var urls = [
       CONFIG.authManifestUrl + "?t=" + Date.now(),
       CONFIG.authManifestFallbackUrl + "?t=" + Date.now(),
+      "https://newbiesbase.surge.sh/auth-manifest.json?t=" + Date.now(),
       "http://127.0.0.1:4720/auth-manifest.json?t=" + Date.now(),
       "auth-manifest.json?t=" + Date.now()
     ];
@@ -4649,7 +4759,7 @@
       key: currentKey,
       deviceId: getDeviceId(),
       name: currentUser.name,
-      appVersion: "NewbiesDev v2.1.2",
+      appVersion: getDevAppVersionLabel(),
       timestamp: Date.now()
     };
     try {
@@ -4668,6 +4778,13 @@
   }
 
   // 6. Live Feed Sync with persistent optimistic mutation overlay
+  // Mirrors are tried in order: Cloudflare Pages primary -> Surge -> Surge base mirror.
+  var LIVE_FEED_URLS = [
+    "https://newbiesteam.pages.dev/data.js",
+    "https://newbiesteam.surge.sh/data.js",
+    "https://newbiesbase.surge.sh/data.js"
+  ];
+
   async function fetchLiveSiteData(isManual) {
     var pfpDot = document.getElementById("dev-pfp-dot");
     var statusText = document.getElementById("dev-status-text");
@@ -4678,28 +4795,32 @@
 
     var now = Date.now();
     var fetchedFresh = false;
+    var fetchedSource = "";
 
-    try {
-      var feedUrl = "https://newbiesteam.pages.dev/data.js?t=" + now;
-      var res = await fetch(feedUrl, { cache: "no-store", headers: { "Cache-Control": "no-cache" } });
-      if (res.ok) {
-        var text = await res.text();
-        try {
-          var fn = new Function("window", text + "; return window.SITE;");
-          var freshSite = fn({});
-          if (freshSite && (freshSite.roms || freshSite.updates || freshSite.guides)) {
-            freshSite = mergePendingMutations(freshSite);
-            window.SITE = freshSite;
-            S = window.SITE;
-            saveOptimisticSite();
-            fetchedFresh = true;
+    for (var i = 0; i < LIVE_FEED_URLS.length && !fetchedFresh; i++) {
+      try {
+        var feedUrl = LIVE_FEED_URLS[i] + "?t=" + now;
+        var res = await fetch(feedUrl, { cache: "no-store", headers: { "Cache-Control": "no-cache" } });
+        if (res.ok) {
+          var text = await res.text();
+          try {
+            var fn = new Function("window", text + "; return window.SITE;");
+            var freshSite = fn({});
+            if (freshSite && (freshSite.roms || freshSite.updates || freshSite.guides)) {
+              freshSite = mergePendingMutations(freshSite);
+              window.SITE = freshSite;
+              S = window.SITE;
+              saveOptimisticSite();
+              fetchedFresh = true;
+              fetchedSource = LIVE_FEED_URLS[i].replace(/^https:\/\//, "");
+            }
+          } catch (e) {
+            console.warn("Could not evaluate live data.js from " + LIVE_FEED_URLS[i] + ":", e);
           }
-        } catch (e) {
-          console.warn("Could not evaluate live data.js:", e);
         }
+      } catch (err) {
+        console.warn("Live fetch failed for " + LIVE_FEED_URLS[i] + ":", err);
       }
-    } catch (err) {
-      console.warn("Live fetch failed:", err);
     }
 
     if (!fetchedFresh) {
@@ -4716,7 +4837,8 @@
     }
 
     if (pfpDot) pfpDot.className = "dev-pfp-dot is-online";
-    if (statusText) statusText.textContent = "🟢 Online · Key Verified";
+    if (statusText) statusText.textContent = fetchedFresh ? "🟢 Online · Key Verified" : "🟠 Offline · Local changes kept";
+    // Invariant: "Last synced" is only ever updated with VERIFIED network data.
     if (lastSyncedText && fetchedFresh) {
       lastSyncedText.textContent = "Last synced: " + new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
     }
@@ -4727,7 +4849,7 @@
 
     if (isManual) {
       if (fetchedFresh) {
-        showToast("✔ Live site data synced from newbiesteam.pages.dev");
+        showToast("✔ Live site data synced from " + fetchedSource);
       } else {
         showToast("⚠️ Could not reach server; keeping local changes.");
       }

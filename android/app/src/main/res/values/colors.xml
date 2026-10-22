@@ -7,4 +7,8 @@
     <color name="crimson">#FFE50914</color>
     <color name="crimson_glow">#4DE50914</color>
     <color name="gold">#FFF59E0B</color>
+    <!-- Splash overlay palette (shared brand mark with the public app) -->
+    <color name="splash_background">#FF0E0F12</color>
+    <color name="text_ink">#FFF0EEE6</color>
+    <color name="text_muted">#FF9C978A</color>
 </resources>

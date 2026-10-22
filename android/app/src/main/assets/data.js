@@ -528,14 +528,10 @@ window.SITE = {
       title: "Ofox Recovery",
       items: [
         {
-          name: "OFOX R 12.0   (XOS 16.3.0)",
+          name: "OFOX R 12.0 (XOS 16.3.0)",
           by: "Mehraann",
-          url: "https://drive.google.com/file/d/1t8utTAa6-0O6JI17nGwponML641qzZ7X/view?usp=drivesdk",
-          group: "Ofox Recovery",
-          date: "2026-10-22",
-          note: null,
-          description: null,
-          size: "64mb (est.)",
+          url: "https://drive.google.com/file/d/1t8utTAa6-0O6JI17nGwponML641qzZ7X/view?usp=drive_link",
+          guide: "ofox-flash",
         },
         {
           name: "OFOX R 12.0 (XOS 15.1.2)",
@@ -552,6 +548,12 @@ window.SITE = {
     {
       title: "Fenrir",
       items: [
+        {
+          name: "Fenrir A16",
+          by: "Mehraann",
+          url: "https://drive.google.com/file/d/1fcmDzmpSFXK6ylNCHdypHldynzAcsA0F/view?usp=drive_link",
+          guide: "flash-fenrir",
+        },
         {
           name: "Fenrir A15",
           guide: "flash-fenrir",
@@ -604,11 +606,35 @@ window.SITE = {
   ],
   appReleases: [
     {
+      version: "v3.1.0",
+      name: "NewbiesTeam Android App v3.1.0",
+      date: "2026-10-23",
+      by: "Softbrick & NewbiesTeam",
+      isLatest: true,
+      apkUrl:
+        "https://github.com/zcyrl/newbiesteam-app/releases/download/v3.1.0/NewbiesTeam-v3.1.0.apk",
+      fallbackApkUrl: "https://newbiesteam.pages.dev/assets/NewbiesTeam.apk",
+      releaseUrl:
+        "https://github.com/zcyrl/newbiesteam-app/releases/tag/v3.1.0",
+      size: "5.1 MB",
+      badge: "144Hz Performance & Twelve Themes",
+      summary:
+        "Both apps now run natively at the panel's maximum refresh rate (144Hz) and ship a twelve-theme engine (Obsidian, AMOLED, Mocha, Midnight, Forest, Dracula, Macchiato, Everforest, Ayu, Cobalt, Carbonfox, Latte) with a picker that animates every element. Dev app sync hardened across the Cloudflare Pages primary and both Surge mirrors, plus a new animated startup splash.",
+      changelog: [
+        "Native 144Hz / High-Refresh Unlock: Both apps request the display's maximum supported mode (preferredDisplayModeId) so WebView animations, tab lenses, and scroll run at full panel rate instead of 60Hz.",
+        "Twelve-Theme Engine (OpenCode-inspired): AMOLED (pure black), Mocha, Latte, Midnight, Forest, Dracula, Catppuccin Macchiato, Everforest, Ayu, Cobalt and Carbonfox join Obsidian — every nav pill, card, popover, toast, and glow matches each palette.",
+        "Theme Picker UI: The nav theme button now opens a glassmorphism menu with live color swatches; switching keeps the circular View-Transition ripple and respects reduced-motion users.",
+        "NewbiesDev Startup Animation: The developer app now plays the same animated brand splash as the public app (blinking robot logo + crimson glow) on launch.",
+        "Multi-Backend Sync Hardening: Dev app live-data sync tries Cloudflare Pages, newbiesteam.surge.sh, and newbiesbase.surge.sh in order — changes keep applying even if the primary CDN is unreachable.",
+        "Developer Keys: Toolkit-generated keys verified against auth-manifest (SHA-256 hashes only) with newbiesbase mirror added to the failover chain.",
+      ],
+    },
+    {
       version: "v3.0.1",
       name: "NewbiesTeam Android App v3.0.1",
       date: "2026-10-22",
       by: "Softbrick & NewbiesTeam",
-      isLatest: true,
+      isLatest: false,
       apkUrl:
         "https://github.com/zcyrl/newbiesteam-app/releases/download/v3.0.1/NewbiesTeam-v3.0.1.apk",
       fallbackApkUrl: "https://newbiesteam.pages.dev/assets/NewbiesTeam.apk",
