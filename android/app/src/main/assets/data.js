@@ -535,12 +535,11 @@ window.SITE = {
         {
           name: "OFOX R 12.0 (XOS 16.3.0)",
           by: "Mehraann",
-          url: "https://drive.google.com/file/d/1t8utTAa6-0O6JI17nGwponML641qzZ7X/view?usp=drive_link",
+          url: "https://drive.google.com/file/d/1lrhnwo_O9rj-tNgsu7z4bYF_w78iEgpg/view?usp=drivesdk",
           guide: "ofox-flash",
           date: "2026-10-23",
-          note: "For Those who can't Format in Recovery After Flashing Fenrir   wipe metadata first then format data.",
-          description:
-            "For Those who can't Format in Recovery After Flashing Fenrir   wipe metadata first then format data.",
+          note: "Fixed format issue",
+          description: "Fixed format issue",
           size: null,
         },
         {
@@ -616,11 +615,34 @@ window.SITE = {
   ],
   appReleases: [
     {
+      version: "v3.1.3",
+      name: "NewbiesTeam Android App v3.1.3",
+      date: "2026-10-23",
+      by: "Softbrick & NewbiesTeam",
+      isLatest: true,
+      apkUrl:
+        "https://github.com/zcyrl/newbiesteam-app/releases/download/v3.1.3/NewbiesTeam-v3.1.3.apk",
+      fallbackApkUrl: "https://newbiesteam.pages.dev/assets/NewbiesTeam.apk",
+      releaseUrl:
+        "https://github.com/zcyrl/newbiesteam-app/releases/tag/v3.1.3",
+      size: "5.2 MB",
+      badge: "OS-Scheduled Update Checker",
+      summary:
+        "The app now checks for new official releases in the background (OS-scheduled WorkManager job, roughly every 3-4 hours) and posts a local notification when a newer NewbiesTeam APK is live — no push servers, no Google Play Services, tap jumps straight to the App tab. Publishing itself stays instant via the 24/7 relay from v3.1.2.",
+      changelog: [
+        "OS-Scheduled Update Checker: a WorkManager periodic job (4h interval, 3h flex) fetches the latest release from GitHub — and falls back to the data.js mirror chain — comparing it against the installed build.",
+        "Local Update Notification: newer official version? You get a notification (channel: App Update Checker) that deep-links into the hub's App tab, with the changelog line from the release.",
+        "No Re-Nagging: each release version is announced once; the checker remembers what it already told you.",
+        "Play-Services-Free: all logic runs in-app over plain HTTPS, so de-Googled ROMs get update alerts too.",
+        "Content alerts stay separate: the 15-minute new-post checker keeps its own channel and cadence.",
+      ],
+    },
+    {
       version: "v3.1.2",
       name: "NewbiesTeam Android App v3.1.2",
       date: "2026-10-23",
       by: "Softbrick & NewbiesTeam",
-      isLatest: true,
+      isLatest: false,
       apkUrl:
         "https://github.com/zcyrl/newbiesteam-app/releases/download/v3.1.2/NewbiesTeam-v3.1.2.apk",
       fallbackApkUrl: "https://newbiesteam.pages.dev/assets/NewbiesTeam.apk",
@@ -1065,14 +1087,6 @@ window.SITE = {
     },
   ],
   updates: [
-    {
-      id: "upd-relaytest2-1792754557-622",
-      date: "2026-10-23",
-      tag: "Notice",
-      by: "NewbiesTeam CI",
-      title: "24/7 Relay Lifecycle Test (v2)",
-      body: "Second automated verification — this one must be ingested by GitHub Actions alone, with the laptop daemon stopped.",
-    },
     {
       id: "sub-1792684005025-ann",
       date: "2026-10-22",
