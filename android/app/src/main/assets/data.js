@@ -34,7 +34,7 @@ window.SITE = {
           guide: "xos16-local-update",
           url: "https://android.googleapis.com/packages/ota-api/package/744f47c66b26e36501d6106360708d3e4dbd6ac1.zip",
           details: {
-            base: "Gt 20 pro",
+            base: "Infinix GT 20 Pro",
             changelogs: [
               "Note: If you are getting upgrade problems then use XOS 15.0.3.",
               "Update Version:",
@@ -45,6 +45,8 @@ window.SITE = {
               "1. Upgraded from XOS 15.1.2 to XOS 16.3.0 for a smarter user interface and a refreshed look for your device.",
               "Size: 8811.2 MB",
             ],
+            bugs: [],
+            fixed: [],
           },
           screenshots: [
             {
@@ -57,6 +59,9 @@ window.SITE = {
             },
           ],
           romId: "rom_xos_16_3_official_41bc",
+          note: null,
+          description: null,
+          size: null,
         },
         {
           name: "OxygenOS 16.0.10 V1",
@@ -390,9 +395,9 @@ window.SITE = {
       items: [
         {
           romId: "rom_boot_img_xos_16_0__ddf3",
-          name: "Boot.img  16.0.3.155",
+          name: "Boot.img  16.3.155",
           date: "2026-10-21",
-          by: "Transition",
+          by: "TransShit",
           url: "https://drive.google.com/file/d/1N2BXj3AdbqwxUIgM2pMijMkjYcFrvIOR/view?usp=drivesdk",
           guide: "patched-and-gki-kernels",
           details: {
@@ -532,6 +537,11 @@ window.SITE = {
           by: "Mehraann",
           url: "https://drive.google.com/file/d/1t8utTAa6-0O6JI17nGwponML641qzZ7X/view?usp=drive_link",
           guide: "ofox-flash",
+          date: "2026-10-23",
+          note: "For Those who can't Format in Recovery After Flashing Fenrir   wipe metadata first then format data.",
+          description:
+            "For Those who can't Format in Recovery After Flashing Fenrir   wipe metadata first then format data.",
+          size: null,
         },
         {
           name: "OFOX R 12.0 (XOS 15.1.2)",
@@ -606,11 +616,34 @@ window.SITE = {
   ],
   appReleases: [
     {
+      version: "v3.1.2",
+      name: "NewbiesTeam Android App v3.1.2",
+      date: "2026-10-23",
+      by: "Softbrick & NewbiesTeam",
+      isLatest: true,
+      apkUrl:
+        "https://github.com/zcyrl/newbiesteam-app/releases/download/v3.1.2/NewbiesTeam-v3.1.2.apk",
+      fallbackApkUrl: "https://newbiesteam.pages.dev/assets/NewbiesTeam.apk",
+      releaseUrl:
+        "https://github.com/zcyrl/newbiesteam-app/releases/tag/v3.1.2",
+      size: "5.2 MB",
+      badge: "24/7 Laptop-Free Publishing",
+      summary:
+        "Posts made in the Dev App now publish to the public app, both Surge mirrors and the web hub even when the host laptop is switched off: a GitHub Actions consumer polls the encrypted ntfy relay every 5 minutes and bakes verified developer content straight into data.js. When the laptop is on, its 4-second daemon loop still syncs instantly.",
+      changelog: [
+        "24/7 Cloud Relay Worker: new GitHub Actions job (every 5 min) consumes Dev App submissions the same way the host daemon does — key + device validation, section permissions, image processing to WebP — so publishing no longer requires the laptop.",
+        "Signature & Permission Parity: relay code reuses the exact daemon engine (RSA verification, developer key roster, revoked keys, device binding) — laptop-on and laptop-off paths are byte-for-byte identical in policy.",
+        "Publish Cascade Fix: pushes made by the relay now use a PAT instead of the default token, so content commits trigger the Cloudflare Pages deploy automatically.",
+        "Zero-Churn State: relay state persists in dev-tools/feed-state.json and is only committed when content actually changed — idle 5-minute runs ship nothing.",
+        "Surge Mirror Refresh: the relay workflow deploys both Surge failover mirrors itself after every published change.",
+      ],
+    },
+    {
       version: "v3.1.1",
       name: "NewbiesTeam Android App v3.1.1",
       date: "2026-10-23",
       by: "Softbrick & NewbiesTeam",
-      isLatest: true,
+      isLatest: false,
       apkUrl:
         "https://github.com/zcyrl/newbiesteam-app/releases/download/v3.1.1/NewbiesTeam-v3.1.1.apk",
       fallbackApkUrl: "https://newbiesteam.pages.dev/assets/NewbiesTeam.apk",
@@ -1032,6 +1065,14 @@ window.SITE = {
     },
   ],
   updates: [
+    {
+      id: "upd-relaytest2-1792754557-622",
+      date: "2026-10-23",
+      tag: "Notice",
+      by: "NewbiesTeam CI",
+      title: "24/7 Relay Lifecycle Test (v2)",
+      body: "Second automated verification — this one must be ingested by GitHub Actions alone, with the laptop daemon stopped.",
+    },
     {
       id: "sub-1792684005025-ann",
       date: "2026-10-22",
