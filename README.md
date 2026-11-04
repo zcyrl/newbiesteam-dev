@@ -2,7 +2,7 @@
 
 Internal developer portal and Android application for Softbrick and the NewbiesTeam to upload custom ROMs, screenshots, guides, modules, and changelogs directly from their phones.
 
-> **Private Repository**: [`zcyrl/newbiesteam-dev`](https://github.com/zcyrl/newbiesteam-dev)
+> **Public Repository — All Rights Reserved**: This repo is public so the APKs stay downloadable. Copying, reuse or redistribution of any part is not permitted — see [LICENSE](LICENSE).
 
 ---
 
@@ -58,3 +58,9 @@ Download `NewbiesDev-v1.1.0.apk` directly inside the app or from the private rep
 
 ### 3. Reviewing Submissions in Terminal
 Run `server` -> choose `[P] 🔔 Pending Team Requests` to approve `[A]` or reject `[R]` moderated uploads.
+
+---
+
+## License
+
+© 2026 Softbrick / NewbiesTeam. **All Rights Reserved.** Public for transparency — not open source. No copying, modification, redistribution, decompilation or derivative works without prior written permission. See [LICENSE](LICENSE).
