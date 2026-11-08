@@ -8,3 +8,16 @@ build/
 .idea/
 .DS_Store
 *keys.txt
+
+# Signing / release material — never commit
+*.jks
+*.keystore
+*.p12
+*.pfx
+keystore.properties
+relay-keys.json
+.relay-keys.json
+code-bundle.txt
+*.apk
+*.aab
+android/app/release.jks
