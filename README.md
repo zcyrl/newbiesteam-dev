@@ -4,19 +4,15 @@ Internal developer portal and Android application for Softbrick and the NewbiesT
 
 > **Public Repository — All Rights Reserved**: This repo is public so the APKs stay downloadable. Copying, reuse or redistribution of any part is not permitted — see [LICENSE](LICENSE).
 
+> **Security notice (2026-11-08):** builds before v3.1.4 used a compromised signing key and a bundled `keys.txt`. Those access keys were revoked. Uninstall old builds and install v3.1.4+ from Releases, then enter a newly issued developer key.
+
 ---
 
-## 📦 Direct APK Downloads
+## 📦 Install
 
-Download the compiled Dev APK directly from this repository page or via the high-speed in-app CDN:
+Get the latest Dev APK from [GitHub Releases](https://github.com/zcyrl/newbiesteam-dev/releases/latest). The previous `NewbiesDev*.apk` files were removed from the repository root; use the release assets.
 
-| Package | Version | Size | Direct GitHub Download | In-App CDN Mirror |
-| :--- | :--- | :--- | :--- | :--- |
-| **`NewbiesDev.apk`** | Latest (`v1.1.0`) | 5.65 MB | [⬇️ Download `NewbiesDev.apk`](https://github.com/zcyrl/newbiesteam-dev/raw/main/NewbiesDev.apk) | [⚡ Surge CDN](https://newbiesteam.surge.sh/assets/dev/NewbiesDev.apk) |
-| **`NewbiesDev-v1.1.0.apk`** | `v1.1.0` (Build 2) | 5.65 MB | [⬇️ Download `NewbiesDev-v1.1.0.apk`](https://github.com/zcyrl/newbiesteam-dev/raw/main/NewbiesDev-v1.1.0.apk) | [⚡ Surge CDN](https://newbiesteam.surge.sh/assets/dev/NewbiesDev-v1.1.0.apk) |
-
-* **GitHub Release Page**: Available under [Releases `v1.1.0`](https://github.com/zcyrl/newbiesteam-dev/releases/tag/v1.1.0).
-* **In-App Delivery**: If you already have the Dev App installed, open the app, tap **Dev APK Updates**, and tap **Download & Install Dev APK** to update seamlessly without entering GitHub credentials.
+* **In-App Delivery**: existing installs can use **Dev APK Updates** once the v3.1.4+ release is published.
 
 ---
 
@@ -30,24 +26,16 @@ Download the compiled Dev APK directly from this repository page or via the high
 
 ---
 
-## 5 Developer Access Keys (32 Characters)
+## Developer Access Keys
 
-See `keys.txt` for key credentials.
-
-| Role | Key Holder | Access Level | Auto-Push Behavior |
-| :--- | :--- | :--- | :--- |
-| **Master Admin** | **Softbrick** | **Full Access** | 🚀 **Instant Direct Auto-Push** to live site on Surge. No terminal confirmation needed. |
-| **Team Member 1** | Team Dev 1 | Moderated | ⏳ ROMs, Guides, Screenshots, Tools go to terminal queue. **News & Changelogs post live immediately**. |
-| **Team Member 2** | Team Dev 2 | Moderated | ⏳ ROMs, Guides, Screenshots, Tools go to terminal queue. **News & Changelogs post live immediately**. |
-| **Team Member 3** | Team Dev 3 | Moderated | ⏳ ROMs, Guides, Screenshots, Tools go to terminal queue. **News & Changelogs post live immediately**. |
-| **Team Member 4** | Team Dev 4 | Moderated | ⏳ ROMs, Guides, Screenshots, Tools go to terminal queue. **News & Changelogs post live immediately**. |
+Developer access keys are issued privately by the owner and are **never stored in this repository**. The live auth manifest exposes only SHA-256 hashes (`https://newbiesteam.pages.dev/auth-manifest.json`). The old `keys.txt` was removed and all of its keys were revoked on 2026-11-08.
 
 ---
 
 ## How to Install & Run
 
 ### 1. Native Android Dev APK
-Download `NewbiesDev-v1.1.0.apk` directly inside the app or from the private repository release.
+Download the latest v3.1.4+ APK from GitHub Releases or inside the app.
 * Offline embedded UI loaded directly from `file:///android_asset/index.html`.
 * Native camera and file picker for screenshot uploads (`WebChromeClient.onShowFileChooser`).
 * Built-in `DownloadManager` auto-installer bridge for silent in-app updates.
