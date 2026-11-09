@@ -1181,6 +1181,38 @@ window.SITE = {
     categories: ["Flashing Guides", "Bootloader Guides", "Rooting Guides"],
     items: [
       {
+        slug: "xos16-flashing",
+        category: "Flashing Guides",
+        title: "XOS 16 Flashing",
+        read: "2 min read",
+        by: "Mehraann",
+        info: {
+          Device: "GT 20 Pro",
+          Difficulty: "Easy",
+          Updated: "Today",
+        },
+        intro: [
+          "Flashing XOS 16 is simple you only need Ofox 16 custom recovery provided on the recovery tab and the flashable provided in the rom tab",
+        ],
+        sections: [
+          {
+            h: "1. Requirments",
+            body: ["Unlocked Bootloader"],
+          },
+          {
+            h: "Select recovery > Go to wipe > Select Dalvik/ART Cache, Cache, Metadata, Data and swipe to wipe. > Go back and tap Files/Install (select ROM.zip > Don't check or uncheck any options. Swipe to flash > Wait for the flashing process to complete.",
+            body: [
+              "Go to Wipe > Format Data.",
+              {
+                code: ["Type yes and tap ✓."],
+              },
+              "Reboot to System.",
+            ],
+          },
+        ],
+        warning: "Follow step by step so you dont get anti-crack",
+      },
+      {
         slug: "xos16-local-update",
         category: "Flashing Guides",
         warning:
